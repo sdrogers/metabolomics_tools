@@ -31,7 +31,7 @@ public class ParseIDFiles {
 			for(int i=0;i<allLists.size();i++) {
 				for(int j=0;j<allLists.get(i).getSize();j++) {
 					Peak temp = allLists.get(i).getPeak(j);
-					if(temp.allC12() && temp.allO16()) {
+					if(temp.allC12() && temp.allO16() && temp.allN14() && temp.allS32()) {
 						// Compare with done
 						boolean isDone = false;
 						if(done.indexOf(temp) > -1) {
@@ -63,8 +63,8 @@ public class ParseIDFiles {
 	}
 	
 	public static void main(String[] args) {
-		String directory = "/Users/simon/git/metabolomics_tools/AdductLevels/data/positive/std1/";
-		ParseIDFiles p = new ParseIDFiles(directory,"std1pos.csv");
+		String directory = "/Users/simonrogers/git/metabolomics_tools/AdductLevels/data/negative/std2/";
+		ParseIDFiles p = new ParseIDFiles(directory,"std2neg.csv");
 		
 	}
 }

@@ -7,7 +7,7 @@ public class Peak {
 	private String databaseID;
 	private String adduct;
 	private String notation;
-	public Peak(Double m,Double i,Double r,String d,String a,String n,Double p) {
+	public Peak(Double m,Double r,Double i,String d,String a,String n,Double p) {
 		this.mass = m;
 		this.intensity = i;
 		this.rt = r;
@@ -15,6 +15,24 @@ public class Peak {
 		this.databaseID = d;
 		this.adduct = a;
 		this.notation = n;
+	}
+	public boolean allS32() {
+		int i = notation.indexOf("[34S]");
+		if(i==-1) {
+			return true;
+		} else {
+			return false;
+		}
+
+	}
+	public boolean allN14() {
+		int i = notation.indexOf("[15N]");
+		if(i==-1) {
+			return true;
+		} else {
+			return false;
+		}
+		
 	}
 	public boolean allC12() {
 		int i = notation.indexOf("[13C]");
