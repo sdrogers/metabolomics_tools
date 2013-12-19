@@ -1,0 +1,18 @@
+import java.util.ArrayList;
+
+public class PeakList {
+	private ArrayList<Peak> peaks;
+	public PeakList() {
+		peaks = new ArrayList<Peak>();
+	}
+	
+	public Peak getPeak(int index) {
+		return peaks.get(index);
+	}
+	public void addPeak(Peak p) {
+		peaks.add(p);
+	}
+	public int getSize() {
+		return peaks.size();
+	}
+}

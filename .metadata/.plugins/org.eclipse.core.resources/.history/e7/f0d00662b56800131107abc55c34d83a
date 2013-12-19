@@ -1,0 +1,47 @@
+import java.io.*;
+import java.util.ArrayList;
+public class ParseIDFiles {
+	private String dataDir;
+	private ArrayList<PeakList> allLists;
+	private PeakList done;
+	public ParseIDFiles(String directory) {
+		dataDir = directory;
+		allLists = new ArrayList<PeakList>();
+		done = new PeakList();
+		File[] fileList = new File(dataDir).listFiles();
+		for(int i=0;i<fileList.length;i++) {
+			System.out.println(fileList[i].getAbsolutePath());
+			PeakList pl = new PeakList();
+			pl.loadFromFile(fileList[0].getAbsolutePath());
+			allLists.add(pl);
+		}
+		
+		for(int i=0;i<allLists.size();i++) {
+			for(int j=0;j<allLists.get(i).getSize();j++) {
+				Peak temp = allLists.get(i).getPeak(j);
+				// Compare with done
+				boolean isDone = false;
+				for(int k=0;k<done.size();k++) {
+					if(done.get(k).peakEquals(temp)) {
+						isDone = true;
+						break;
+					}
+				}
+				if(!isDone) {
+					String line = "";
+					line += temp.getDatabaseID() + "," + temp.getAdduct() + "," + temp.getNotation();
+					
+					done.addPeak(temp);
+				}
+			}
+		}
+		
+		
+	}
+	
+	public static void main(String[] args) {
+		String directory = "/Users/simon/git/metabolomics_tools/AdductLevels/data/positive/std1/";
+		ParseIDFiles p = new ParseIDFiles(directory);
+		
+	}
+}

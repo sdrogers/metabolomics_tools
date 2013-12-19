@@ -1,0 +1,12 @@
+import java.io.*;
+
+public class ParseIDFiles {
+
+	
+	
+	public static void main(String[] args) {
+		String directory = "/Users/simon/git/metabolomic_tools/AdductLevels/data/";
+		ParseIDFiles p = new ParseIDFiles(directory);
+		
+	}
+}
