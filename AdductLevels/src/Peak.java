@@ -42,6 +42,14 @@ public class Peak {
 			return false;
 		}
 	}
+	public boolean allSe80() {
+		int i = notation.indexOf("[82Se]");
+		if(i==-1) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 	public boolean allO16() {
 		int i = notation.indexOf("[18O]");
 		if(i==-1) {
