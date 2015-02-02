@@ -70,9 +70,9 @@ def make_mapping(input_file, database, transformation, mass_tol, rt_tol):
         for j in np.arange(n_trans):
             trans_mass = (mass[i] - trans_sub[j])/trans_mul[j]
             peak_rt = rt[i]
-            # True if this peak's mass after transformation is close enough to the precursor masses
+            # True if this peak's mass before transformation is close enough to the precursor masses from M+H
             mass_ok = mass_match(trans_mass, precursor_masses, mass_tol)
-            # True if this peak's RT is close enough to the RTs of other peaks
+            # True if this peak's RT is close enough to the RTs of the initial peaks that generated the M+H bins 
             rt_ok = rt_match(peak_rt, all_rts, rt_tol)
             # combine the results
             matching = np.logical_and(mass_ok, rt_ok)         
@@ -95,26 +95,26 @@ def plot_hist(mapping, filename, mass_tol, rt_tol):
     plt.figure()
     plt.bar(np.arange(10)+1, mini_hist)
     plt.title(title)
-    plt.show(block=False)
+    plt.show()
     
 def main():
 
-    database = 'database/std1_mols.csv'
-    transformation = 'mulsub.txt'
+    database = '/home/joewandy/git/metabolomics_tools/discretisation/database/std1_mols.csv'
+    transformation = '/home/joewandy/git/metabolomics_tools/discretisation/mulsub.txt'
 
-    filename = 'input/std1_csv/std1-file1.identified.csv'
+    filename = '/home/joewandy/git/metabolomics_tools/discretisation/input/std1_csv/std1-file1.identified.csv'
     mass_tol = 2
     rt_tol = 999
     mapping = make_mapping(filename, database, transformation, mass_tol, rt_tol)
     plot_hist(mapping, filename, mass_tol, rt_tol)
 
-    filename = 'input/std1_csv/std1-file1.identified.csv'
+    filename = '/home/joewandy/git/metabolomics_tools/discretisation/input/std1_csv/std1-file1.identified.csv'
     mass_tol = 2
     rt_tol = 30
     mapping = make_mapping(filename, database, transformation, mass_tol, rt_tol)
     plot_hist(mapping, filename, mass_tol, rt_tol)
 
-    filename = 'input/std1_csv/std1-file1.identified.csv'
+    filename = '/home/joewandy/git/metabolomics_tools/discretisation/input/std1_csv/std1-file1.identified.csv'
     mass_tol = 2
     rt_tol = 10
     mapping = make_mapping(filename, database, transformation, mass_tol, rt_tol)
