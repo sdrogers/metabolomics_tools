@@ -106,7 +106,8 @@ def plot_hist(mapping, filename, mass_tol, rt_tol):
     
 def main():
 
-    basedir = '/home/joewandy/git/metabolomics_tools/discretisation'
+    # basedir = '/home/joewandy/git/metabolomics_tools/discretisation'
+    basedir = '.'
     database = basedir + '/database/std1_mols.csv'
     transformation = basedir + '/mulsub.txt'
     filename = basedir + '/input/std1_csv/std1-file1.identified.csv'
