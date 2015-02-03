@@ -139,6 +139,7 @@ def annotate_mols(moldb, precursor_masses, mass_tol):
             ambiguous.add(db_entry)
     discrete_hits = len(unambiguous) + len(ambiguous)
     print 'discrete_hits=' + str(discrete_hits) + '/' + str(len(moldb))
+    print 'ambiguous=' + str(len(ambiguous)) + ' unambiguous=' + str(len(unambiguous))
 
 # We can histogram the number of transformations available for each peak. mini_hist holds this. 
 # Note that all peaks have >0 transformations as each peak's precursor is in the list
