@@ -1,6 +1,49 @@
 from collections import namedtuple
+import csv
 
 DatabaseEntry = namedtuple('DatabaseEntry', ['id', 'name', 'formula', 'mass'])
+Feature = namedtuple('Feature', ['id', 'mass', 'rt', 'intensity'])
+Transformation = namedtuple('Transformation', ['id', 'name', 'sub', 'mul'])
+
+class FileLoader:
+    def load_features(self, input_file):
+        """ Load peak features """
+        features = []
+        with open(input_file, 'rb') as csvfile:
+            reader = csv.reader(csvfile, delimiter=':')
+            next(reader, None)  # skip the headers
+            for elements in reader:
+                feature = Feature(id=self.num(elements[0]), mass=self.num(elements[1]), \
+                                  rt=self.num(elements[2]), intensity=self.num(elements[3]))
+                features.append(feature)
+        return features
+
+    def load_database(self, database):
+        moldb = []
+        with open(database, 'rb') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+            for elements in reader:
+                mol = DatabaseEntry(id=elements[0], name=elements[1], formula=elements[2], \
+                                    mass=self.num(elements[3]))
+                moldb.append(mol)
+        return moldb
+    
+    def load_transformation(self, transformation):
+        transformations = []
+        with open(transformation, 'rb') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+            trans_id = 1
+            for elements in reader:
+                trans = Transformation(id=trans_id, name=elements[0], sub=self.num(elements[1]), \
+                                       mul=self.num(elements[2]))
+                transformations.append(trans)
+        return transformations        
+    
+    def num(self, s):
+        try:
+            return int(s)
+        except ValueError:
+            return float(s)
 
 class MassBin:
     def __init__(self, start_mass, end_mass):
@@ -13,9 +56,11 @@ class MassBin:
     def __repr__(self):
         return 'MassBin (' + str(self.start_mass) + ", " + str(self.end_mass) + ')'
 
-# copied from http://zurb.com/forrst/posts/Interval_Tree_implementation_in_python-e0K
-
 class IntervalTree:
+    """ 
+    Interval tree implementation
+    from http://zurb.com/forrst/posts/Interval_Tree_implementation_in_python-e0K
+    """
     def __init__(self, intervals):
         self.top_node = self.divide_intervals(intervals)
  
@@ -45,13 +90,13 @@ class IntervalTree:
         fs = sort_by_begin(intervals)
         length = len(fs)
  
-        return fs[int(length/2)].get_begin()
+        return fs[int(length / 2)].get_begin()
  
     def search(self, begin, end=None):
         if end:
             result = []
  
-            for j in xrange(begin, end+1):
+            for j in xrange(begin, end + 1):
                 for k in self.search(j):
                     result.append(k)
                 result = list(set(result))

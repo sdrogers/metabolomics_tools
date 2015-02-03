@@ -1,8 +1,9 @@
-from models import *
+from models import MassBin, IntervalTree
 import numpy as np
 
+
 class MolAnnotator:
-    def annotate_mols(__self__, moldb, precursor_masses, mass_tol):
+    def annotate_mols(self, moldb, precursor_masses, mass_tol):
         """ A simple annotation experiment to see if we lose anything by binning:
         i. Take the M+H precursor mass from a standard file, match them against database within tolerance
         and see how many you get --> gold standard
@@ -16,7 +17,7 @@ class MolAnnotator:
         for db_entry in moldb:
             found = 0
             for pc in precursor_masses:
-                if __self__.mass_match(db_entry.mass, pc, mass_tol):
+                if self.mass_match(db_entry.mass, pc, mass_tol):
                     found = found+1
             if found==1:
                 unambiguous.add(db_entry)
@@ -29,7 +30,7 @@ class MolAnnotator:
         # now check if we lose anything by going discrete
         print 'Checking discrete molecule annotations'
         # first, make the bins
-        lower, upper = __self__.bin_range(precursor_masses, mass_tol)
+        lower, upper = self.bin_range(precursor_masses, mass_tol)
         the_bins = []
         for i in np.arange(len(precursor_masses)):
             low = lower[i]
@@ -50,10 +51,10 @@ class MolAnnotator:
         print '\tdiscrete_hits=' + str(discrete_hits) + '/' + str(len(moldb)) + ' molecules'
         print '\tambiguous=' + str(len(ambiguous)) + ' unambiguous=' + str(len(unambiguous))    
         
-    def mass_match(__self__, m1, m2, tol):
+    def mass_match(self, m1, m2, tol):
         return np.abs((m1-m2)/(m1))<tol*1e-6
         
-    def bin_range(__self__, m1, tol):
+    def bin_range(self, m1, tol):
         interval = m1*tol*1e-6
         upper = m1+interval
         lower = m1-interval
