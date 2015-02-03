@@ -1,3 +1,18 @@
+from collections import namedtuple
+
+DatabaseEntry = namedtuple('DatabaseEntry', ['id', 'name', 'formula', 'mass'])
+
+class MassBin:
+    def __init__(self, start_mass, end_mass):
+        self.start_mass = start_mass
+        self.end_mass = end_mass
+    def get_begin(self):
+        return self.start_mass
+    def get_end(self):
+        return self.end_mass
+    def __repr__(self):
+        return 'MassBin (' + str(self.start_mass) + ", " + str(self.end_mass) + ')'
+
 # copied from http://zurb.com/forrst/posts/Interval_Tree_implementation_in_python-e0K
 
 class IntervalTree:

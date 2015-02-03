@@ -1,21 +1,8 @@
 import numpy as np
 import pylab as plt
 import csv
-from IntervalTree import IntervalTree
-from collections import namedtuple
-
-DatabaseEntry = namedtuple('DatabaseEntry', ['id', 'name', 'formula', 'mass'])
-
-class MassBin:
-    def __init__(self, start_mass, end_mass):
-        self.start_mass = start_mass
-        self.end_mass = end_mass
-    def get_begin(self):
-        return self.start_mass
-    def get_end(self):
-        return self.end_mass
-    def __repr__(self):
-        return 'MassBin (' + str(self.start_mass) + ", " + str(self.end_mass) + ')'
+from models import *
+from Annotation import MolAnnotator
 
 def num(s):
     try:
@@ -25,12 +12,6 @@ def num(s):
 
 def mass_match(m1, m2, tol):
     return np.abs((m1-m2)/(m1))<tol*1e-6
-
-def bin_range(m1, tol):
-    interval = m1*tol*1e-6
-    upper = m1+interval
-    lower = m1-interval
-    return lower, upper
 
 def rt_match(t1, t2, tol):
     return np.abs(t1-t2)<tol    
@@ -99,57 +80,11 @@ def make_mapping(input_file, database, transformation, mass_tol, rt_tol):
             mapping[i][q] = j+1
 
     # compare annotations of database molecules in the continous and discrete cases
-    annotate_mols(moldb, precursor_masses, mass_tol)
+    ann = MolAnnotator()
+    ann.annotate_mols(moldb, precursor_masses, mass_tol)
     
     return mapping
     
-# A simple annotation experiment to see if we lose anything by binning:
-# i. Take the M+H precursor mass from a standard file, match them against database within tolerance
-# and see how many you get --> gold standard
-# ii. Compare this with the discrete version
-def annotate_mols(moldb, precursor_masses, mass_tol):
-    
-    # the old-fashioned way of annotation in the continuous space
-    print 'Checking continuous molecule annotations'
-    unambiguous = set()
-    ambiguous = set()
-    for db_entry in moldb:
-        found = 0
-        for pc in precursor_masses:
-            if mass_match(db_entry.mass, pc, mass_tol):
-                found = found+1
-        if found==1:
-            unambiguous.add(db_entry)
-        elif found>1:
-            ambiguous.add(db_entry)
-    continuous_hits = len(unambiguous) + len(ambiguous)
-    print '\tcontinuous_hits=' + str(continuous_hits) + '/' + str(len(moldb)) + ' molecules'
-    print '\tambiguous=' + str(len(ambiguous)) + ' unambiguous=' + str(len(unambiguous))
-
-    # now check if we lose anything by going discrete
-    print 'Checking discrete molecule annotations'
-    # first, make the bins
-    lower, upper = bin_range(precursor_masses, mass_tol)
-    the_bins = []
-    for i in np.arange(len(precursor_masses)):
-        low = lower[i]
-        up = upper[i]
-        the_bins.append(MassBin(low, up))        
-
-    # count the hits
-    T = IntervalTree(the_bins) # store bins in an interval tree
-    unambiguous = set()
-    ambiguous = set()
-    for db_entry in moldb:
-        matching_bins = T.search(db_entry.mass)
-        if (len(matching_bins)==1): # exactly one matching bin
-            unambiguous.add(db_entry)
-        elif (len(matching_bins)>1): # more than one possible matching bins
-            ambiguous.add(db_entry)
-    discrete_hits = len(unambiguous) + len(ambiguous)
-    print '\tdiscrete_hits=' + str(discrete_hits) + '/' + str(len(moldb)) + ' molecules'
-    print '\tambiguous=' + str(len(ambiguous)) + ' unambiguous=' + str(len(unambiguous))
-
 # We can histogram the number of transformations available for each peak. mini_hist holds this. 
 # Note that all peaks have >0 transformations as each peak's precursor is in the list
 def plot_hist(mapping, filename, mass_tol, rt_tol):
