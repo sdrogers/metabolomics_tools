@@ -110,12 +110,20 @@ def annotate_mols(moldb, precursor_masses, mass_tol):
     
     # the old-fashioned way of annotation in the continuous space
     print 'Checking continuous molecule annotations'
-    results = set()
-    for pc in precursor_masses:
-        for db_entry in moldb:
+    unambiguous = set()
+    ambiguous = set()
+    for db_entry in moldb:
+        found = 0
+        for pc in precursor_masses:
             if mass_match(db_entry.mass, pc, mass_tol):
-                results.add(db_entry)
-    print 'continuous_hits=' + str(len(results)) + '/' + str(len(moldb))
+                found = found+1
+        if found==1:
+            unambiguous.add(db_entry)
+        elif found>1:
+            ambiguous.add(db_entry)
+    continuous_hits = len(unambiguous) + len(ambiguous)
+    print '\tcontinuous_hits=' + str(continuous_hits) + '/' + str(len(moldb)) + ' molecules'
+    print '\tambiguous=' + str(len(ambiguous)) + ' unambiguous=' + str(len(unambiguous))
 
     # now check if we lose anything by going discrete
     print 'Checking discrete molecule annotations'
@@ -138,8 +146,8 @@ def annotate_mols(moldb, precursor_masses, mass_tol):
         elif (len(matching_bins)>1): # more than one possible matching bins
             ambiguous.add(db_entry)
     discrete_hits = len(unambiguous) + len(ambiguous)
-    print 'discrete_hits=' + str(discrete_hits) + '/' + str(len(moldb))
-    print 'ambiguous=' + str(len(ambiguous)) + ' unambiguous=' + str(len(unambiguous))
+    print '\tdiscrete_hits=' + str(discrete_hits) + '/' + str(len(moldb)) + ' molecules'
+    print '\tambiguous=' + str(len(ambiguous)) + ' unambiguous=' + str(len(unambiguous))
 
 # We can histogram the number of transformations available for each peak. mini_hist holds this. 
 # Note that all peaks have >0 transformations as each peak's precursor is in the list
@@ -162,24 +170,23 @@ def plot_hist(mapping, filename, mass_tol, rt_tol):
     
 def main():
 
-    database = '/home/joewandy/git/metabolomics_tools/discretisation/database/std1_mols.csv'
-    transformation = '/home/joewandy/git/metabolomics_tools/discretisation/mulsub.txt'
+    basedir = '/home/joewandy/git/metabolomics_tools/discretisation'
+    database = basedir + '/database/std1_mols.csv'
+    transformation = basedir + '/mulsub.txt'
+    filename = basedir + '/input/std1_csv/std1-file1.identified.csv'
 
-    filename = '/home/joewandy/git/metabolomics_tools/discretisation/input/std1_csv/std1-file1.identified.csv'
     mass_tol = 2
     rt_tol = 999
     mapping = make_mapping(filename, database, transformation, mass_tol, rt_tol)
     plot_hist(mapping, filename, mass_tol, rt_tol)
     print
 
-    filename = '/home/joewandy/git/metabolomics_tools/discretisation/input/std1_csv/std1-file1.identified.csv'
     mass_tol = 2
     rt_tol = 30
     mapping = make_mapping(filename, database, transformation, mass_tol, rt_tol)
     plot_hist(mapping, filename, mass_tol, rt_tol)
     print
 
-    filename = '/home/joewandy/git/metabolomics_tools/discretisation/input/std1_csv/std1-file1.identified.csv'
     mass_tol = 2
     rt_tol = 10
     mapping = make_mapping(filename, database, transformation, mass_tol, rt_tol)
