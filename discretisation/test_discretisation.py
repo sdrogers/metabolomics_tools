@@ -6,6 +6,17 @@ from collections import namedtuple
 
 DatabaseEntry = namedtuple('DatabaseEntry', ['id', 'name', 'formula', 'mass'])
 
+class MassBin:
+    def __init__(self, start_mass, end_mass):
+        self.start_mass = start_mass
+        self.end_mass = end_mass
+    def get_begin(self):
+        return self.start_mass
+    def get_end(self):
+        return self.end_mass
+    def __repr__(self):
+        return 'MassBin (' + str(self.start_mass) + ", " + str(self.end_mass) + ')'
+
 def num(s):
     try:
         return int(s)
@@ -87,20 +98,10 @@ def make_mapping(input_file, database, transformation, mass_tol, rt_tol):
             q = temp[0]
             mapping[i][q] = j+1
 
+    # compare annotations of database molecules in the continous and discrete cases
     annotate_mols(moldb, precursor_masses, mass_tol)
-            
+    
     return mapping
-
-class MassBin:
-    def __init__(self, start_mass, end_mass):
-        self.start_mass = start_mass
-        self.end_mass = end_mass
-    def get_begin(self):
-        return self.start_mass
-    def get_end(self):
-        return self.end_mass
-    def __repr__(self):
-        return 'MassBin (' + str(self.start_mass) + ", " + str(self.end_mass) + ')'
     
 # A simple annotation experiment to see if we lose anything by binning:
 # i. Take the M+H precursor mass from a standard file, match them against database within tolerance
