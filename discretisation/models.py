@@ -37,6 +37,7 @@ class FileLoader:
                 trans = Transformation(id=trans_id, name=elements[0], sub=self.num(elements[1]), \
                                        mul=self.num(elements[2]))
                 transformations.append(trans)
+                trans_id = trans_id + 1
         return transformations        
     
     def num(self, s):
@@ -46,15 +47,31 @@ class FileLoader:
             return float(s)
 
 class MassBin:
-    def __init__(self, start_mass, end_mass):
+    def __init__(self, id, start_mass, end_mass, rt):
+        self.id = id
         self.start_mass = start_mass
         self.end_mass = end_mass
+        self.rt = rt
+        self.features = []
+    def get_id(self):
+        return self.id
     def get_begin(self):
         return self.start_mass
     def get_end(self):
         return self.end_mass
+    def get_rt(self):
+        return self.rt
+    def add_feature(self, feature):
+        self.features.append(feature)
+    def remove_feature(self, feature):
+        if feature in self.features: 
+            self.features.remove(feature)
+    def get_features(self):
+        return self.features
+    def get_features_count(self):
+        return len(self.features)
     def __repr__(self):
-        return 'MassBin (' + str(self.start_mass) + ", " + str(self.end_mass) + ')'
+        return 'MassBin id ' + str(self.id) + ' mass (' + str(self.start_mass) + ", " + str(self.end_mass) + ') rt ' + str(self.rt) + ' #fs ' + str(len(self.features))
 
 class IntervalTree:
     """ 
