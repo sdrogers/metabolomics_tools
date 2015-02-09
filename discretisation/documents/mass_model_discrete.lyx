@@ -1,0 +1,430 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman lmodern
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation skip
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Discrete Adduct Clustering Model for MS Data
+\end_layout
+
+\begin_layout Section
+Binning
+\end_layout
+
+\begin_layout Standard
+We can bin the data along the mass dimension.
+ Specifically, given 
+\begin_inset Formula $N$
+\end_inset
+
+ peak features in a file, we create a corresponding 
+\begin_inset Formula $N$
+\end_inset
+
+ bins centered at the precursor mass M by applying the inverse M+H adduct
+ transformation from the peak mass O
+\begin_inset Formula 
+\begin{equation}
+M=\frac{O|c|+ce-\sum_{i}h_{i}G_{i}}{n}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $c$
+\end_inset
+
+ is the charge, 
+\begin_inset Formula $e$
+\end_inset
+
+ is the mass of the electron, 
+\begin_inset Formula $h_{i}$
+\end_inset
+
+ and 
+\begin_inset Formula $G_{i}$
+\end_inset
+
+ are the adduct parts.
+ Further details can be found in Adduct_notes.pdf.
+ 
+\end_layout
+
+\begin_layout Standard
+Given the 
+\begin_inset Formula $n$
+\end_inset
+
+-th precursor mass 
+\begin_inset Formula $M_{n}$
+\end_inset
+
+, we then create a mass bin such that 
+\begin_inset Formula $M_{n}\pm b_{n}$
+\end_inset
+
+, where 
+\begin_inset Formula $b_{n}=M_{n}*tol*(1e-6)$
+\end_inset
+
+ with the value of 
+\begin_inset Formula $tol$
+\end_inset
+
+ specified by the user.
+ Repeat this for all 
+\begin_inset Formula $N$
+\end_inset
+
+ precursor masses created for each peak, so we end up with 
+\begin_inset Formula $K$
+\end_inset
+
+ bins, where 
+\begin_inset Formula $N=K$
+\end_inset
+
+.
+ Each bin now define a valid precursor mass cluster that a peak can be assigned
+ to based on the potential adduct transformation.
+ We index peak features by 
+\begin_inset Formula $n=1,...,N$
+\end_inset
+
+ and precursor mass bin (i.e.
+ mass clusters) by 
+\begin_inset Formula $k=1,...,K$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Section
+Model
+\end_layout
+
+\begin_layout Standard
+Denote the peak feature by 
+\begin_inset Formula $d_{n}=(x_{n},y_{n})$
+\end_inset
+
+ where 
+\begin_inset Formula $x_{n}$
+\end_inset
+
+ is the mass value and 
+\begin_inset Formula $y_{n}$
+\end_inset
+
+ the RT value.
+ We use the variable 
+\begin_inset Formula $z_{n}=k$
+\end_inset
+
+ to denote the assignment of peak feature 
+\begin_inset Formula $n$
+\end_inset
+
+ to bin 
+\begin_inset Formula $k$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+Given the data, we want to infer the assignment of the 
+\begin_inset Formula $z_{n}$
+\end_inset
+
+ variables to the clusters.
+ Assume a fixed number of clusters (based on the known `valid' precursor
+ masses 
+\begin_inset Formula $K=N$
+\end_inset
+
+).
+ Each categorical variables 
+\begin_inset Formula $z_{1},...,z_{n}$
+\end_inset
+
+ is then independently drawn from a categorical distribution with parameter
+ 
+\begin_inset Formula $\boldsymbol{\theta}$
+\end_inset
+
+ and determines the assignment of peak 
+\begin_inset Formula $n$
+\end_inset
+
+ to cluster 
+\begin_inset Formula $k$
+\end_inset
+
+.
+ The parameter vector 
+\begin_inset Formula $\boldsymbol{\theta}$
+\end_inset
+
+ of length 
+\begin_inset Formula $K$
+\end_inset
+
+ is drawn from a Dirichlet distribution with parameter 
+\begin_inset Formula $\alpha$
+\end_inset
+
+.
+ The likelihood of a peak into a cluster also depends on whether there's
+ a possible transformation from its ion mass to the precursor mass and based
+ on the RT value too.
+\begin_inset Formula 
+\begin{eqnarray}
+\boldsymbol{\theta} & \sim & Dir(\alpha)\\
+z_{n}=k & \sim & Cat(\boldsymbol{\theta})\\
+d_{n} & \sim & L(d_{n}|z_{n}=k,...)
+\end{eqnarray}
+
+\end_inset
+
+The likelihood 
+\begin_inset Formula $L(d_{n}|z_{n}=k,...)$
+\end_inset
+
+ can be factorised into the mass and RT terms 
+\begin_inset Formula $L(d_{n}|z_{n}=k)=p(x_{n}|z_{n}=k)\cdot p(x_{y}|z_{n}=k)$
+\end_inset
+
+.
+ For the mass term, 
+\begin_inset Formula 
+\begin{equation}
+p(x_{n}|z_{n}=k)=I_{k}(x_{n})
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $I_{k}(x_{n})$
+\end_inset
+
+ is the indicator function that produces 1 if there is a possible adduct
+ inverse transformation from ion mass 
+\begin_inset Formula $x_{n}$
+\end_inset
+
+ to bin 
+\begin_inset Formula $k$
+\end_inset
+
+ and 0 otherwise.
+ 
+\begin_inset Formula $y_{n}$
+\end_inset
+
+ is normally distributed with mean equals to 
+\begin_inset Formula $\mu_{k}$
+\end_inset
+
+, the RT value of the peak that produce the mass bin during the binning
+ stage, and some variance 
+\begin_inset Formula $\sigma_{k}^{2}$
+\end_inset
+
+.
+\begin_inset Formula 
+\begin{equation}
+p(y_{n}|z_{n}=k)=\mathcal{{N}}(y_{n}|\mu_{k},\sigma_{k}^{2})
+\end{equation}
+
+\end_inset
+
+The assumption implicit in the model is that a peak must always be assignable
+ to a mass bin.
+ 
+\end_layout
+
+\begin_layout Standard
+For Gibbs sampling,
+\begin_inset Formula 
+\begin{eqnarray}
+p(z_{n}=k|\boldsymbol{\theta},...) & \propto & (\alpha_{k}+z_{k})\cdot L(d_{n}|z_{n}=k)\\
+ & = & (\alpha_{k}+z_{k})\cdot I_{k}(x_{n})\cdot\mathcal{{N}}(y_{n}|\mu_{k},\sigma_{k}^{2})
+\end{eqnarray}
+
+\end_inset
+
+Full derivations to follow in below section.
+\end_layout
+
+\begin_layout Subsection
+Derivations
+\end_layout
+
+\begin_layout Standard
+Some standard derivations for Dirichlet-discrete model.
+ 
+\end_layout
+
+\begin_layout Standard
+The joint distribution of the data is 
+\begin_inset Formula 
+\begin{eqnarray}
+p(z_{1},...,z_{n},\boldsymbol{\theta},\alpha) & = & \prod_{n}p(z_{n}=k|\boldsymbol{\theta})p(\boldsymbol{\theta}|\alpha)\\
+p(z_{n}=k|\boldsymbol{\theta}) & = & Cat(\boldsymbol{\theta})=\prod_{k}(\boldsymbol{\theta}_{k})^{z_{k}}\\
+p(\boldsymbol{\theta}|\alpha) & = & Dir(\alpha)=\frac{1}{B(\alpha)}\prod_{k}(\boldsymbol{\theta}_{k})^{\alpha_{k}-1}
+\end{eqnarray}
+
+\end_inset
+
+For Gibbs sampling, we need 
+\begin_inset Formula $p(z_{n}|\boldsymbol{\theta},...)$
+\end_inset
+
+.
+ This is
+\begin_inset Formula 
+\begin{eqnarray}
+p(z_{n}=k|\boldsymbol{\theta},...) & \propto & p(z_{n}=k,\boldsymbol{\theta},...)\\
+ & = & p(z_{n}=k|\boldsymbol{\theta},...)\cdot p(\boldsymbol{\theta}|\alpha)\\
+ & = & \int\left[p(z_{n}=k|\boldsymbol{\theta},...)\cdot p(\boldsymbol{\theta}|\alpha)\right]\, d\theta\\
+ & = & \int\left[\prod_{k}(\boldsymbol{\theta}_{k})^{z_{k}}\cdot\frac{1}{B(\alpha)}\prod_{k}(\boldsymbol{\theta}_{k})^{\alpha_{k}-1}\right]\, d\theta\\
+ & = & \frac{1}{B(\alpha)}\int\left[\prod_{k}(\boldsymbol{\theta}_{k})^{z_{k}+\alpha_{k}-1}\right]\, d\theta\label{eq:integral}\\
+ & = & \frac{B(\alpha+z)}{B(\alpha)}\label{eq:beta_thing}
+\end{eqnarray}
+
+\end_inset
+
+Eq (
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:integral"
+
+\end_inset
+
+) is obtained as such: we know 
+\begin_inset Formula 
+\begin{equation}
+B(\alpha)=\int\left[\prod_{k}(\boldsymbol{\theta}_{k})^{z_{k}+\alpha_{k}-1}\right]\, d\theta
+\end{equation}
+
+\end_inset
+
+as it's the normalising constant in the multinomial pdf, so 
+\begin_inset Formula 
+\begin{equation}
+B(\alpha+z)=\int\left[\prod_{k}(\boldsymbol{\theta}_{k})^{z_{k}+\alpha_{k}-1}\right]\, d\theta
+\end{equation}
+
+\end_inset
+
+Continuing from eq (
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:beta_thing"
+
+\end_inset
+
+), the beta function is defined as 
+\begin_inset Formula $B(\alpha)=\frac{\prod_{k}\Gamma(\alpha_{k})}{\Gamma(\sum_{k}\alpha_{k})}$
+\end_inset
+
+.
+ Expand everything, and we get
+\begin_inset Formula 
+\begin{eqnarray}
+p(z_{n}=k|\boldsymbol{\theta},...) & \propto & \left(\frac{\prod_{k}\Gamma(\alpha_{k}+z_{k})}{\Gamma(\sum_{k}\alpha_{k}+z_{k})}\right)\left(\frac{\Gamma(\sum_{k}\alpha_{k})}{\prod_{k}\Gamma(\alpha_{k})}\right)\\
+ & = & \left(\frac{\Gamma(\sum_{k}\alpha_{k})}{\Gamma(\sum_{k}\alpha_{k}+z_{k})}\right)\left(\frac{\prod_{k}\Gamma(\alpha_{k}+z_{k})}{\prod_{k}\Gamma(\alpha_{k})}\right)\\
+ & \propto & \prod_{k}\frac{\Gamma(\alpha_{k}+z_{k})}{\Gamma(\alpha_{k})}\\
+ & \propto & \prod_{k}\Gamma(\alpha_{k}+z_{k})\\
+ & \propto & ...?\\
+ & \propto & \alpha_{k}+z_{k}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "/home/joewandy/Dropbox/Project/documents/library"
+options "plain"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

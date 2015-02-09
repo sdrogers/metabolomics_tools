@@ -1,0 +1,1728 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman lmodern
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation skip
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Adduct Clustering for MS Data
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+Based on the group's previous work on MetAssign, we have seen how prior
+ formula information, when available, can be used to model the inter-dependencie
+s between peaks (based on the mass, RT and intensity values and the assignments
+ to theoretical peaks).
+ In this report, we propose a clustering model that do not use such formula
+ information but instead takes into account the adduct relationships between
+ peaks for clustering.
+ 
+\end_layout
+
+\begin_layout Standard
+Later on, it might also be useful to incorporate the adduct clustering model
+ proposed here here into HDP-Align.
+ It might also be possible to come up with another model that combines the
+ approach with formula prior (i.e.
+ MetAssign) and without formula prior for the purpose metabolite identity
+ annotations and precursor mass discovery.
+\end_layout
+
+\begin_layout Section
+Preliminary
+\end_layout
+
+\begin_layout Subsection
+Adduct Transformation
+\end_layout
+
+\begin_layout Standard
+Given a set of metabolites (indexed by 
+\begin_inset Formula $i=1,...,I$
+\end_inset
+
+) and a set of adducts (indexed by 
+\begin_inset Formula $k=1,...,K$
+\end_inset
+
+), a precursor mass of a metabolite 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+ will be observed with the addition of an adduct 
+\begin_inset Formula $a_{k}$
+\end_inset
+
+.
+ An adduct is encoded in the form:
+\begin_inset Formula 
+\begin{equation}
+a_{k}=nM+\sum_{j}h_{j}b_{j}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $n$
+\end_inset
+
+ is the multiplicity of the molecule, 
+\begin_inset Formula $b_{j}$
+\end_inset
+
+ is the adduct part (e.g.
+ O, H, C, N, etc.) and 
+\begin_inset Formula $h_{j}$
+\end_inset
+
+ is the count of such adduct part.
+ For example using the adduct `M+2H+Na': the multiplicity is 
+\begin_inset Formula $n$
+\end_inset
+
+=1, the first adduct part is 
+\begin_inset Formula $b_{1}$
+\end_inset
+
+=H, 
+\begin_inset Formula $h_{1}$
+\end_inset
+
+=2 and the second adduct part 
+\begin_inset Formula $b_{2}$
+\end_inset
+
+=Na, 
+\begin_inset Formula $h_{2}$
+\end_inset
+
+=1.
+ Each adduct part 
+\begin_inset Formula $b_{j}$
+\end_inset
+
+ has a corresponding known mass 
+\begin_inset Formula $g(b_{j})$
+\end_inset
+
+.
+ The addition of an adduct 
+\begin_inset Formula $a_{k}$
+\end_inset
+
+ then defines a linear transformation 
+\begin_inset Formula $f_{k}(m_{i})$
+\end_inset
+
+ from a precursor mass 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+ to the group of observed peak masses, based on which 
+\begin_inset Formula $k$
+\end_inset
+
+-th adduct has been applied.
+ This is defined as 
+\begin_inset Formula 
+\begin{equation}
+f_{k}(m_{i})=\left(\frac{n}{|c|}\right)m_{i}+\left(\frac{-cE+\sum_{j}h_{j}g(b_{j})}{|c|}\right)=d_{k}m_{i}+h_{k}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $c$
+\end_inset
+
+ is the charge, 
+\begin_inset Formula $E$
+\end_inset
+
+ is the mass of an electron (0.00054857990924).
+ The constants for the linear transformation 
+\begin_inset Formula $d_{k}m_{i}+h_{k}$
+\end_inset
+
+ are 
+\begin_inset Formula $d_{k}=\frac{n}{|c|}$
+\end_inset
+
+ and 
+\begin_inset Formula $h_{h}=\frac{-cE+\sum_{j}h_{j}g(b_{j})}{|c|}$
+\end_inset
+
+ .
+ 
+\end_layout
+
+\begin_layout Standard
+Following are some examples of adducts (indexed by 
+\begin_inset Formula $k$
+\end_inset
+
+) and the corresponding transformation constants.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset Float table
+placement H
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\noindent
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="6" columns="7">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $k$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $a_{k}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $n$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $c$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $d_{k}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $h_{k}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $f_{k}(m_{i})$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+M+H
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $-E+g(H)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $m_{i}-E+g(H)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+M+2H
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+0.5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $-E+g(H)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $0.5m_{i}-E+g(H)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+M+Na
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $-E+g(Na)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $m_{i}-E+g(Na)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+M+K
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $-E+g(K)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $m_{i}-E+g(K)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+2M+H
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $-E+g(H)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $2m_{i}-E+g(H)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Some examples of adduct transformations, indexed by 
+\begin_inset Formula $k$
+\end_inset
+
+
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:Example-adduct-transformations"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The atomic masses of the adduct parts are obtained from http://dx.doi.org/10.1351/p
+ac200375060683 and summarised in below table: 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+placement H
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\noindent
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="4">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $b_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $g(b_{j})$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $b_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+\begin_inset Formula $g(b_{j})$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+O
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+15.9949146223
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+Na
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+22.98976966
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+H
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+1.0078250319
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+K
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+38.9637069
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+C
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+12.0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+S
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+31.97207073
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+N
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size footnotesize
+14.0030740074
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Atomic masses of elements
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Linear transformation of univariate Gaussian random variable
+\end_layout
+
+\begin_layout Standard
+Given a univariate Gaussian random variable 
+\begin_inset Formula $X$
+\end_inset
+
+ normally distributed with mean 
+\begin_inset Formula $\mu_{X}$
+\end_inset
+
+ and precision 
+\begin_inset Formula $\sigma_{X}$
+\end_inset
+
+, we can apply some linear transformation 
+\begin_inset Formula $f(X)=dX+h$
+\end_inset
+
+ to it and obtain a new random variable 
+\begin_inset Formula $Y$
+\end_inset
+
+ with mean 
+\begin_inset Formula $\mu_{Y}=d\mu_{X}+h$
+\end_inset
+
+ and precision 
+\begin_inset Formula $\sigma_{Y}=\frac{1}{d^{2}}\cdot\sigma_{X}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mu_{Y}=E\{Y\}=E\{dX+h\}=dE\{X\}+h=d\mu_{X}+h
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{eqnarray}
+\sigma_{Y}^{-1} & = & E\{\left[Y-\mu_{Y}\right]^{2}\}\nonumber \\
+ & = & E\{\left[dX+h-d\mu_{X}+h\right]^{2}\}\nonumber \\
+ & = & E\{\left[d(X-\mu_{X})\right]^{2}\}\nonumber \\
+ & = & d^{2}E\{\left[X-\mu_{X}\right]^{2}\}\nonumber \\
+ & = & d^{2}\sigma_{X}^{-1}\nonumber \\
+\sigma_{Y} & = & \frac{\sigma_{X}}{d^{2}}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+A Generative Model
+\end_layout
+
+\begin_layout Standard
+The observed data is the set of 
+\begin_inset Formula $N$
+\end_inset
+
+ peak masses 
+\begin_inset Formula $X=\{x_{1},x_{2},...,x_{n}\}$
+\end_inset
+
+, which may be pooled together from different runs (files).
+ We will ignore the chromatography part for now, so, we are not considering
+ retention time and chromatographic peak shapes etc.
+ and assume that all the peaks already share similar RT values (have been
+ aligned).
+ The following generative process is assumed:
+\end_layout
+
+\begin_layout Enumerate
+A run contains multiple metabolites.
+ This is modeled as a Dirichlet Process mixture model, where each mixture
+ component in the DP mixture corresponds to a metabolite.
+ Metabolites are indexed from 
+\begin_inset Formula $i=1,...,I$
+\end_inset
+
+.
+ Each metabolite has exactly one precursor molecular mass 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+, drawn from the base Gaussian distribution with mean 
+\begin_inset Formula $\mu_{0}$
+\end_inset
+
+ and precision 
+\begin_inset Formula $\sigma_{0}$
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+m_{i}|\mu_{0},\sigma_{0}\sim\mathcal{N}(\mu_{0},\sigma_{0}^{-1})\label{eq:draw_ti}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+For each metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+, we generate exactly 
+\begin_inset Formula $K$
+\end_inset
+
+ adduct clusters, corresponding to the possible 
+\begin_inset Formula $K$
+\end_inset
+
+ adduct transformations.
+ The number of adducts (
+\begin_inset Formula $K$
+\end_inset
+
+) and the exact form of adduct transformations (the 
+\begin_inset Formula $f_{k}$
+\end_inset
+
+s in Table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:Example-adduct-transformations"
+
+\end_inset
+
+) must be provided by user as input to the model.
+ The adducts are modeled as a finite mixture of 
+\begin_inset Formula $K$
+\end_inset
+
+ Gaussian components linked to metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+, with uniform prior on the mixture proportion 
+\begin_inset Formula $\boldsymbol{\pi}=(\frac{1}{K},\frac{1}{K},..,\frac{1}{K})$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Enumerate
+For each adduct cluster 
+\begin_inset Formula $a$
+\end_inset
+
+ in metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+, we then assign it a linear transformation 
+\begin_inset Formula $k$
+\end_inset
+
+.
+ The categorical variable 
+\begin_inset Formula $\varphi_{ia}=k\in\left\{ 1,...,K\right\} $
+\end_inset
+
+ denotes the pre-determined one-to-one assignment of adduct component 
+\begin_inset Formula $a$
+\end_inset
+
+ in metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+ to the linear transformation 
+\begin_inset Formula $k$
+\end_inset
+
+.
+ Observed peaks are then generated by sampling from the transformed distribution
+ 
+\begin_inset Formula $f_{k}(\mathcal{N}(m_{i},\lambda^{-1}))$
+\end_inset
+
+, where 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+ is the initial metabolite mass and 
+\begin_inset Formula $\lambda$
+\end_inset
+
+ some fixed precision.
+ Given the assignment of peak 
+\begin_inset Formula $n$
+\end_inset
+
+ to adduct 
+\begin_inset Formula $a$
+\end_inset
+
+ in metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+ (
+\begin_inset Formula $z_{nia}=1$
+\end_inset
+
+) and the assignment of adduct transformation 
+\begin_inset Formula $k$
+\end_inset
+
+ to adduct 
+\begin_inset Formula $a$
+\end_inset
+
+ in metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+ (
+\begin_inset Formula $\varphi_{ia}=k$
+\end_inset
+
+), we generate peak masses (
+\begin_inset Formula $x_{n}$
+\end_inset
+
+) by sampling from 
+\begin_inset Formula 
+\begin{eqnarray}
+x_{n}|z_{nia}=1,\varphi_{ia}=k & \sim & f_{k}(\mathcal{N}(m_{i},\lambda^{-1}))
+\end{eqnarray}
+
+\end_inset
+
+Since we know the constants for every transformation 
+\begin_inset Formula $k$
+\end_inset
+
+ (the 
+\begin_inset Formula $d_{k}$
+\end_inset
+
+s and 
+\begin_inset Formula $h_{k}$
+\end_inset
+
+s in Table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:Example-adduct-transformations"
+
+\end_inset
+
+), the above equation simplifies to
+\begin_inset Formula 
+\begin{equation}
+x_{n}|z_{nia}=1,\varphi_{ia}=k\sim\mathcal{N}(d_{k}m_{i}+h_{k},d_{k}^{2}\lambda^{-1})
+\end{equation}
+
+\end_inset
+
+There can be multiple peaks generated here under each transformed cluster.
+ We assume these are peaks coming from different runs and sharing similar
+ RT values (not considered in the model).
+\end_layout
+
+\begin_layout Section
+Inference
+\end_layout
+
+\begin_layout Standard
+Inference is performed via Gibbs sampling.
+ In each iteration of Gibbs sampling, we randomly loop through all peaks,
+ remove the current peak from the model and update the assignment of peak
+ 
+\begin_inset Formula $n$
+\end_inset
+
+ to metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+ adduct 
+\begin_inset Formula $a$
+\end_inset
+
+.
+ The conditional probability of 
+\begin_inset Formula $p(z_{ni.}=1|)$
+\end_inset
+
+ given any other parameter is the following
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+p(z_{ni.}=1|x_{n},...)\propto\begin{cases}
+c_{i}\cdot p(x_{n}|z_{ni}=1,...)\\
+\alpha\cdot p(x_{n}|z_{ni^{*}}=1,...)
+\end{cases}\label{eq:peak_assignment}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where:
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $c_{i}$
+\end_inset
+
+ is the count of peaks currently assigned to metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $\alpha$
+\end_inset
+
+ is the DP concentration parameter
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $z_{ni}=1$
+\end_inset
+
+ denotes the assignment of peak 
+\begin_inset Formula $n$
+\end_inset
+
+ to an existing metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $z_{ni^{*}}=1$
+\end_inset
+
+ denotes the assignment of peak 
+\begin_inset Formula $n$
+\end_inset
+
+ to a new metabolite 
+\begin_inset Formula $i^{*}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+We consider the top part of eq.
+ (
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:peak_assignment"
+
+\end_inset
+
+).
+ The likelihood of peak 
+\begin_inset Formula $x_{n}$
+\end_inset
+
+ to be in an existing metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+ is given by the sum over the finite mixture components of the transformed
+ adducts.
+\begin_inset Formula 
+\begin{eqnarray}
+p(x_{n}|z_{ni}=1,...) & = & \frac{1}{K}\sum_{k}p(x_{n}|m_{i},\lambda,...)\nonumber \\
+ & = & \frac{1}{K}\sum_{k}\mathcal{N}(x_{n}|d_{k}m_{i}+h_{k},d_{k}^{2}\lambda^{-1})
+\end{eqnarray}
+
+\end_inset
+
+Then we consider the bottom part of eq.
+ (
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:peak_assignment"
+
+\end_inset
+
+).
+ The likelihood of peak 
+\begin_inset Formula $x_{n}$
+\end_inset
+
+ to be in a new metabolite 
+\begin_inset Formula $i^{*}$
+\end_inset
+
+ is obtained by marginalising over all possible values of 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+.
+\begin_inset Formula 
+\begin{eqnarray}
+p(x_{n}|z_{ni^{*}}=1,...) & = & \int\, p(x_{n}|m_{i})\,\cdot\, p(m_{i}|\mu_{0})\, dm_{i}\nonumber \\
+ & = & \int\,\left[\frac{1}{K}\sum_{k}\mathcal{N}(x_{n}|d_{k}m_{i}+h_{k},d_{k}^{2}\lambda^{-1})\right]\,\cdot\,\mathcal{N}(m_{i}|\mu_{0},\sigma_{0}^{-1})\, dm_{i}\nonumber \\
+ & = & \boldsymbol{???}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Also we need to update the metabolite mass 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+ given every other parameter.
+\begin_inset Formula 
+\begin{eqnarray*}
+p(m_{i}|x_{n},...) & \propto & \left[\prod_{n\in i}p(x_{n}|m_{i})\right]p(m_{i}|\mu_{0},\sigma_{0})\\
+ & \propto & \left[\prod_{n\in i}\frac{1}{K}\sum_{k}\mathcal{N}\left(x_{n}|d_{k}m_{i}+h_{k},d_{k}^{2}\lambda^{-1}\right)\right]\mathcal{N}(m_{i}|\mu_{0},\sigma_{0}^{-1})\\
+ & \propto & \left[\prod_{n\in i}\mathcal{N}\left(x_{n}|\sum_{k}d_{k}m_{i}+h_{k},\sum_{k}d_{k}^{2}\lambda^{-1}\right)\right]\mathcal{N}(m_{i}|\mu_{0},\sigma_{0}^{-1})
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Written in the form of the density functions
+\begin_inset Formula 
+\begin{eqnarray*}
+p(m_{i}|x_{n},...) & \propto & \left[\prod_{n\in i}exp\left(\frac{-(\sum_{k}d_{k}^{2}\lambda^{-1})}{2}x_{n}-\sum_{k}d_{k}m_{i}+h_{k})^{2}\right)\right]exp\left(\frac{-\sigma_{0}}{2}\,(m_{i}-\mu_{0})^{2}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $p(m_{i}|x_{n},...)$
+\end_inset
+
+ is proportional to the products of Gaussian, which is a Gaussian.
+ We equate this to 
+\begin_inset Formula $N(\mu_{i},\sigma_{i}^{-1}).$
+\end_inset
+
+ Then
+\begin_inset Formula 
+\begin{eqnarray*}
+exp\left(\frac{-\sigma_{i}}{2}\,(m_{i}-\mu_{i})^{2}\right) & \propto & exp\left(\sum_{n\in i}\left[\frac{-(\sum_{k}d_{k}^{2}\lambda^{-1})}{2}\,(x_{n}-\sum_{k}d_{k}m_{i}+h_{k})^{2}\right]\right)exp\left(\frac{-\sigma_{0}}{2}\,(m_{i}-\mu_{0})^{2}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $\sum_{k}d_{k}^{2}\lambda^{-1}=r$
+\end_inset
+
+ for clarity, then
+\begin_inset Formula 
+\begin{eqnarray*}
+exp\left(\frac{-\sigma_{i}}{2}\,(m_{i}-\mu_{i})^{2}\right) & \propto & exp\left(\sum_{n\in i}\left[\frac{-r}{2}\,(x_{n}-\sum_{k}d_{k}m_{i}+h_{k})^{2}\right]\right)exp\left(\frac{-\sigma_{0}}{2}\,(m_{i}-\mu_{0})^{2}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Collecting the quadratic terms for 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+ from both sides, we can solve for 
+\begin_inset Formula $\sigma_{i}$
+\end_inset
+
+
+\begin_inset Formula 
+\begin{eqnarray}
+\sigma_{i}m_{i}^{2} & = & \sum_{n\in i}\left[r(\sum_{k}d_{k})^{2}m_{i}^{2}\right]+\sigma_{0}m_{i}^{2}\nonumber \\
+\sigma_{i} & = & c_{i}\left[r(\sum_{k}d_{k})^{2}\right]+\sigma_{0}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $c_{i}$
+\end_inset
+
+ is the count of peaks under metabolite 
+\begin_inset Formula $i$
+\end_inset
+
+.
+ Collecting the linear terms for 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+ from both sides, we can solve for 
+\begin_inset Formula $\mu_{i}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\frac{-\sigma_{i}}{2}(-2m_{i}\mu_{i}) & = & \sum_{n\in i}\left[\frac{-r}{2}(-2x_{n}(\sum_{k}d_{k}m_{i}+h_{k}))\right]+\frac{-\sigma_{0}}{2}(-2m_{i}\mu_{0})\\
+\sigma_{i}(-2m_{i}\mu_{i}) & = & \sum_{n\in i}\left[r(-2x_{n}(\sum_{k}d_{k}m_{i}+h_{k}))\right]+\sigma_{0}(-2m_{i}\mu_{0})\\
+\sigma_{i}(m_{i}\mu_{i}) & = & \sum_{n\in i}\left[rx_{n}(\sum_{k}d_{k}+h_{k}))\right]+\sigma_{0}(m_{i}\mu_{0})\\
+\sigma_{i}\mu_{i} & = & r(\sum_{k}d_{k}+h_{k})\sum_{n\in i}x_{n}+\sigma_{0}\mu_{0}\\
+\mu_{i} & = & \frac{1}{\sigma_{i}}\left[r(\sum_{k}d_{k}+h_{k})\sum_{n\in i}x_{n}+\sigma_{0}\mu_{0}\right]
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Notes
+\end_layout
+
+\begin_layout Enumerate
+The mass model now has a noise that is dependant on the transformation??!!
+ Is this a realistic assumption.
+ Also, the sum of gaussians when updating 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Discretizing again, investigate this as top priority!!
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+Peaks get represented as a vector of length N (where N is the bin from possible
+ M+H inverse transformation, i.e.
+ the precursor mass).
+ This becomes a word.
+\end_layout
+
+\begin_layout Enumerate
+LDA model to group words together? Topic will be learned by LDA, can consider
+ further application, e.g.
+ integrating pathway information together too.
+\end_layout
+
+\begin_layout Enumerate
+Do experiment:
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+Take the M+H precursor mass from a standard file, match them against database,
+ and see how many you get --> gold standard
+\end_layout
+
+\begin_layout Enumerate
+Compare this with the discrete version
+\end_layout
+
+\end_deeper
+\end_deeper
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "/home/joewandy/Dropbox/Project/documents/library"
+options "plain"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
