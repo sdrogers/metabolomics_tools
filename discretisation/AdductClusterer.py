@@ -79,7 +79,7 @@ class MassBinClusterer:
             '''
 
             # initially put all peak into one bin
-            z = {}  # z_nk, tracks f-bin assignment
+            z = {}  # z_nk, tracks feature to bin assignment
             first_bin = bins[0]
             for f in self.features:
                 first_bin.add_feature(f)
