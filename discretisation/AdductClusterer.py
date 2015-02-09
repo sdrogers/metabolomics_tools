@@ -116,7 +116,7 @@ class MassBinClusterer:
                             assert len(precursor_masses) == len(matching_bins)
                             assert len(trans_type) == len(matching_bins)
                     
-                    # perform reassignment peak to bin
+                    # perform reassignment of peak to bin
                     log_posts = []
                     for mass_bin in matching_bins:
 
@@ -126,16 +126,16 @@ class MassBinClusterer:
                         # compute mass likelihood
                         log_likelihood_mass = np.log(1.0) - np.log(len(matching_bins))
                         
-                        # compute RT likelihood -- mu is a random variable
+                        # compute RT likelihood -- mu is fixed to the RT of the peak that generates the M+H                        
+                        # mu = mass_bin.get_rt()
+                        # prec = self.sigma
+                        
+                        # compute RT likelihood -- mu is a random variable, marginalise this out
                         param_beta = self.tau_zero + (self.sigma * mass_bin.get_features_count())
                         temp = (self.tau_zero * self.mu_zero) + (self.sigma * mass_bin.get_features_rt())
                         mu = (1 / param_beta) * temp
                         prec = 1 / ((1 / param_beta) + (1 / self.sigma))
                         
-                        # compute RT likelihood -- mu is fixed to the RT of the peak that generates the M+H                        
-                        # mu = mass_bin.get_rt()
-                        # prec = self.sigma
-
                         log_likelihood = -0.5 * np.log(2 * np.pi)
                         log_likelihood = log_likelihood + 0.5 * np.log(prec)
                         log_likelihood_rt = log_likelihood - 0.5 * np.multiply(prec, np.square(f.rt - mu))
