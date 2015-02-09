@@ -11,6 +11,7 @@ class MassBinClusterer:
             ''' 
             Clusters peak features by the possible precursor masses, based on the specified list of adducts. 
             features is a list of peak features
+            database is the list of database entries of molecules, used for matching by masses to the bins
             transformations is a list of adduct transformations (e.g. M+H, M+2H) and their associated constants 
             '''
             print 'MassBinClusterer initialised'
