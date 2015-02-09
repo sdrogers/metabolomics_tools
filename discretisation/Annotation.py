@@ -54,8 +54,8 @@ class MolAnnotator:
     def mass_match(self, m1, m2, tol):
         return np.abs((m1-m2)/(m1))<tol*1e-6
         
-    def bin_range(self, m1, tol):
-        interval = m1*tol*1e-6
-        upper = m1+interval
-        lower = m1-interval
+    def bin_range(self, center, tol):
+        interval = center*tol*1e-6
+        upper = center+interval
+        lower = center-interval
         return lower, upper
