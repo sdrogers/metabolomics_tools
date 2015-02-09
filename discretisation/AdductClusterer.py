@@ -1,3 +1,4 @@
+from collections import Counter
 from random import shuffle
 import time
 
@@ -161,9 +162,11 @@ class MassBinClusterer:
                     z[f] = found_bin
                     feature_annotation[f] = trans_type[k].name + ' @ ' + str(precursor_masses[k])
                     
-                cluster_sizes = sorted([mb.get_features_count() for mb in bins], reverse=True)
+                cluster_sizes = [str(mb.get_features_count()) for mb in bins]
+                c = Counter()
+                c.update(cluster_sizes)
                 time_taken = time.time() - start_time
-                print('SAMPLE %3d\t%4.2fs\t%s' % ((s+1), time_taken, str(cluster_sizes)))
+                print('SAMPLE %3d\t%4.2fs\t%s' % ((s+1), time_taken, str(c)))
                         
             print 'DONE!'      
             print
