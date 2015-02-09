@@ -13,7 +13,7 @@ def main():
     transformations = loader.load_transformation(transformation_file)
     input_file = basedir + '/input/synthetic/synthdata_0.txt'
     features = loader.load_features_sima(input_file)
-     
+      
     # run it through the model
     mass_tol = 100
     alpha = 0.01
@@ -29,12 +29,12 @@ def main():
 #     transformations = loader.load_transformation(transformation_file)
 #     input_file = basedir + '/input/std1_csv/std1-file1.identified.csv'    
 #     features = loader.load_features(input_file)
-#  
+#   
 #     # run it through the model
 #     mass_tol = 100
 #     alpha = 0.01
 #     sigma = 20
-#     nsamps = 1
+#     nsamps = 20
 #     mbc = MassBinClusterer(features, database, transformations, mass_tol, alpha, sigma, nsamps)
 #     mbc.run()
     
