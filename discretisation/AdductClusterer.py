@@ -131,7 +131,7 @@ class MassBinClusterer:
                         mu = (1 / param_beta) * temp
                         prec = 1 / ((1 / param_beta) + (1 / self.sigma))
                         
-                        # compute RT likelihood -- mu is fixed at the cluster RT                        
+                        # compute RT likelihood -- mu is fixed to the RT of the peak that generates the M+H                        
                         # mu = mass_bin.get_rt()
                         # prec = self.sigma
 
@@ -168,7 +168,6 @@ class MassBinClusterer:
             print
             print 'Last sample report'
             count_empty_bins = 0
-            misclassify = 0
             bins.sort(key=lambda x: x.get_features_count(), reverse=True)
             for mass_bin in bins:
                 if mass_bin.get_features_count() > 0:
@@ -177,26 +176,18 @@ class MassBinClusterer:
                     for mol in mass_bin.get_molecules():
                         print "\t" + str(mol)
                     table = []
-                    table.append(['feature_id', 'mass', 'rt', 'intensity', 'gt_metabolite', 'gt_adduct', 'annotation'])
+                    table.append(['feature_id', 'mass', 'rt', 'intensity', 'annotation', 'gt_metabolite', 'gt_adduct'])
                     # print features in this mass bin
                     for f in mass_bin.get_features():
-                        table.append([str(f.feature_id), str(f.mass), str(f.rt), str(f.intensity), \
-                                      str(f.gt_metabolite), str(f.gt_adduct), feature_annotation[f]])
+                        table.append([str(f.feature_id), str(f.mass), str(f.rt), str(f.intensity), 
+                                      feature_annotation[f], str(f.gt_metabolite), str(f.gt_adduct)])
                     self.print_table(table)
-                    # compute misclassification rate
-                    if (f.gt_adduct != None):
-                        actual = str(f.gt_adduct)
-                        annot = feature_annotation[f].split(" ")
-                        predicted = annot[0].strip()
-                        if actual.lower != predicted.lower():
-                            misclassify = misclassify + 1
                     print
                 else:
                     count_empty_bins = count_empty_bins + 1
             print
             print 'Empty bins=' + str(count_empty_bins)
             print 'Occupied bins=' + str(len(bins) - count_empty_bins) 
-            print 'Misclassification=' + str(misclassify) + '/' + str(len(self.features)) 
             
             return bins
         
