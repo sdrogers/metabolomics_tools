@@ -169,8 +169,15 @@ class MassBinClusterer:
             print
             print 'Last sample report'
             count_empty_bins = 0
+            bin_mols = []
+            bin_mols_unique = set()
+            # sort the bin by no. of features first (biggest first)
             bins.sort(key=lambda x: x.get_features_count(), reverse=True)
+            # loop through bins and print stuff
             for mass_bin in bins:
+                # count molecules annotated to bin
+                bin_mols.extend(mass_bin.get_molecules())
+                bin_mols_unique.update(mass_bin.get_molecules())
                 if mass_bin.get_features_count() > 0:
                     # print header
                     print mass_bin
@@ -189,6 +196,8 @@ class MassBinClusterer:
             print
             print 'Empty bins=' + str(count_empty_bins)
             print 'Occupied bins=' + str(len(bins) - count_empty_bins) 
+            print 'Molecules annotated to bins=' + str(len(bin_mols))
+            print 'Unique molecules annotated to bins=' + str(len(bin_mols_unique))
             
             return bins
         
