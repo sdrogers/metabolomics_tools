@@ -367,7 +367,7 @@ For the mass term
 \begin_inset Formula 
 \begin{equation}
 I_{k}(x_{n})\begin{cases}
-1 & \textnormal{there is an adduct transformation from x_{n} to bin k }\\
+1 & \textnormal{there is a known adduct transformation from x_{n} to bin k }\\
 0 & \textnormal{otherwise}
 \end{cases}
 \end{equation}
@@ -378,7 +378,7 @@ In short,
 \begin_inset Formula $I_{k}(x_{n})=1$
 \end_inset
 
- if there is an adduct transformation that lets us reach the cluster 
+ if there is an adduct transformation that lets us reach cluster 
 \begin_inset Formula $k$
 \end_inset
 
@@ -386,11 +386,12 @@ In short,
 \begin_inset Formula $x_{n}$
 \end_inset
 
- (
+ (i.e.
+ 
 \begin_inset Formula $q_{k}-b_{k}\leq x_{n}\leq q_{k}+b_{k}$
 \end_inset
 
- for a precursor mass 
+ for precursor mass 
 \begin_inset Formula $q_{k}$
 \end_inset
 
@@ -399,6 +400,7 @@ In short,
 \end_inset
 
 ).
+ We call this adduct transformation as a `valid' transformation.
  For each 
 \begin_inset Formula $x_{n}$
 \end_inset
@@ -407,14 +409,27 @@ In short,
 \begin_inset Formula $k^{*}$
 \end_inset
 
- to be the set of all such valid transformations.
- Then the mass term is
+ to be the list of all such valid transformations originating from peak
+ 
+\begin_inset Formula $n$
+\end_inset
+
+.
+ Then the mass likelihood of peak 
+\begin_inset Formula $n$
+\end_inset
+
+ in cluster 
+\begin_inset Formula $k$
+\end_inset
+
+ is
 \end_layout
 
 \begin_layout Standard
 \begin_inset Formula 
 \begin{equation}
-p(x_{n}|z_{n}=k,...)=\frac{1}{|k^{*}|}\sum_{k}I_{k}(x_{n})\label{eq:mass_term}
+p(x_{n}|z_{n}=k,...)=\frac{1}{|k^{*}|}I_{k}(x_{n})\label{eq:mass_term}
 \end{equation}
 
 \end_inset
@@ -457,10 +472,6 @@ p(\mu_{k}|\mu_{0},\tau_{0}) & = & \mathcal{{N}}(\mu_{k}|\mu_{0},\tau_{0}^{-1})
 
 \end_inset
 
-
-\end_layout
-
-\begin_layout Standard
 For Gibbs sampling, we need the conditional distribution
 \begin_inset Formula 
 \begin{eqnarray}
@@ -577,7 +588,7 @@ Derivations
 \end_layout
 
 \begin_layout Standard
-Some standard derivations for Dirichlet-categorical model.
+Some note on standard derivations for Dirichlet-categorical model.
  
 \end_layout
 
