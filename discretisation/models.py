@@ -1,9 +1,24 @@
 from collections import namedtuple
 import csv
 
-DatabaseEntry = namedtuple('DatabaseEntry', ['id', 'name', 'formula', 'mass'])
-Feature = namedtuple('Feature', ['id', 'mass', 'rt', 'intensity'])
-Transformation = namedtuple('Transformation', ['id', 'name', 'sub', 'mul'])
+DatabaseEntry = namedtuple('DatabaseEntry', ['db_id', 'name', 'formula', 'mass'])
+Feature = namedtuple('Feature', ['feature_id', 'mass', 'rt', 'intensity'])
+Transformation = namedtuple('Transformation', ['trans_id', 'name', 'sub', 'mul'])
+
+class Feature(object):
+        
+    def __init__(self, feature_id, mass, rt, intensity):
+        self.feature_id = feature_id
+        self.mass = mass
+        self.rt = rt
+        self.intensity = intensity
+        self.gt_metabolite = None
+        self.gt_adduct = None
+        
+    def __repr__(self):
+        return "Feature id=" + str(self.feature_id) + " mass=" + str(self.mass) + \
+            " rt=" + str(self.rt) + " intensity=" + str(self.intensity) + \
+            " gt_metabolite=" + str(self.gt_metabolite) + " gt_adduct=" + str(self.gt_adduct)
 
 class FileLoader:
     def load_features(self, input_file):
@@ -13,9 +28,31 @@ class FileLoader:
             reader = csv.reader(csvfile, delimiter=':')
             next(reader, None)  # skip the headers
             for elements in reader:
-                feature = Feature(id=self.num(elements[0]), mass=self.num(elements[1]), \
+                feature = Feature(feature_id=self.num(elements[0]), mass=self.num(elements[1]), \
                                   rt=self.num(elements[2]), intensity=self.num(elements[3]))
                 features.append(feature)
+        return features
+    
+    def load_features_sima(self, input_file):
+        """ Load peak features """
+        features = []
+        with open(input_file, 'rb') as csvfile:
+            reader = csv.reader(csvfile, delimiter='\t')
+            next(reader, None)  # skip the headers
+            feature_id = 1
+            for elements in reader:
+                mass = self.num(elements[0])
+                charge = self.num(elements[1])
+                intensity = self.num(elements[2])
+                rt = self.num(elements[3])
+                gt_peak_id = self.num(elements[4])
+                gt_metabolite_id = self.num(elements[5])
+                gt_adduct_type = elements[6]
+                feature = Feature(feature_id, mass, rt, intensity)
+                feature.gt_metabolite = gt_metabolite_id
+                feature.gt_adduct = gt_adduct_type
+                features.append(feature)
+                feature_id = feature_id + 1
         return features
 
     def load_database(self, database):
@@ -23,7 +60,7 @@ class FileLoader:
         with open(database, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter=',')
             for elements in reader:
-                mol = DatabaseEntry(id=elements[0], name=elements[1], formula=elements[2], \
+                mol = DatabaseEntry(db_id=elements[0], name=elements[1], formula=elements[2], \
                                     mass=self.num(elements[3]))
                 moldb.append(mol)
         return moldb
@@ -32,12 +69,12 @@ class FileLoader:
         transformations = []
         with open(transformation, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter=',')
-            trans_id = 1
+            i = 1
             for elements in reader:
-                trans = Transformation(id=trans_id, name=elements[0], sub=self.num(elements[1]), \
+                trans = Transformation(trans_id=i, name=elements[0], sub=self.num(elements[1]), \
                                        mul=self.num(elements[2]))
                 transformations.append(trans)
-                trans_id = trans_id + 1
+                i = i + 1
         return transformations        
     
     def num(self, s):
@@ -47,14 +84,15 @@ class FileLoader:
             return float(s)
 
 class MassBin:
-    def __init__(self, id, start_mass, end_mass, rt):
-        self.id = id
+    def __init__(self, bin_id, start_mass, end_mass, rt):
+        self.bin_id = bin_id
         self.start_mass = start_mass
         self.end_mass = end_mass
         self.rt = rt
         self.features = []
+        self.molecules = set()
     def get_id(self):
-        return self.id
+        return self.bin_id
     def get_begin(self):
         return self.start_mass
     def get_end(self):
@@ -70,8 +108,19 @@ class MassBin:
         return self.features
     def get_features_count(self):
         return len(self.features)
+    def get_features_rt(self):
+        total_rt = 0
+        for feature in self.features:
+            total_rt = total_rt + feature.rt
+        return total_rt
+    def get_molecules(self):
+        return self.molecules
+    def add_molecule(self, molecule):
+        self.molecules.add(molecule)
     def __repr__(self):
-        return 'MassBin id ' + str(self.id) + ' mass (' + str(self.start_mass) + ", " + str(self.end_mass) + ') rt ' + str(self.rt) + ' #fs ' + str(len(self.features))
+        return 'MassBin id=' + str(self.bin_id) + ' mass=(' + str(self.start_mass) + \
+            ', ' + str(self.end_mass) + ') num_features=' + str(len(self.features)) + \
+            ' num_molecules=' + str(len(self.molecules))
 
 class IntervalTree:
     """ 

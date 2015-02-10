@@ -26,7 +26,16 @@
 \index_command default
 \paperfontsize default
 \spacing single
-\use_hyperref false
+\use_hyperref true
+\pdf_bookmarks true
+\pdf_bookmarksnumbered false
+\pdf_bookmarksopen false
+\pdf_bookmarksopenlevel 1
+\pdf_breaklinks false
+\pdf_pdfborder false
+\pdf_colorlinks false
+\pdf_backref false
+\pdf_pdfusetitle true
 \papersize default
 \use_geometry false
 \use_package amsmath 1
@@ -74,24 +83,57 @@ Discrete Adduct Clustering Model for MS Data
 \end_layout
 
 \begin_layout Section
-Binning
+Introduction
+\end_layout
+
+\begin_layout Standard
+To annotate precursor masses of peak features in an input file against some
+ database of molecules, we have to do some crude form of discretisation
+ anyway (when matching the mass values).
+ In this report, we introduce the discretisation process early early on.
+ 
+\end_layout
+
+\begin_layout Section
+Discretisation
 \end_layout
 
 \begin_layout Standard
 We can bin the data along the mass dimension.
- Specifically, given 
-\begin_inset Formula $N$
+ We index peak features by 
+\begin_inset Formula $n=1,...,N$
 \end_inset
 
- peak features in a file, we create a corresponding 
-\begin_inset Formula $N$
+ and the bins (i.e.
+ precursor mass clusters) by 
+\begin_inset Formula $k=1,...,K$
 \end_inset
 
- bins centered at the precursor mass M by applying the inverse M+H adduct
- transformation from the peak mass O
+..
+ Given any peak feature 
+\begin_inset Formula $n$
+\end_inset
+
+ with observed mass 
+\begin_inset Formula $m_{n}$
+\end_inset
+
+, we want to compute the precursor mass 
+\begin_inset Formula $q_{k}$
+\end_inset
+
+, associated to a cluster 
+\begin_inset Formula $k$
+\end_inset
+
+, by applying the 
+\begin_inset Formula $M+H$
+\end_inset
+
+ adduct inverse-transformation: 
 \begin_inset Formula 
 \begin{equation}
-M=\frac{O|c|+ce-\sum_{i}h_{i}G_{i}}{n}
+q_{k}=\frac{m_{n}|c|+ce-\sum_{i}h_{i}G_{i}}{n}
 \end{equation}
 
 \end_inset
@@ -113,37 +155,50 @@ where
 \end_inset
 
  are the adduct parts.
+ Specifically for the M+H adduct, 
+\begin_inset Formula $n=1.0$
+\end_inset
+
+ and 
+\begin_inset Formula $ce-\sum_{i}h_{i}G_{i}=1.00727645199076$
+\end_inset
+
+.
  Further details can be found in Adduct_notes.pdf.
  
 \end_layout
 
 \begin_layout Standard
-Given the 
-\begin_inset Formula $n$
+Given 
+\begin_inset Formula $q_{k}$
 \end_inset
 
--th precursor mass 
-\begin_inset Formula $M_{n}$
+, we then create a mass bin centered at 
+\begin_inset Formula $q_{k}$
 \end_inset
 
-, we then create a mass bin such that 
-\begin_inset Formula $M_{n}\pm b_{n}$
+ 
+\begin_inset Formula 
+\begin{equation}
+q_{k}\pm b_{k}
+\end{equation}
+
 \end_inset
 
-, where 
-\begin_inset Formula $b_{n}=M_{n}*tol*(1e-6)$
+where 
+\begin_inset Formula $b_{k}=q_{k}\cdot w\cdot(1e-6)$
 \end_inset
 
- with the value of 
-\begin_inset Formula $tol$
+ is the bin width The value of 
+\begin_inset Formula $w$
 \end_inset
 
- specified by the user.
- Repeat this for all 
+ is specified by the user.
+ This process is repeated for all 
 \begin_inset Formula $N$
 \end_inset
 
- precursor masses created for each peak, so we end up with 
+ observed peak features, resulting in 
 \begin_inset Formula $K$
 \end_inset
 
@@ -152,19 +207,33 @@ Given the
 \end_inset
 
 .
- Each bin now define a valid precursor mass cluster that a peak can be assigned
- to based on the potential adduct transformation.
- We index peak features by 
-\begin_inset Formula $n=1,...,N$
-\end_inset
-
- and precursor mass bin (i.e.
- mass clusters) by 
-\begin_inset Formula $k=1,...,K$
-\end_inset
-
-.
  
+\end_layout
+
+\begin_layout Standard
+Each bin now corresponds to a 'valid' potential assignment of an observed
+ peak to a precursor mass -- based on the crucial assumption that an acceptable
+ precursor mass clustering should have the 
+\begin_inset Formula $M+H$
+\end_inset
+
+ adduct peak inside.
+ Note that in this binning scheme, there are usually overlapping bins.
+ It's a good idea to explore other binning approach, e.g.
+ non-overlapping bin at fixed interval, etc, and see if this affects the
+ results (maybe not?).
+\end_layout
+
+\begin_layout Standard
+Note from email:
+\end_layout
+
+\begin_layout Itemize
+How do you discretise? We need to ensure that everything that can be transformed
+ to a particular precursor mass is in the same bin.
+ It should make discretisation actually pretty easy.
+ In fact, you could after doing the transformations in a continuous space…this
+ would not necessarily work once we go to multiple files…
 \end_layout
 
 \begin_layout Section
@@ -206,32 +275,23 @@ Given the data, we want to infer the assignment of the
 \begin_inset Formula $z_{n}$
 \end_inset
 
- variables to the clusters.
- Assume a fixed number of clusters (based on the known `valid' precursor
- masses 
-\begin_inset Formula $K=N$
+ variables to the precursor mass clusters.
+ Assume a fixed number of clusters based on the known number of `valid'
+ precursor masses 
+\begin_inset Formula $K$
 \end_inset
 
-).
- Each categorical variables 
+, each 
 \begin_inset Formula $z_{1},...,z_{n}$
 \end_inset
 
- is then independently drawn from a categorical distribution with parameter
- 
+ is therefore a categorical variable independently drawn from a categorical
+ distribution with parameter 
 \begin_inset Formula $\boldsymbol{\theta}$
 \end_inset
 
- and determines the assignment of peak 
-\begin_inset Formula $n$
-\end_inset
-
- to cluster 
-\begin_inset Formula $k$
-\end_inset
-
 .
- The parameter vector 
+ In turn, the parameter vector 
 \begin_inset Formula $\boldsymbol{\theta}$
 \end_inset
 
@@ -244,9 +304,32 @@ Given the data, we want to infer the assignment of the
 \end_inset
 
 .
- The likelihood of a peak into a cluster also depends on whether there's
- a possible transformation from its ion mass to the precursor mass and based
- on the RT value too.
+ So, the likelihood of a peak 
+\begin_inset Formula $n$
+\end_inset
+
+ to be assigned into a cluster 
+\begin_inset Formula $k$
+\end_inset
+
+ depends on 
+\series bold
+(1)
+\series default
+ whether there's a possible transformation from the observed mass 
+\begin_inset Formula $x_{n}$
+\end_inset
+
+ to any precursor mass 
+\begin_inset Formula $q_{k}$
+\end_inset
+
+ given the list of adducts, and 
+\series bold
+(2)
+\series default
+ based on the RT values.
+ The model is therefore
 \begin_inset Formula 
 \begin{eqnarray}
 \boldsymbol{\theta} & \sim & Dir(\alpha)\\
@@ -260,78 +343,252 @@ The likelihood
 \begin_inset Formula $L(d_{n}|z_{n}=k,...)$
 \end_inset
 
- can be factorised into the mass and RT terms 
-\begin_inset Formula $L(d_{n}|z_{n}=k)=p(x_{n}|z_{n}=k)\cdot p(x_{y}|z_{n}=k)$
-\end_inset
-
-.
- For the mass term, 
+ can be factorised into its mass and RT terms
 \begin_inset Formula 
 \begin{equation}
-p(x_{n}|z_{n}=k)=I_{k}(x_{n})
+L(d_{n}|z_{n}=k,...)=p(x_{n}|z_{n}=k,...)\cdot p(y_{n}|z_{n}=k,...)
 \end{equation}
 
 \end_inset
 
-where 
-\begin_inset Formula $I_{k}(x_{n})$
-\end_inset
 
- is the indicator function that produces 1 if there is a possible adduct
- inverse transformation from ion mass 
-\begin_inset Formula $x_{n}$
-\end_inset
-
- to bin 
-\begin_inset Formula $k$
-\end_inset
-
- and 0 otherwise.
- 
-\begin_inset Formula $y_{n}$
-\end_inset
-
- is normally distributed with mean equals to 
-\begin_inset Formula $\mu_{k}$
-\end_inset
-
-, the RT value of the peak that produce the mass bin during the binning
- stage, and some variance 
-\begin_inset Formula $\sigma_{k}^{2}$
-\end_inset
-
-.
-\begin_inset Formula 
-\begin{equation}
-p(y_{n}|z_{n}=k)=\mathcal{{N}}(y_{n}|\mu_{k},\sigma_{k}^{2})
-\end{equation}
-
-\end_inset
-
-The assumption implicit in the model is that a peak must always be assignable
- to a mass bin.
- 
 \end_layout
 
 \begin_layout Standard
-For Gibbs sampling,
+For the mass term 
+\begin_inset Formula $p(x_{n}|z_{n}=k,...)$
+\end_inset
+
+, let 
+\begin_inset Formula $I_{k}(x_{n})$
+\end_inset
+
+ to be the indicator function defined as
+\begin_inset Formula 
+\begin{equation}
+I_{k}(x_{n})\begin{cases}
+1 & \textnormal{there is a known adduct transformation from x_{n} to bin k }\\
+0 & \textnormal{otherwise}
+\end{cases}
+\end{equation}
+
+\end_inset
+
+In short, 
+\begin_inset Formula $I_{k}(x_{n})=1$
+\end_inset
+
+ if there is an adduct transformation that lets us reach cluster 
+\begin_inset Formula $k$
+\end_inset
+
+ from 
+\begin_inset Formula $x_{n}$
+\end_inset
+
+ (i.e.
+ 
+\begin_inset Formula $q_{k}-b_{k}\leq x_{n}\leq q_{k}+b_{k}$
+\end_inset
+
+ for precursor mass 
+\begin_inset Formula $q_{k}$
+\end_inset
+
+ and its interval 
+\begin_inset Formula $b_{k}$
+\end_inset
+
+).
+ We call this adduct transformation as a `valid' transformation.
+ For each 
+\begin_inset Formula $x_{n}$
+\end_inset
+
+, define 
+\begin_inset Formula $k^{*}$
+\end_inset
+
+ to be the list of all such valid transformations originating from peak
+ 
+\begin_inset Formula $n$
+\end_inset
+
+.
+ Then the mass likelihood of peak 
+\begin_inset Formula $n$
+\end_inset
+
+ in cluster 
+\begin_inset Formula $k$
+\end_inset
+
+ is
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+p(x_{n}|z_{n}=k,...)=\frac{1}{|k^{*}|}I_{k}(x_{n})\label{eq:mass_term}
+\end{equation}
+
+\end_inset
+
+For the RT term 
+\begin_inset Formula $p(y_{n}|z_{n}=k,...)$
+\end_inset
+
+, 
+\begin_inset Formula $y_{n}$
+\end_inset
+
+ is normally distributed with mean 
+\begin_inset Formula $\mu_{k}$
+\end_inset
+
+ and some precision (inverse variance) 
+\begin_inset Formula $\delta$
+\end_inset
+
+.
+ The cluster mean 
+\begin_inset Formula $\mu_{k}$
+\end_inset
+
+ is in turn drawn from another normal distribution with mean 
+\begin_inset Formula $\mu_{0}$
+\end_inset
+
+ and precision 
+\begin_inset Formula $\tau_{0}$
+\end_inset
+
+
 \begin_inset Formula 
 \begin{eqnarray}
-p(z_{n}=k|\boldsymbol{\theta},...) & \propto & (\alpha_{k}+z_{k})\cdot L(d_{n}|z_{n}=k)\\
- & = & (\alpha_{k}+z_{k})\cdot I_{k}(x_{n})\cdot\mathcal{{N}}(y_{n}|\mu_{k},\sigma_{k}^{2})
+p(y_{n}|z_{n}=k,\mu_{k},\delta,...) & = & \mathcal{{N}}(y_{n}|\mu_{k},\delta^{-1})\\
+p(\mu_{k}|\mu_{0},\tau_{0}) & = & \mathcal{{N}}(\mu_{k}|\mu_{0},\tau_{0}^{-1})
 \end{eqnarray}
 
 \end_inset
 
-Full derivations to follow in below section.
+For Gibbs sampling, we need the conditional distribution
+\begin_inset Formula 
+\begin{eqnarray}
+p(z_{n}=k|\boldsymbol{\theta},...) & \propto & (\alpha_{k}+z_{k})\cdot L(d_{n}|z_{n}=k)\\
+ & = & (\alpha_{k}+z_{k})\cdot p(x_{n}|z_{n}=k,...)\cdot p(y_{n}|z_{n}=k,...)
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $p(x_{n}|z_{n}=k,...)$
+\end_inset
+
+ is as defined in eq.
+ (
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:mass_term"
+
+\end_inset
+
+).
+ For the RT term, we marginalise 
+\color black
+over all values of 
+\begin_inset Formula $\mu_{k}$
+\end_inset
+
+ and get: 
+\begin_inset Formula 
+\begin{eqnarray}
+p(y_{n}|z_{n}=k,...) & = & \mathcal{N}(y_{n}|\beta_{k},\lambda_{k}^{-1})\label{eq:15}
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $\lambda_{k}=((\tau_{0}+\sigma c_{k})^{-1}+\delta^{-1})^{-1}$
+\end_inset
+
+ and 
+\begin_inset Formula $\beta_{k}=\frac{1}{\lambda_{k}}\left[(\mu_{0}\tau_{0})+(\delta\sum_{n}y_{n\in k})\right]$
+\end_inset
+
+.
+ Here, 
+\begin_inset Formula $y_{n\in k}$
+\end_inset
+
+ denotes the RT values of any peak 
+\begin_inset Formula $n$
+\end_inset
+
+ currently assigned to cluster 
+\begin_inset Formula $k$
+\end_inset
+
+, and 
+\begin_inset Formula $c_{k}$
+\end_inset
+
+ the count of such peaks.
+ 
 \end_layout
 
-\begin_layout Subsection
+\begin_layout Standard
+Full derivations to follow in later sections.
+\end_layout
+
+\begin_layout Section
+Results
+\end_layout
+
+\begin_layout Standard
+Results can be found in the Python notebook at 
+\begin_inset Flex URL
+status open
+
+\begin_layout Plain Layout
+
+http://nbviewer.ipython.org/github/sdrogers/metabolomics_tools/blob/master/discret
+isation/notebooks/Test_discrete_clustering.ipynb
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+To make the model extendable to isotopes, you need the final column from
+ the mulsub file too.
+ In fact, remind me to give you mulsub2 which is the one I’ve been using,
+ which has the various isotopes in as adducts.
+ The file you have has only zeros in the final column, which is why you’ve
+ ignored it, I guess.
+ 
+\end_layout
+
+\begin_layout Itemize
+We should settle on a way of storing peaks and files and both use it.
+ Yours is probably neater than mine.
+ 
+\end_layout
+
+\begin_layout Itemize
+We should settle on the output we want from the clustering models, and both
+ use it too.
+ Perhaps this should be discussed tomorrow.
+\end_layout
+
+\begin_layout Section
 Derivations
 \end_layout
 
 \begin_layout Standard
-Some standard derivations for Dirichlet-discrete model.
+Some note on standard derivations for Dirichlet-categorical model.
  
 \end_layout
 
