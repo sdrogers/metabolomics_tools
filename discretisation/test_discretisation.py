@@ -1,4 +1,4 @@
-from Annotation import MolAnnotator
+from annotation import MolAnnotator
 from models import FileLoader
 import numpy as np
 import pylab as plt
@@ -76,7 +76,7 @@ def main():
     # basedir = '/home/joewandy/git/metabolomics_tools/discretisation'
     basedir = '.'
     database = basedir + '/database/std1_mols.csv'
-    transformation = basedir + '/mulsub.txt'
+    transformation = basedir + '/mulsubs/mulsub.txt'
     filename = basedir + '/input/std1_csv/std1-file1.identified.csv'
 
     mass_tol = 2

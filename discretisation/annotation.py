@@ -36,7 +36,7 @@ class MolAnnotator:
         for i in np.arange(len(precursor_masses)):
             low = lower[i]
             up = upper[i]
-            the_bins.append(MassBin(low, up))        
+            the_bins.append(MassBin(i, low, up))        
 
         # count the hits
         T = IntervalTree(the_bins) # store bins in an interval tree

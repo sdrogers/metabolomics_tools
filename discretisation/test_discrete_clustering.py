@@ -1,5 +1,5 @@
 from models import FileLoader
-from AdductClusterer import MassBinClusterer
+from adduct_clusterer import MassBinClusterer
 
 def main():
 
