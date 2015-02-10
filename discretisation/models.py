@@ -1,28 +1,115 @@
 from collections import namedtuple
 import csv
 
+import numpy as np
+import scipy.sparse as sp
+
+
 DatabaseEntry = namedtuple('DatabaseEntry', ['db_id', 'name', 'formula', 'mass'])
-Feature = namedtuple('Feature', ['feature_id', 'mass', 'rt', 'intensity'])
-Transformation = namedtuple('Transformation', ['trans_id', 'name', 'sub', 'mul'])
+Transformation = namedtuple('Transformation', ['trans_id', 'name', 'sub', 'mul', 'iso'])
 
 class Feature(object):
-        
+            
     def __init__(self, feature_id, mass, rt, intensity):
         self.feature_id = feature_id
         self.mass = mass
         self.rt = rt
         self.intensity = intensity
-        self.gt_metabolite = None
-        self.gt_adduct = None
+        self.gt_metabolite = None # used for synthetic data
+        self.gt_adduct = None # used for synthetic data
         
     def __repr__(self):
         return "Feature id=" + str(self.feature_id) + " mass=" + str(self.mass) + \
             " rt=" + str(self.rt) + " intensity=" + str(self.intensity) + \
             " gt_metabolite=" + str(self.gt_metabolite) + " gt_adduct=" + str(self.gt_adduct)
 
+class PeakData(object):
+    
+    def __init__(self, features, database, transformations, mass_tol, rt_tol):
+                
+        # list of feature, database entry and transformation objects
+        self.features = features
+        self.database = database
+        self.transformations = transformations
+        self.num_peaks = len(features)
+
+        # the same data as numpy arrays for convenience
+        self.mass = np.array([f.mass for f in self.features])[:, None]              # N x 1 
+        self.rt = np.array([f.rt for f in self.features])[:, None]                  # N x 1 
+        self.intensity = np.array([f.intensity for f in self.features])[:, None]    # N x 1
+        
+        # discretise the input data
+        self.possible, self.transformed = self.discretise(mass_tol, rt_tol)
+                
+    def mass_match(self, mass, other_masses, tol):
+        return np.abs((mass-other_masses)/mass)<tol*1e-6
+    
+    def rt_match(self, rt, other_rts, tol):
+        return np.abs(rt-other_rts)<tol
+
+    def discretise(self, mass_tol, rt_tol):       
+        """ Discretise peaks by mass_tol and rt_tol, based on the occurence of possible precursor masses.
+
+            Args: 
+             - mass_tol: the mass tolerance for binning
+             - rt_tol: the RT tolerance for binning
+
+            Returns:
+             - possible: an NxN matrix, where the entries are the index of the possible transformation from peak n to cluster k
+             - transformed: an NxN matrix, where the entries are the actual transformed mass from peak n to cluster k             
+        """
+        print 'Discretising peak data'
+        adduct_name = np.array([t.name for t in self.transformations])[:,None]      # A x 1
+        adduct_mul = np.array([t.mul for t in self.transformations])[:,None]        # A x 1
+        adduct_sub = np.array([t.sub for t in self.transformations])[:,None]        # A x 1
+        adduct_del = np.array([t.iso for t in self.transformations])[:,None]        # A x 1
+        num_peaks = len(self.features)
+
+        # find the location of M+H adduct in the transformation file
+        proton_pos = np.flatnonzero(np.array(adduct_name)=='M+H') 
+
+        # for each peak, calculate the prior precursor masses under M+H
+        cluster_prior_mass_mean = (self.mass - adduct_sub[proton_pos])/adduct_mul[proton_pos] 
+
+        # N x N, entry is the id of mass_ok valid transformation originating from mass_ok peak
+        possible = sp.lil_matrix((num_peaks, num_peaks), dtype=np.int)
+        
+        # N x N, entry is the possible precursor mass after applying the transformation
+        transformed = sp.lil_matrix((num_peaks, num_peaks), dtype=np.float)
+        
+        # populate the matrices
+        for n in np.arange(self.num_peaks):
+            current_mass, current_rt, current_intensity = self.mass[n], self.rt[n], self.intensity[n]
+            prior_mass = (current_mass - adduct_sub)/adduct_mul + adduct_del
+            rt_ok = self.rt_match(current_rt, self.rt, rt_tol)
+            intensity_ok = (current_intensity <= self.intensity)
+            for t in np.arange(adduct_sub.size):
+                mass_ok = self.mass_match(prior_mass[t], cluster_prior_mass_mean, mass_tol)
+                pos = np.flatnonzero(rt_ok*mass_ok*intensity_ok)
+                possible[n, pos] = t+1
+                transformed[n, pos] = prior_mass[t]
+                
+        return possible, transformed
+
 class FileLoader:
+    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol):
+        """ Load everything that a clustering model requires """
+
+        if input_file.endswith(".csv"):
+            features = self.load_features(input_file)
+        elif input_file.endswith(".txt"):
+            # in SIMA (.txt) format, used for some old synthetic data
+            features = self.load_features_sima(input_file)        
+        
+        # load database and transformations
+        database = self.load_database(database_file)
+        transformations = self.load_transformation(transformation_file)
+        
+        # discretisation happens inside PeakData
+        data = PeakData(features, database, transformations, mass_tol, rt_tol)
+        return data
+        
     def load_features(self, input_file):
-        """ Load peak features """
         features = []
         with open(input_file, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter=':')
@@ -34,7 +121,6 @@ class FileLoader:
         return features
     
     def load_features_sima(self, input_file):
-        """ Load peak features """
         features = []
         with open(input_file, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter='\t')
@@ -42,10 +128,10 @@ class FileLoader:
             feature_id = 1
             for elements in reader:
                 mass = self.num(elements[0])
-                charge = self.num(elements[1])
+                charge = self.num(elements[1]) # unused
                 intensity = self.num(elements[2])
                 rt = self.num(elements[3])
-                gt_peak_id = self.num(elements[4])
+                gt_peak_id = self.num(elements[4]) # unused
                 gt_metabolite_id = self.num(elements[5])
                 gt_adduct_type = elements[6]
                 feature = Feature(feature_id, mass, rt, intensity)
@@ -71,8 +157,11 @@ class FileLoader:
             reader = csv.reader(csvfile, delimiter=',')
             i = 1
             for elements in reader:
-                trans = Transformation(trans_id=i, name=elements[0], sub=self.num(elements[1]), \
-                                       mul=self.num(elements[2]))
+                name=elements[0]
+                sub=self.num(elements[1])
+                mul=self.num(elements[2])
+                iso=self.num(elements[3])
+                trans = Transformation(i, name, sub, mul, iso)
                 transformations.append(trans)
                 i = i + 1
         return transformations        
@@ -83,29 +172,23 @@ class FileLoader:
         except ValueError:
             return float(s)
 
+# Not sure whether want to keep this or not ...
 class MassBin:
-    def __init__(self, bin_id, start_mass, end_mass, rt):
+    def __init__(self, bin_id, start_mass, end_mass):
         self.bin_id = bin_id
         self.start_mass = start_mass
         self.end_mass = end_mass
-        self.rt = rt
         self.features = []
         self.molecules = set()
-    def get_id(self):
-        return self.bin_id
     def get_begin(self):
         return self.start_mass
     def get_end(self):
         return self.end_mass
-    def get_rt(self):
-        return self.rt
     def add_feature(self, feature):
         self.features.append(feature)
     def remove_feature(self, feature):
         if feature in self.features: 
             self.features.remove(feature)
-    def get_features(self):
-        return self.features
     def get_features_count(self):
         return len(self.features)
     def get_features_rt(self):
@@ -113,92 +196,9 @@ class MassBin:
         for feature in self.features:
             total_rt = total_rt + feature.rt
         return total_rt
-    def get_molecules(self):
-        return self.molecules
     def add_molecule(self, molecule):
         self.molecules.add(molecule)
     def __repr__(self):
         return 'MassBin id=' + str(self.bin_id) + ' mass=(' + str(self.start_mass) + \
             ', ' + str(self.end_mass) + ') num_features=' + str(len(self.features)) + \
             ' num_molecules=' + str(len(self.molecules))
-
-class IntervalTree:
-    """ 
-    Interval tree implementation
-    from http://zurb.com/forrst/posts/Interval_Tree_implementation_in_python-e0K
-    """
-    def __init__(self, intervals):
-        self.top_node = self.divide_intervals(intervals)
- 
-    def divide_intervals(self, intervals):
- 
-        if not intervals:
-            return None
- 
-        x_center = self.center(intervals)
- 
-        s_center = []
-        s_left = []
-        s_right = []
- 
-        for k in intervals:
-            if k.get_end() < x_center:
-                s_left.append(k)
-            elif k.get_begin() > x_center:
-                s_right.append(k)
-            else:
-                s_center.append(k)
- 
-        return Node(x_center, s_center, self.divide_intervals(s_left), self.divide_intervals(s_right))
-        
- 
-    def center(self, intervals):
-        fs = sort_by_begin(intervals)
-        length = len(fs)
- 
-        return fs[int(length / 2)].get_begin()
- 
-    def search(self, begin, end=None):
-        if end:
-            result = []
- 
-            for j in xrange(begin, end + 1):
-                for k in self.search(j):
-                    result.append(k)
-                result = list(set(result))
-            return sort_by_begin(result)
-        else:
-            return self._search(self.top_node, begin, [])
-    def _search(self, node, point, result):
-        
-        for k in node.s_center:
-            if k.get_begin() <= point <= k.get_end():
-                result.append(k)
-        if point < node.x_center and node.left_node:
-            for k in self._search(node.left_node, point, []):
-                result.append(k)
-        if point > node.x_center and node.right_node:
-            for k in self._search(node.right_node, point, []):
-                result.append(k)
- 
-        return list(set(result))
- 
-class Interval:
-    def __init__(self, begin, end):
-        self.begin = begin
-        self.end = end
-        
-    def get_begin(self):
-        return self.begin
-    def get_end(self):
-        return self.end
- 
-class Node:
-    def __init__(self, x_center, s_center, left_node, right_node):
-        self.x_center = x_center
-        self.s_center = sort_by_begin(s_center)
-        self.left_node = left_node
-        self.right_node = right_node
- 
-def sort_by_begin(intervals):
-    return sorted(intervals, key=lambda x: x.get_begin())

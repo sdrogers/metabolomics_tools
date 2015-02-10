@@ -1,4 +1,5 @@
-from models import MassBin, IntervalTree
+from models import MassBin
+from interval_tree import IntervalTree
 import numpy as np
 
 

@@ -2,13 +2,14 @@ from collections import Counter
 from random import shuffle
 import time
 
-from models import MassBin, IntervalTree
+from models import MassBin
+from interval_tree import IntervalTree
 import numpy as np
 
 
 class MassBinClusterer:
     
-        def __init__(self, features, database, transformations, mass_tol, alpha, sigma, nsamps):
+        def __init__(self, peak_data, mass_tol, alpha, sigma, nsamps):
             ''' 
             Clusters peak features by the possible precursor masses, based on the specified list of adducts. 
             features is a list of peak features
@@ -16,14 +17,15 @@ class MassBinClusterer:
             transformations is a list of adduct transformations (e.g. M+H, M+2H) and their associated constants 
             '''
             print 'MassBinClusterer initialised'
-            self.features = features
-            self.database = database
-            self.transformations = transformations
+            self.features = peak_data.features
+            self.database = peak_data.database
+            self.transformations = peak_data.transformations
+            self.possible = peak_data.possible
 
             self.alpha = alpha  # Dirichlet concentration smoothing parameter
             self.mass_tol = mass_tol  # the tolerance used for binning in bin_range()
             self.sigma = 1.0 / (sigma * sigma)  # precision for RT
-            self.mu_zero = np.mean([f.rt for f in features])  # hyperparameter mean for RT
+            self.mu_zero = np.mean([f.rt for f in self.features])  # hyperparameter mean for RT
             self.tau_zero = 5E-3  # hyperparameter precision for RT
             
             self.nsamps = nsamps  # total number of samples
@@ -50,8 +52,7 @@ class MassBinClusterer:
             for i in np.arange(len(precursor_masses)):
                 low = lower[i]
                 up = upper[i]
-                rt = rts[i]
-                the_bins.append(MassBin(bin_id, low, up, rt))                        
+                the_bins.append(MassBin(bin_id, low, up))                        
                 bin_id = bin_id + 1
             return the_bins
         
@@ -166,7 +167,7 @@ class MassBinClusterer:
                 c = Counter()
                 c.update(cluster_sizes)
                 time_taken = time.time() - start_time
-                print('SAMPLE %3d\t%4.2fs\t%s' % ((s+1), time_taken, str(c)))
+                print('SAMPLE %d %4.2fs\t%s' % ((s+1), time_taken, str(c)))
                         
             print 'DONE!'      
             print
@@ -179,17 +180,17 @@ class MassBinClusterer:
             # loop through bins and print stuff
             for mass_bin in bins:
                 # count molecules annotated to bin
-                bin_mols.extend(mass_bin.get_molecules())
-                bin_mols_unique.update(mass_bin.get_molecules())
+                bin_mols.extend(mass_bin.molecules)
+                bin_mols_unique.update(mass_bin.molecules)
                 if mass_bin.get_features_count() > 0:
                     # print header
                     print mass_bin
-                    for mol in mass_bin.get_molecules():
+                    for mol in mass_bin.molecules:
                         print "\t" + str(mol)
                     table = []
                     table.append(['feature_id', 'mass', 'rt', 'intensity', 'annotation', 'gt_metabolite', 'gt_adduct'])
                     # print features in this mass bin
-                    for f in mass_bin.get_features():
+                    for f in mass_bin.features:
                         table.append([str(f.feature_id), str(f.mass), str(f.rt), str(f.intensity), 
                                       feature_annotation[f], str(f.gt_metabolite), str(f.gt_adduct)])
                     self.print_table(table)
