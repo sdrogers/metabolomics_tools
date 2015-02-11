@@ -8,6 +8,20 @@ import scipy.sparse as sp
 DatabaseEntry = namedtuple('DatabaseEntry', ['db_id', 'name', 'formula', 'mass'])
 Transformation = namedtuple('Transformation', ['trans_id', 'name', 'sub', 'mul', 'iso'])
 
+class HyperPars(object):
+
+    def __init__(self):
+        self.rt_prec = 100
+        self.mass_prec = 100
+        self.rt_prior_prec = 10
+        self.mass_prior_prec = 10
+        self.alpha = float(1)
+
+    def __repr__(self):
+        return "Hyperparameters: rt precision = " + str(self.rt_prec) + " mass precision = " + str(self.mass_prec) + \
+            " rt prior precision = " + str(self.rt_prior_prec) + " mass prior precision = " + str(self.mass_prior_prec) + \
+            " alpha = " + str(self.alpha)
+
 class Feature(object):
             
     def __init__(self, feature_id, mass, rt, intensity):
@@ -39,7 +53,7 @@ class PeakData(object):
         self.intensity = np.array([f.intensity for f in self.features])[:, None]    # N x 1
         
         # discretise the input data
-        self.possible, self.transformed = self.discretise(mass_tol, rt_tol)
+        self.possible, self.transformed, self.precursor_mass = self.discretise(mass_tol, rt_tol)
                 
     def mass_match(self, mass, other_masses, tol):
         return np.abs((mass-other_masses)/mass)<tol*1e-6
@@ -89,7 +103,7 @@ class PeakData(object):
                 possible[n, pos] = t+1
                 transformed[n, pos] = prior_mass[t]
                 
-        return possible, transformed
+        return possible, transformed, cluster_prior_mass_mean
 
 class FileLoader:
     def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol):
