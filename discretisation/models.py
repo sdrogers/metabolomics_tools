@@ -11,11 +11,13 @@ Transformation = namedtuple('Transformation', ['trans_id', 'name', 'sub', 'mul',
 class HyperPars(object):
 
     def __init__(self):
-        self.rt_prec = 100
+        
+        self.rt_prec = 10
         self.mass_prec = 100
-        self.rt_prior_prec = 10
-        self.mass_prior_prec = 10
-        self.alpha = float(1)
+        self.rt_prior_prec = 100
+        self.mass_prior_prec = 100
+        self.alpha = float(100)
+
         self.discrete_alpha = 0.01
         self.discrete_rt_stdev = 20
         self.discrete_rt_prior_prec = 5E-3
@@ -57,7 +59,7 @@ class PeakData(object):
         self.intensity = np.array([f.intensity for f in self.features])[:, None]    # N x 1
         
         # discretise the input data
-        self.possible, self.transformed, self.precursor_mass = self.discretise(mass_tol, rt_tol)
+        self.possible, self.transformed, self.precursor_mass, self.matRT = self.discretise(mass_tol, rt_tol)
                 
     def mass_match(self, mass, other_masses, tol):
         return np.abs((mass-other_masses)/mass)<tol*1e-6
@@ -95,6 +97,9 @@ class PeakData(object):
         # N x N, entry is the possible precursor mass after applying the transformation
         transformed = sp.lil_matrix((num_peaks, num_peaks), dtype=np.float)
         
+        # N x N, entry is the retention time
+        matRT = sp.lil_matrix((num_peaks,num_peaks),dtype = np.float)
+
         # populate the matrices
         for n in np.arange(self.num_peaks):
             current_mass, current_rt, current_intensity = self.mass[n], self.rt[n], self.intensity[n]
@@ -106,8 +111,9 @@ class PeakData(object):
                 pos = np.flatnonzero(rt_ok*mass_ok*intensity_ok)
                 possible[n, pos] = t+1
                 transformed[n, pos] = prior_mass[t]
+                matRT[n,pos] = current_rt
                 
-        return possible, transformed, cluster_prior_mass_mean
+        return possible, transformed, cluster_prior_mass_mean, matRT
 
 class FileLoader:
     
