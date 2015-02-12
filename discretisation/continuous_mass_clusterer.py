@@ -14,7 +14,7 @@ class ContinuousGibbs:
 		self.hyper_pars = hyper_pars
 		self.rt = np.copy(peak_data.rt)
 		self.prior_rt = np.copy(peak_data.rt)
-		self.prior_mass = peak_data.precursor_mass.copy()
+		self.prior_mass = np.copy(peak_data.precursor_mass.copy)
 		self.n_peaks = self.prior_mass.size
 
 
