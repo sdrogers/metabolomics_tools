@@ -79,6 +79,7 @@ class DiscreteGibbs:
                     possible_adducts_ids = [self.possible[n, k] for k in idx]
                     possible_precursor_masses = [self.transformed[n, k] for k in idx]
 
+                    # TODO: we really should vectorise this bit!
                     log_posts = []
                     for mass_bin in matching_bins:
 
