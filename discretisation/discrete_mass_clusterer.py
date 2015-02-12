@@ -2,31 +2,32 @@ from collections import Counter
 from random import shuffle
 import time
 
-from models import MassBin
-from interval_tree import IntervalTree
+from models import HyperPars
 import numpy as np
 
 
-class MassBinClusterer:
+class DiscreteGibbs:
     
-        def __init__(self, peak_data, mass_tol, alpha, sigma, nsamps):
+        def __init__(self, peak_data, hyperpars, nsamps):
             ''' 
             Clusters peak features by the possible precursor masses, based on the specified list of adducts. 
             features is a list of peak features
             database is the list of database entries of molecules, used for matching by masses to the bins
             transformations is a list of adduct transformations (e.g. M+H, M+2H) and their associated constants 
             '''
-            print 'MassBinClusterer initialised'
+            print 'DiscreteGibbs initialised'
             self.features = peak_data.features
             self.database = peak_data.database
-            self.transformations = peak_data.transformations
             self.possible = peak_data.possible
 
-            self.alpha = alpha  # Dirichlet concentration smoothing parameter
-            self.mass_tol = mass_tol  # the tolerance used for binning in bin_range()
-            self.sigma = 1.0 / (sigma * sigma)  # precision for RT
-            self.mu_zero = np.mean([f.rt for f in self.features])  # hyperparameter mean for RT
-            self.tau_zero = 5E-3  # hyperparameter precision for RT
+            # Dirichlet smoothing parameter
+            self.alpha = hyperpars.discrete_alpha  
+            # precision for RT
+            self.sigma = 1.0 / (hyperpars.discrete_rt_stdev * hyperpars.discrete_rt_stdev)
+            # hyperparameter mean for RT
+            self.mu_zero = np.mean([f.rt for f in self.features])
+            # hyperparameter precision for RT
+            self.tau_zero = hyperpars.discrete_rt_prior_prec
             
             self.nsamps = nsamps  # total number of samples
             

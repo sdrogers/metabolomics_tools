@@ -1,0 +1,164 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{xcolor}
+\newcommand\todo[1]{\textcolor{red}{#1}}
+
+\title{Adduct Clustering Model for MS Data}
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+To annotate precursor masses of peak features in an input file against some database of molecules, we have to do some crude form of discretisation anyway (when matching the mass values). In this report, we introduce the discretisation process early on -- allowing us to separate peak features into bins. We then perform the clustering of peak features based on the possible adduct transformations that `connects' a peak to these bins.
+
+\section{Adduct Transformations}
+
+A given precursor mass will be oberved with the addition of an adduct. For example, rather than measuring $M$, we might measure $M+H$, or $M+ACN$, or $M+ACN+H$ etc. Because we measure the mass per unit charge, working out the mass of the particlar ionization product (molecule of interest plus adduct) is not as easy as you might think. \todo{Put everything from adduct-notes.pdf here ..}
+
+\section{Discretisation}
+
+We can bin the data along the mass dimension. We index peak features by $n=1,...,N$ and the bins (i.e. possible precursor mass clusters) by $k=1,...,K$. Given any peak feature $n$ with observed mass $m_{n}$, we want to compute the precursor mass $q_{k}$, associated to a cluster $k$, by applying the $M+H$ adduct inverse-transformation: 
+\begin{equation}
+q_{k}=\frac{m_{n}|c|+ce-\sum_{i}h_{i}G_{i}}{n}
+\end{equation}
+where $c$ is the charge, $e$ is the mass of the electron, $h_{i}$ and $G_{i}$ are the adduct parts. Specifically for the M+H adduct, $n=1.0$ and $ce-\sum_{i}h_{i}G_{i}=1.00727645199076$. Further details can be found in Adduct\_notes.pdf. 
+
+Given $q_{k}$, we then create a mass bin centered at $q_{k}$ 
+\begin{equation}
+q_{k}\pm b_{k}
+\end{equation}
+where $b_{k}=q_{k}\cdot w\cdot(1e-6)$ is the bin width The value of $w$ is specified by the user. This process is repeated for all $N$ observed peak features, resulting in $K$ bins, where $N=K$. 
+
+Each bin now corresponds to a 'valid' precursor mass that an observed peak can be assigned to -- based on the crucial assumption that an acceptable precursor mass clustering should have the $M+H$ adduct peak inside. Additionally, a peak is connected to a bin only if it's within some RT tolerance value and only if the M+H adduct is the one with the largest intensity. More details on the implementation and data structure can be found in Section~\ref{sec:data_structure}. 
+
+Note that in this binning scheme, there are usually overlapping bins. It's a good idea to explore other binning approach, e.g. non-overlapping bin at fixed interval, etc, and see if this affects the results significantly (don't think so?). 
+
+In dealing with multiple files, we can do the binning process iteratively. Process the first file, create all the bins. Process the second file and assigning peaks to existing bins (from the first file) if already exists and creating new bins if necessary. Repeat until all files are exhausted.
+
+\section{Discrete Model}
+
+\subsection{Description}
+
+Denote the peak feature by $d_{n}=(x_{n},y_{n})$ where $x_{n}$ is the mass value and $y_{n}$ the RT value. We use the variable $z_{n}=k$ to denote the assignment of peak feature $n$ to bin $k$. 
+
+Given the data, we want to infer the assignment of the $z_{n}$ variables to the precursor mass clusters. Assume a fixed number of clusters based on the known number of `valid' precursor masses $K$, each $z_{1},...,z_{n}$ is therefore a categorical variable independently drawn from a categorical distribution with parameter $\boldsymbol{\theta}$. In turn, the parameter vector $\boldsymbol{\theta}$ of length $K$ is drawn from a Dirichlet distribution with parameter $\alpha$. So, the likelihood of a peak $n$ to be assigned into a cluster $k$ depends on \textbf{(1)} whether there's a possible transformation from the observed mass $x_{n}$ to any precursor mass $q_{k}$ given the list of adducts, and \textbf{(2)} based on the RT values. The model is therefore
+\begin{eqnarray}
+\boldsymbol{\theta} & \sim & Dir(\alpha)\\
+z_{n}=k & \sim & Cat(\boldsymbol{\theta})\\
+d_{n} & \sim & L(d_{n}|z_{n}=k,...)
+\end{eqnarray}
+The likelihood $L(d_{n}|z_{n}=k,...)$ can be factorised into its mass and RT terms
+\begin{equation}
+L(d_{n}|z_{n}=k,...)=p(x_{n}|z_{n}=k,...)\cdot p(y_{n}|z_{n}=k,...)
+\end{equation}
+For the mass term $p(x_{n}|z_{n}=k,...)$, let $I_{k}(x_{n})$ to be the indicator function defined as
+\begin{equation}
+I_{k}(x_{n})\begin{cases}
+1 & \textnormal{there is a known adduct transformation from \ensuremath{x_{n}} to bin k }\\
+0 & \textnormal{otherwise}
+\end{cases}
+\end{equation}
+In short, $I_{k}(x_{n})=1$ if there is an adduct transformation that lets us reach cluster $k$ from $x_{n}$ (i.e. $q_{k}-b_{k}\leq x_{n}\leq q_{k}+b_{k}$ for precursor mass $q_{k}$ and its interval $b_{k}$). We call this adduct transformation as a `valid' transformation. For each $x_{n}$, define $k^{*}$ to be the list of all such valid transformations originating from peak $n$. Then the mass likelihood of peak $n$ in cluster $k$ is
+
+\begin{equation}
+p(x_{n}|z_{n}=k,...)=\frac{1}{|k^{*}|}I_{k}(x_{n})\label{eq:mass_term}
+\end{equation}
+For the RT term $p(y_{n}|z_{n}=k,...)$, $y_{n}$ is normally distributed with mean $\mu_{k}$ and some precision (inverse variance) $\delta$. The cluster mean $\mu_{k}$ is in turn drawn from another normal distribution with mean $\mu_{0}$ and precision $\tau_{0}$
+\begin{eqnarray}
+p(y_{n}|z_{n}=k,\mu_{k},\delta,...) & = & \mathcal{{N}}(y_{n}|\mu_{k},\delta^{-1})\\
+p(\mu_{k}|\mu_{0},\tau_{0}) & = & \mathcal{{N}}(\mu_{k}|\mu_{0},\tau_{0}^{-1})
+\end{eqnarray}
+For Gibbs sampling, we need the conditional distribution
+\begin{eqnarray}
+p(z_{n}=k|\boldsymbol{\theta},...) & \propto & (\alpha_{k}+z_{k})\cdot L(d_{n}|z_{n}=k)\\
+ & = & (\alpha_{k}+z_{k})\cdot p(x_{n}|z_{n}=k,...)\cdot p(y_{n}|z_{n}=k,...)
+\end{eqnarray}
+where $p(x_{n}|z_{n}=k,...)$ is as defined in eq. (\ref{eq:mass_term}).
+For the RT term, we marginalise over all values
+of $\mu_{k}$ and get: 
+\begin{eqnarray}
+p(y_{n}|z_{n}=k,...) & = & \mathcal{N}(y_{n}|\beta_{k},\lambda_{k}^{-1})\label{eq:15}
+\end{eqnarray}
+where $\lambda_{k}=((\tau_{0}+\sigma c_{k})^{-1}+\delta^{-1})^{-1}$ and $\beta_{k}=\frac{1}{\lambda_{k}}\left[(\mu_{0}\tau_{0})+(\delta\sum_{n}y_{n\in k})\right]$. Here, $y_{n\in k}$ denotes the RT values of any peak $n$ currently assigned to cluster $k$, and $c_{k}$ the count of such peaks.
+
+\subsection{Results}
+
+Results can be found in the Python notebook at \url{http://nbviewer.ipython.org/github/sdrogers/metabolomics_tools/blob/master/discretisation/notebooks/Test_discrete_clustering.ipynb}
+
+\section{Continuous Model}
+
+\todo{Put continuous model description here}
+
+\subsection{Description}
+
+\subsection{Results}
+
+\section{Data Structure}
+\label{sec:data_structure}
+
+Implementations of the object models and data structures described in this report can be found inside \texttt{\small{}metabolomics\_tools/discretisation/models.py}. 
+
+Throughout the whole report, $N$ refers to the number of peaks in an input file and $K$ refers to the total number of clusters. Peaks (i.e. features) are indexed by $n=1,...,N$ and clusters are indexed by $k=1,...,K$. Remember that by design, generally $N$ == $K$ in some of our models described in this report.
+
+A feature is a tuple of (m/z, RT, intensity) values, stored in a \texttt{\small{}Feature} object. Additionally, we also have a \texttt{\small{}DatabaseEntry} object, corresponding to a record from the molecule database. User-defined adduct transformations are stored in the \texttt{\small{}Transformation} object.
+
+The \texttt{\small{}PeakData} object is a container of all those stuff above, plus more. Inside \texttt{\small{}PeakData}, we have the lists of features (\texttt{\small{}PeakData.features}), database entries (\texttt{\small{}PeakData.database}) and adduct transformations (\texttt{\small{}PeakData.transformations}). For computational convenience, the \texttt{\small{}PeakData} object also contains Numpy matrices of the m/z, RT and intensity values of peak features. Each attribute is stored in an $N$ x 1 matrix. They are \texttt{\small{}PeakData}.\texttt{\small{}mass}, \texttt{\small{}PeakData}.\texttt{\small{}rt} and \texttt{\small{}PeakData}.\texttt{\small{}intensity.}{\small \par}
+
+For the purpose of modelling, features are then discretised into bins -- based on some user-defined mass and RT tolerances. The mapping between features to all the valid bins they can go into are stored in \texttt{\small{}PeakData.possible}, an $N$ x $K$ matrix where entries in the matrix are indices of the possible adduct transformations connecting a peak to any bin. This is subjected to the constraints on mass tolerance, RT tolerance and the additional constraint that the M+H adduct has to be the one with the largest intensity (i.e. there can be no other adduct transformation from a peak to any bin where the peak intensity is larger than the one for M+H). Additionally, there is another $N$ x $K$ matrix, \texttt{\small{}PeakData.transformed}, that stores the actual transformed mass values. The class \texttt{\small{}FileLoader} can be used to load some input file and prepare \texttt{\small{}PeakData} object and everything inside. The output from any of the clustering model we've developed is an $N$ x $K$ matrix of peak-to-cluster assignments. In the case of Gibbs sampling, this will usually contains the accumulated of counts of peak $n$ in cluster $k$ throughout the collected posterior samples.
+
+\section{Derivations}
+
+Put whatever derivations here for future reference.
+
+\subsection{Prior for finite Dirichlet-categorical mixture model}
+
+Some note on the derivation for the conditional prior in the standard Dirichlet-categorical finite mixture model. This is more or less the same for Dirichlet-multinomial mixture model, except that the multinomial version has an additional constant in front.
+
+The joint distribution of the data is 
+\begin{eqnarray}
+p(z_{1},...,z_{n},\boldsymbol{\theta},\alpha) & = & \prod_{n}p(z_{n}=k|\boldsymbol{\theta})p(\boldsymbol{\theta}|\alpha)\\
+p(z_{n}=k|\boldsymbol{\theta}) & = & Cat(\boldsymbol{\theta})=\prod_{k}(\boldsymbol{\theta}_{k})^{z_{k}}\\
+p(\boldsymbol{\theta}|\alpha) & = & Dir(\alpha)=\frac{1}{B(\alpha)}\prod_{k}(\boldsymbol{\theta}_{k})^{\alpha_{k}-1}
+\end{eqnarray}
+For Gibbs sampling, we need $p(z_{n}|\boldsymbol{\theta},...)$. This
+is
+\begin{eqnarray}
+p(z_{n}=k|\boldsymbol{\theta},...) & \propto & p(z_{n}=k,\boldsymbol{\theta},...)\\
+ & = & p(z_{n}=k|\boldsymbol{\theta},...)\cdot p(\boldsymbol{\theta}|\alpha)\\
+ & = & \int\left[p(z_{n}=k|\boldsymbol{\theta},...)\cdot p(\boldsymbol{\theta}|\alpha)\right]\, d\theta\\
+ & = & \int\left[\prod_{k}(\boldsymbol{\theta}_{k})^{z_{k}}\cdot\frac{1}{B(\alpha)}\prod_{k}(\boldsymbol{\theta}_{k})^{\alpha_{k}-1}\right]\, d\theta\\
+ & = & \frac{1}{B(\alpha)}\int\left[\prod_{k}(\boldsymbol{\theta}_{k})^{z_{k}+\alpha_{k}-1}\right]\, d\theta\label{eq:integral}\\
+ & = & \frac{B(\alpha+z)}{B(\alpha)}\label{eq:beta_thing}
+\end{eqnarray}
+Eq (\ref{eq:integral}) is obtained as such: we know 
+\begin{equation}
+B(\alpha)=\int\left[\prod_{k}(\boldsymbol{\theta}_{k})^{z_{k}+\alpha_{k}-1}\right]\, d\theta
+\end{equation}
+as it's the normalising constant in the multinomial pdf, so 
+\begin{equation}
+B(\alpha+z)=\int\left[\prod_{k}(\boldsymbol{\theta}_{k})^{z_{k}+\alpha_{k}-1}\right]\, d\theta
+\end{equation}
+Continuing from eq (\ref{eq:beta_thing}), the beta function is defined
+as $B(\alpha)=\frac{\prod_{k}\Gamma(\alpha_{k})}{\Gamma(\sum_{k}\alpha_{k})}$.
+Expand everything, and we get
+\begin{eqnarray}
+p(z_{n}=k|\boldsymbol{\theta},...) & \propto & \left(\frac{\prod_{k}\Gamma(\alpha_{k}+z_{k})}{\Gamma(\sum_{k}\alpha_{k}+z_{k})}\right)\left(\frac{\Gamma(\sum_{k}\alpha_{k})}{\prod_{k}\Gamma(\alpha_{k})}\right)\\
+ & = & \left(\frac{\Gamma(\sum_{k}\alpha_{k})}{\Gamma(\sum_{k}\alpha_{k}+z_{k})}\right)\left(\frac{\prod_{k}\Gamma(\alpha_{k}+z_{k})}{\prod_{k}\Gamma(\alpha_{k})}\right)\\
+ & \propto & \prod_{k}\frac{\Gamma(\alpha_{k}+z_{k})}{\Gamma(\alpha_{k})}\\
+ & \propto & \prod_{k}\Gamma(\alpha_{k}+z_{k})\\
+ & \propto & ...?\\
+ & \propto & \alpha_{k}+z_{k}
+\end{eqnarray}
+\todo{Something wrong with the notations used above ... what is $z_{k}$ here? Should be the number of peaks assigned to cluster $k$.}
+
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{library}
+
+\end{document}

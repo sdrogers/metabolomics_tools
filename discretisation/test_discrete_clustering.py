@@ -1,4 +1,4 @@
-from models import FileLoader
+from models import FileLoader, HyperPars
 from adduct_clusterer import MassBinClusterer
 
 def main():
@@ -15,6 +15,7 @@ def main():
     peak_data = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol)
         
     # run it through the model
+    hp = HyperPars()
     alpha, sigma, nsamps = 0.01, 20, 20 
     mbc = MassBinClusterer(peak_data, mass_tol, alpha, sigma, nsamps)
     mbc.run()

@@ -16,10 +16,14 @@ class HyperPars(object):
         self.rt_prior_prec = 10
         self.mass_prior_prec = 10
         self.alpha = float(1)
+        self.discrete_alpha = 0.01
+        self.discrete_rt_stdev = 20
+        self.discrete_rt_prior_prec = 5E-3
 
     def __repr__(self):
         return "Hyperparameters: rt precision = " + str(self.rt_prec) + " mass precision = " + str(self.mass_prec) + \
             " rt prior precision = " + str(self.rt_prior_prec) + " mass prior precision = " + str(self.mass_prior_prec) + \
+            " discrete_rt_prior_prec = " + str(self.discrete_rt_prior_prec) + \
             " alpha = " + str(self.alpha)
 
 class Feature(object):
@@ -106,6 +110,7 @@ class PeakData(object):
         return possible, transformed, cluster_prior_mass_mean
 
 class FileLoader:
+    
     def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol):
         """ Load everything that a clustering model requires """
 
@@ -187,31 +192,40 @@ class FileLoader:
             return float(s)
 
 # Not sure whether want to keep this or not ...
-class MassBin:
+class MassBin(object):
+    
     def __init__(self, bin_id, start_mass, end_mass):
         self.bin_id = bin_id
         self.start_mass = start_mass
         self.end_mass = end_mass
         self.features = []
         self.molecules = set()
+        
     def get_begin(self):
         return self.start_mass
+
     def get_end(self):
         return self.end_mass
+    
     def add_feature(self, feature):
         self.features.append(feature)
+    
     def remove_feature(self, feature):
         if feature in self.features: 
             self.features.remove(feature)
+    
     def get_features_count(self):
         return len(self.features)
+    
     def get_features_rt(self):
         total_rt = 0
         for feature in self.features:
             total_rt = total_rt + feature.rt
         return total_rt
+    
     def add_molecule(self, molecule):
         self.molecules.add(molecule)
+    
     def __repr__(self):
         return 'MassBin id=' + str(self.bin_id) + ' mass=(' + str(self.start_mass) + \
             ', ' + str(self.end_mass) + ') num_features=' + str(len(self.features)) + \
