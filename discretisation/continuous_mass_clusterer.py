@@ -4,6 +4,7 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.special import psi
 import time
+import sample_reporter
 
 class ContinuousGibbs:
 	# This is the continuous mass gibbs sampler
@@ -39,7 +40,7 @@ class ContinuousGibbs:
 		print str(todo.size) + " peaks to be re-sampled"
 		for samp in np.arange(self.n_samples):
 			if samp%1 == 0:
-				self.report(samp)
+				sample_reporter.print_cluster_size(self.cluster_size, samp)
 
 			# for i in np.arange(todo.size):
 			for i in np.arange(todo.size):
@@ -83,9 +84,6 @@ class ContinuousGibbs:
 
 	def log_of_norm_pdf(self,x,mu,prec):
 		return -0.5*np.log(2*np.pi) + 0.5*np.log(prec) - 0.5*prec*(x-mu)**2
-
-	def report(self,samp):
-		print "Sample " + str(samp) + " biggest cluster: " + str(self.cluster_size.max()) + " (" + str(self.cluster_size.argmax()) + ")"
 
 	def set_n_samples(self,n_samples):
 		self.n_samples = n_samples

@@ -1,5 +1,5 @@
 from models import FileLoader, HyperPars
-from adduct_clusterer import MassBinClusterer
+from discrete_mass_clusterer import DiscreteGibbs
 
 def main():
 
@@ -13,11 +13,11 @@ def main():
     rt_tol = 5
     loader = FileLoader()
     peak_data = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol)
-        
+          
     # run it through the model
     hp = HyperPars()
-    alpha, sigma, nsamps = 0.01, 20, 20 
-    mbc = MassBinClusterer(peak_data, mass_tol, alpha, sigma, nsamps)
+    nsamps = 20
+    mbc = DiscreteGibbs(peak_data, hp, nsamps)
     mbc.run()
 
 #     # load std1 file
@@ -28,10 +28,11 @@ def main():
 #     rt_tol = 5
 #     loader = FileLoader()
 #     peak_data = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol)
-#     
+#       
 #     # run it through the model
-#     alpha, sigma, nsamps = 0.01, 20, 20 
-#     mbc = MassBinClusterer(peak_data, mass_tol, alpha, sigma, nsamps)
+#     hp = HyperPars()
+#     nsamps = 20
+#     mbc = DiscreteGibbs(peak_data, hp, nsamps)
 #     mbc.run()
     
 if __name__ == "__main__": main()
