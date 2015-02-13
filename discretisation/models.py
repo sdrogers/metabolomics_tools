@@ -4,10 +4,62 @@ import csv
 import numpy as np
 import scipy.sparse as sp
 import utils
+from matplotlib import pylab as plt
 
 
 DatabaseEntry = namedtuple('DatabaseEntry', ['db_id', 'name', 'formula', 'mass'])
 Transformation = namedtuple('Transformation', ['trans_id', 'name', 'sub', 'mul', 'iso'])
+
+
+class ClusterPlotter(object):
+    # an uncommented class for plotting clusters
+    def __init__(self,peak_data,cluster_model):
+        self.cluster_model = cluster_model
+        self.peak_data = peak_data
+        self.cluster_membership = (cluster_model.peak_cluster_probs>0.5)
+
+    def summary(self):
+        print "Cluster output"
+        s = self.cluster_membership.sum(0)
+        nnz = (s>0).sum()
+        print "Number of non-empty clusters: " + str(nnz) + " (of " + str(s.size) + ")"
+        si = (self.cluster_membership).sum(0)
+        print
+        print "Size: count"
+        for i in np.arange(0,si.max()+1):
+            print str(i) + ": " + str((si==i).sum())
+        t = (self.peak_data.possible.multiply(self.cluster_membership)).data
+        t -= 1
+        print
+        print "Trans: count"
+        for i in np.arange(len(self.peak_data.transformations)):
+            print self.peak_data.transformations[i].name + ": " + str((t==i).sum())
+
+
+    def plot_biggest(self,n_plot):
+        # plots the n_plot biggest clusters
+        s = self.cluster_membership.sum(0)
+        order = np.argsort(s)
+        
+        for i in np.arange(s.size-1,s.size-n_plot-1,-1):
+            cluster = order[0,i]
+            peaks = np.nonzero(self.cluster_membership.getcol(cluster))[0]
+            plt.figure(figsize=(8,8))
+            plt.subplot(1,2,1)
+            plt.plot(self.peak_data.mass[peaks],self.peak_data.rt[peaks],'ro')
+            plt.plot(self.peak_data.transformed[peaks,cluster].toarray(),self.peak_data.rt[peaks],'ko')
+
+            plt.subplot(1,2,2)
+            for peak in peaks:
+                plt.plot((self.peak_data.mass[peak], self.peak_data.mass[peak]),(0,self.peak_data.intensity[peak]))
+                tr = self.peak_data.possible[peak,cluster]-1
+                plt.text(self.peak_data.mass[peak],self.peak_data.intensity[peak],self.peak_data.transformations[tr].name)
+                
+        
+    def intensity_plot(self):
+        # This will create the plot of intensity ratios versus intensity ratios
+        
+
 
 class HyperPars(object):
 

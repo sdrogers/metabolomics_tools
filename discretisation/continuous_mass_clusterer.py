@@ -11,11 +11,12 @@ class ContinuousGibbs:
 	def __init__(self,peak_data,hyper_pars):
 		self.possible = peak_data.possible
 		self.transformed = peak_data.transformed
-		self.n_samples = 100
+		self.n_samples = 20
+		self.n_burn = 10
 		self.hyper_pars = hyper_pars
 		self.rt = np.copy(peak_data.rt)
 		self.prior_rt = np.copy(peak_data.rt)
-		self.prior_mass = np.copy(peak_data.precursor_mass.copy)
+		self.prior_mass = np.copy(peak_data.precursor_mass)
 		self.n_peaks = self.prior_mass.size
 
 
@@ -35,12 +36,13 @@ class ContinuousGibbs:
 		print "Running the clustering"
 
 		# Find the peaks that we need to re-sample
-
+		self.peak_cluster_probs = sp.lil_matrix((self.n_peaks,self.n_peaks),dtype=np.float)
 		todo = np.nonzero((self.possible>0).sum(1)>1)[0]
 		print str(todo.size) + " peaks to be re-sampled"
 		for samp in np.arange(self.n_samples):
 			if samp%1 == 0:
 				sample_reporter.print_cluster_size(self.cluster_size, samp)
+				sys.stdout.flush()
 
 			# for i in np.arange(todo.size):
 			for i in np.arange(todo.size):
@@ -52,7 +54,8 @@ class ContinuousGibbs:
 				
 				# Assign to a random cluster
 
-				possible_clusters = np.nonzero(self.possible[peak,:])[1]
+				# possible_clusters = np.nonzero(self.possible[peak,:])[1]
+				possible_clusters = self.possible.getrowview(peak).nonzero()[1]
 				like = np.log((self.hyper_pars.alpha/self.n_peaks) + self.cluster_size[possible_clusters])
 				like += self.comp_rt_like(peak,possible_clusters)
 				like += self.comp_mass_like(peak,possible_clusters)
@@ -69,6 +72,19 @@ class ContinuousGibbs:
 				self.cluster_size[new_cluster]+=1
 				self.cluster_rt_sum[new_cluster]+=self.rt[peak]
 				self.cluster_mass_sum[new_cluster]+=self.transformed[peak,new_cluster]
+				if samp>=self.n_burn:
+					self.peak_cluster_probs[peak,new_cluster] += 1.0
+
+		self.peak_cluster_probs /= (self.n_samples-self.n_burn)
+
+		# This sets the probabilities to one for the peaks that were not resampled
+		not_done = np.nonzero((self.possible>0).sum(1)==1)[0]
+		for i in np.arange(not_done.size):
+			peak = not_done[0,i]
+			cluster = self.possible.getrowview(peak).nonzero()[1]
+			self.peak_cluster_probs[peak,cluster] = 1.0
+
+		# we also need a consistent set of cluster precursor masses with precisions
 
 	def comp_mass_like(self,peak,possible_clusters):
 		posterior_precision = self.hyper_pars.mass_prior_prec + self.hyper_pars.mass_prec*self.cluster_size[possible_clusters]
@@ -85,8 +101,6 @@ class ContinuousGibbs:
 	def log_of_norm_pdf(self,x,mu,prec):
 		return -0.5*np.log(2*np.pi) + 0.5*np.log(prec) - 0.5*prec*(x-mu)**2
 
-	def set_n_samples(self,n_samples):
-		self.n_samples = n_samples
 
 	def __repr__(self):
 		return "Gibbs sampler for continuous mass model\n" + self.hyper_pars.__repr__() + \
@@ -128,6 +142,8 @@ class ContinuousVB:
 
 		# print "Finished inefficient matrix nonsense"
 
+
+		# These lines dont do anything
 		self.matRT.tocsr()
 		self.possible.tocsr()
 		self.transformed.tocsr()
