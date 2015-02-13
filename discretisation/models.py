@@ -54,11 +54,15 @@ class ClusterPlotter(object):
                 plt.plot((self.peak_data.mass[peak], self.peak_data.mass[peak]),(0,self.peak_data.intensity[peak]))
                 tr = self.peak_data.possible[peak,cluster]-1
                 plt.text(self.peak_data.mass[peak],self.peak_data.intensity[peak],self.peak_data.transformations[tr].name)
-                
+                title_string = "Mean RT: " + str(self.cluster_model.cluster_rt_mean[cluster]) + "(" + \
+                    str(1.0/self.cluster_model.cluster_rt_prec[cluster]) + ") Mean Mass: " + str(self.cluster_model.cluster_mass_mean[cluster]) + \
+                    "(" + str(1.0/self.cluster_model.cluster_mass_prec[cluster]) + ")"
+                plt.title(title_string) 
+
         
     def intensity_plot(self):
         # This will create the plot of intensity ratios versus intensity ratios
-        
+        print "hello"
 
 
 class HyperPars(object):

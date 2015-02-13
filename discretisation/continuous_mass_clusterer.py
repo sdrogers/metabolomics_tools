@@ -85,6 +85,12 @@ class ContinuousGibbs:
 			self.peak_cluster_probs[peak,cluster] = 1.0
 
 		# we also need a consistent set of cluster precursor masses with precisions
+		self.cluster_rt_prec = self.hyper_pars.rt_prior_prec + self.cluster_size*self.hyper_pars.rt_prec
+		self.cluster_rt_mean = (1.0/self.cluster_rt_prec)*(self.hyper_pars.rt_prior_prec*self.prior_rt + self.hyper_pars.rt_prec*self.cluster_rt_sum)
+
+		self.cluster_mass_prec = self.hyper_pars.mass_prior_prec + self.cluster_size*self.hyper_pars.mass_prec
+		self.cluster_mass_mean = (1.0/self.cluster_mass_prec)*(self.hyper_pars.mass_prior_prec*self.prior_mass + self.hyper_pars.mass_prec*self.cluster_mass_sum)
+
 
 	def comp_mass_like(self,peak,possible_clusters):
 		posterior_precision = self.hyper_pars.mass_prior_prec + self.hyper_pars.mass_prec*self.cluster_size[possible_clusters]
