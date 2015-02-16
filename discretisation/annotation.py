@@ -1,5 +1,5 @@
-from models import MassBin
 from interval_tree import IntervalTree
+from models import PrecursorBin
 import numpy as np
 
 
@@ -36,7 +36,7 @@ class MolAnnotator:
         for i in np.arange(len(precursor_masses)):
             low = lower[i]
             up = upper[i]
-            the_bins.append(MassBin(i, low, up))        
+            the_bins.append(PrecursorBin(i, low, up, 0, 0)) # TODO: broken code
 
         # count the hits
         T = IntervalTree(the_bins) # store bins in an interval tree

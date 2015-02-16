@@ -16,9 +16,10 @@ def make_mapping(input_file, database_file, transformation_file, mass_tol, rt_to
 
     # load the std file, database_file molecules and transformation_file
     loader = FileLoader()
-    features = loader.load_features(input_file)
-    moldb = loader.load_database(database_file)
-    transformations = loader.load_transformation(transformation_file)
+    peak_data = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol)
+    features = peak_data.features
+    moldb = peak_data.database
+    transformations = peak_data.transformations
     
     # The following cell takes all of the M+H peaks and then creates a peak x peak matrix that 
     # hold (for each peak (row)) the precursors that it can be reached. 

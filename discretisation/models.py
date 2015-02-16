@@ -1,5 +1,6 @@
 from collections import namedtuple
 import csv
+import os
 
 import numpy as np
 import scipy.sparse as sp
@@ -97,7 +98,7 @@ class Feature(object):
 
 class PeakData(object):
     
-    def __init__(self, features, database, transformations, mass_tol, rt_tol):
+    def __init__(self, features, database, transformations, mass_tol, rt_tol, make_bins=True):
                 
         # list of feature, database entry and transformation objects
         self.features = features
@@ -111,7 +112,9 @@ class PeakData(object):
         self.intensity = np.array([f.intensity for f in self.features])[:, None]    # N x 1
         
         # discretise the input data
-        self.possible, self.transformed, self.precursor_mass, self.matRT, self.bins = self.discretise(mass_tol, rt_tol)
+        if make_bins:
+            print 'Discretising peak data at mass_tol ' + str(mass_tol) + ' and rt_tol ' + str(rt_tol)
+            self.possible, self.transformed, self.precursor_mass, self.matRT, self.bins = self.discretise(mass_tol, rt_tol)
                 
     def mass_match(self, mass, other_masses, tol):
         return np.abs((mass-other_masses)/mass)<tol*1e-6
@@ -141,7 +144,6 @@ class PeakData(object):
             Returns:
              - possible, transformed, bin_centre, mat_RT, bins
         """
-        print 'Discretising peak data'
         adduct_name = np.array([t.name for t in self.transformations])[:,None]      # A x 1
         adduct_mul = np.array([t.mul for t in self.transformations])[:,None]        # A x 1
         adduct_sub = np.array([t.sub for t in self.transformations])[:,None]        # A x 1
@@ -185,7 +187,7 @@ class PeakData(object):
 
 class FileLoader:
     
-    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol):
+    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol, discretise=True):
         """ Load everything that a clustering model requires """
 
         if input_file.endswith(".csv"):
@@ -199,11 +201,13 @@ class FileLoader:
         transformations = self.load_transformation(transformation_file)
         
         # discretisation happens inside PeakData
-        data = PeakData(features, database, transformations, mass_tol, rt_tol)
+        data = PeakData(features, database, transformations, mass_tol, rt_tol, make_bins=discretise)
         return data
         
     def load_features(self, input_file):
         features = []
+        if not os.path.exists(input_file):
+            return features
         with open(input_file, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter=':')
             next(reader, None)  # skip the headers
@@ -215,6 +219,8 @@ class FileLoader:
     
     def load_features_sima(self, input_file):
         features = []
+        if not os.path.exists(input_file):
+            return features
         with open(input_file, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter='\t')
             next(reader, None)  # skip the headers
@@ -224,18 +230,21 @@ class FileLoader:
                 charge = utils.num(elements[1]) # unused
                 intensity = utils.num(elements[2])
                 rt = utils.num(elements[3])
-                gt_peak_id = utils.num(elements[4]) # unused
-                gt_metabolite_id = utils.num(elements[5])
-                gt_adduct_type = elements[6]
                 feature = Feature(feature_id, mass, rt, intensity)
-                feature.gt_metabolite = gt_metabolite_id
-                feature.gt_adduct = gt_adduct_type
+                if len(elements)>4:
+                    gt_peak_id = utils.num(elements[4]) # unused
+                    gt_metabolite_id = utils.num(elements[5])
+                    gt_adduct_type = elements[6]
+                    feature.gt_metabolite = gt_metabolite_id
+                    feature.gt_adduct = gt_adduct_type
                 features.append(feature)
                 feature_id = feature_id + 1
         return features
 
     def load_database(self, database):
         moldb = []
+        if not os.path.exists(database):
+            return moldb
         with open(database, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter=',')
             for elements in reader:
@@ -246,6 +255,8 @@ class FileLoader:
     
     def load_transformation(self, transformation):
         transformations = []
+        if not os.path.exists(transformation):
+            return transformations
         with open(transformation, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter=',')
             i = 1
@@ -271,10 +282,10 @@ class PrecursorBin(object):
         self.molecules = set()
         
     def get_begin(self):
-        return self.mass_start
+        return self.mass_range[0]
 
     def get_end(self):
-        return self.mass_end
+        return self.mass_range[1]
     
     def add_feature(self, feature):
         self.features.append(feature)

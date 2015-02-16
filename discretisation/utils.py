@@ -15,6 +15,5 @@ def num(s):
     except ValueError:
         return float(s)
 
-def db_hit(database,mass,tol):
+# def db_hit(database,mass,tol):
     # returns database hits for the mass at tol ppm
-    
