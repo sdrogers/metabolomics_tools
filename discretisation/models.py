@@ -7,10 +7,25 @@ import scipy.sparse as sp
 import utils
 from matplotlib import pylab as plt
 
-
-DatabaseEntry = namedtuple('DatabaseEntry', ['db_id', 'name', 'formula', 'mass'])
 Transformation = namedtuple('Transformation', ['trans_id', 'name', 'sub', 'mul', 'iso'])
 
+class DatabaseEntry(object):
+    # this is mostly called by FileLoader.load_database() 
+    def __init__(self, db_id, name, formula, mass, mass_tol):
+        self.db_id = db_id
+        self.name = name
+        self.formula = formula
+        self.mass = mass
+        self.mass_range = utils.mass_range(mass, mass_tol)
+        
+    def get_begin(self):
+        return self.mass_range[0]
+
+    def get_end(self):
+        return self.mass_range[1]
+        
+    def __repr__(self):
+        return "DatabaseEntry " + utils.print_all_attributes(self)
 
 class ClusterPlotter(object):
     # an uncommented class for plotting clusters
@@ -76,6 +91,7 @@ class HyperPars(object):
         self.mass_prior_prec = 100
         self.alpha = float(100)
 
+        # TODO: get rid of these three and use the above
         self.discrete_alpha = 0.01
         self.discrete_rt_stdev = 20
         self.discrete_rt_prior_prec = 5E-3
@@ -115,22 +131,12 @@ class PeakData(object):
         if make_bins:
             print 'Discretising peak data at mass_tol ' + str(mass_tol) + ' and rt_tol ' + str(rt_tol)
             self.possible, self.transformed, self.precursor_mass, self.matRT, self.bins = self.discretise(mass_tol, rt_tol)
-                
-    def mass_match(self, mass, other_masses, tol):
-        return np.abs((mass-other_masses)/mass)<tol*1e-6
-    
-    def rt_match(self, rt, other_rts, tol):
-        return np.abs(rt-other_rts)<tol
-    
+                    
     def make_precursor_bin(self, bin_id, mass_centre, rt_centre, mass_tol, rt_tol):
         mass_centre = np.asscalar(mass_centre)
         rt_centre = np.asscalar(rt_centre)        
-        # the intervals computed here should really be the same as whatever used in mass_match() and rt_match()
-        interval = mass_centre * mass_tol * 1e-6
-        mass_start = mass_centre - interval
-        mass_end = mass_centre + interval
-        rt_start = rt_centre - rt_tol
-        rt_end = rt_centre + rt_tol
+        mass_start, mass_end = utils.mass_range(mass_centre, mass_tol)
+        rt_start, rt_end = utils.rt_range(rt_centre, rt_tol)
         pcb = PrecursorBin(bin_id, mass_start, mass_end, rt_start, rt_end)
         return pcb
 
@@ -174,10 +180,10 @@ class PeakData(object):
             bins.append(pc_bin)
             
             prior_mass = (current_mass - adduct_sub)/adduct_mul + adduct_del
-            rt_ok = self.rt_match(current_rt, self.rt, rt_tol)
+            rt_ok = utils.rt_match(current_rt, self.rt, rt_tol)
             intensity_ok = (current_intensity <= self.intensity)
             for t in np.arange(adduct_sub.size):
-                mass_ok = self.mass_match(prior_mass[t], bin_centre, mass_tol)
+                mass_ok = utils.mass_match(prior_mass[t], bin_centre, mass_tol)
                 pos = np.flatnonzero(rt_ok*mass_ok*intensity_ok)
                 possible[n, pos] = t+1
                 transformed[n, pos] = prior_mass[t]
@@ -197,7 +203,7 @@ class FileLoader:
             features = self.load_features_sima(input_file)        
         
         # load database and transformations
-        database = self.load_database(database_file)
+        database = self.load_database(database_file, mass_tol)
         transformations = self.load_transformation(transformation_file)
         
         # discretisation happens inside PeakData
@@ -241,7 +247,7 @@ class FileLoader:
                 feature_id = feature_id + 1
         return features
 
-    def load_database(self, database):
+    def load_database(self, database, tol):
         moldb = []
         if not os.path.exists(database):
             return moldb
@@ -249,7 +255,7 @@ class FileLoader:
             reader = csv.reader(csvfile, delimiter=',')
             for elements in reader:
                 mol = DatabaseEntry(db_id=elements[0], name=elements[1], formula=elements[2], \
-                                    mass=utils.num(elements[3]))
+                                    mass=utils.num(elements[3]), mass_tol=tol)
                 moldb.append(mol)
         return moldb
     
