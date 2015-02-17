@@ -21,18 +21,16 @@ class DiscreteGibbs:
             self.possible = peak_data.possible
             self.transformed = peak_data.transformed
             self.bins = peak_data.bins
+            self.matRT = peak_data.matRT
 
             # Dirichlet smoothing parameter
-            self.alpha = hyperpars.discrete_alpha  
+            self.alpha = float(hyperpars.alpha)
 
             # precision for RT
-            self.sigma = 1.0 / (hyperpars.discrete_rt_stdev * hyperpars.discrete_rt_stdev)
-            
-            # hyperparameter mean for RT
-            self.mu_zero = np.mean([f.rt for f in self.features])
-            
+            self.sigma = float(hyperpars.rt_prec)
+                        
             # hyperparameter precision for RT
-            self.tau_zero = hyperpars.discrete_rt_prior_prec
+            self.tau_zero = float(hyperpars.rt_prior_prec)
             
             # total number of samples
             self.nsamps = nsamps  
@@ -78,24 +76,24 @@ class DiscreteGibbs:
                     matching_bins = [self.bins[k] for k in idx]
                     possible_adducts_ids = [self.possible[n, k] for k in idx]
                     possible_precursor_masses = [self.transformed[n, k] for k in idx]
+                    possible_precursor_rts = [self.matRT[n, k] for k in idx]
 
                     # TODO: we really should vectorise this bit!
                     log_posts = []
-                    for mass_bin in matching_bins:
+                    for k in range(len(matching_bins)):
+
+                        mass_bin = matching_bins[k]
+                        mass_bin_rt = possible_precursor_rts[k]
 
                         # compute prior
                         log_prior = np.log(self.alpha + mass_bin.get_features_count())
                         
                         # compute mass likelihood
                         log_likelihood_mass = np.log(1.0) - np.log(len(matching_bins))
-                        
-                        # compute RT likelihood -- mu is fixed to the RT of the peak that generates the M+H                        
-                        # mu = mass_bin.get_rt()
-                        # prec = self.sigma
-                        
+                                                
                         # compute RT likelihood -- mu is a random variable, marginalise this out
                         param_beta = self.tau_zero + (self.sigma * mass_bin.get_features_count())
-                        temp = (self.tau_zero * self.mu_zero) + (self.sigma * mass_bin.get_features_rt())
+                        temp = (self.tau_zero * mass_bin_rt) + (self.sigma * mass_bin.get_features_rt())
                         mu = (1 / param_beta) * temp
                         prec = 1 / ((1 / param_beta) + (1 / self.sigma))
                         
@@ -133,5 +131,3 @@ class DiscreteGibbs:
             print 'DONE!'      
             print
             sample_reporter.print_last_sample(self.bins, feature_annotation)
-            
-            return self.bins

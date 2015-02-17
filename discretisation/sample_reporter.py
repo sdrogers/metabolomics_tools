@@ -50,8 +50,6 @@ def print_last_sample(bins, feature_annotation):
 
     print 'Empty bins=' + str(count_empty_bins)
     print 'Occupied bins=' + str(len(bins) - count_empty_bins) 
-    print 'Molecules annotated to bins=' + str(len(bin_mols))
-    print 'Unique molecules annotated to bins=' + str(len(bin_mols_unique))
 
 def __print_table(table):
     col_width = [max(len(x) for x in col) for col in zip(*table)]

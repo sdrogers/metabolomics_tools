@@ -13,7 +13,7 @@ def main():
     rt_tol = 5
     loader = FileLoader()
     peak_data = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol)
-          
+           
     # run it through the model
     hp = HyperPars()
     nsamps = 20
@@ -28,7 +28,7 @@ def main():
 #     rt_tol = 5
 #     loader = FileLoader()
 #     peak_data = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol)
-#       
+#        
 #     # run it through the model
 #     hp = HyperPars()
 #     nsamps = 20

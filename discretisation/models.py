@@ -91,11 +91,6 @@ class HyperPars(object):
         self.mass_prior_prec = 100
         self.alpha = float(100)
 
-        # TODO: get rid of these three and use the above
-        self.discrete_alpha = 0.01
-        self.discrete_rt_stdev = 20
-        self.discrete_rt_prior_prec = 5E-3
-
     def __repr__(self):
         return "Hyperparameters " + utils.print_all_attributes(self)
 
@@ -189,6 +184,7 @@ class PeakData(object):
                 transformed[n, pos] = prior_mass[t]
                 mat_RT[n,pos] = current_rt
                 
+        print "{:d} bins created".format(len(bins))
         return possible, transformed, bin_centre, mat_RT, bins
 
 class FileLoader:
