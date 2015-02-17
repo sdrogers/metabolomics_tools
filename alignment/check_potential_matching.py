@@ -58,7 +58,8 @@ def make_boxplot(filenames, mass_tol, rt_tols, title, highest_bin):
         # share the axis for subplots
         if ax1 is None:
             ax1 = plt.subplot(1, len(rt_tols), t+1)
-            plt.ylabel('# potential matches')
+            plt.xlabel('# potential matches')
+            plt.ylabel('feature count')
         else:
             plt.subplot(1, len(rt_tols), t+1, sharex=ax1, sharey=ax1)
         
