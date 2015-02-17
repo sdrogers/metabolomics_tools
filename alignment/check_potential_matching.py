@@ -16,15 +16,18 @@ We can try the following experiment to answer the question:
 In short, **approach (a)** is to do alignment on feature-level, while **approach (b)** is operating on the group-level.
 """
 
-import numpy as np
-from discretisation import models
-import pylab as plt
-
 import sys
-sys.path.append('..')
-from discretisation import models
 
-def make_boxplot(filenames, mass_tol, rt_tols, title):
+from discretisation import models, utils
+import numpy as np
+import pylab as plt
+from collections import Counter
+
+
+sys.path.append('..')
+
+def make_boxplot(filenames, mass_tol, rt_tols, title, highest_bin):
+
     # load the data
     loader = models.FileLoader()
     all_data = []
@@ -35,29 +38,37 @@ def make_boxplot(filenames, mass_tol, rt_tols, title):
         all_data.append(peak_data)
         
     # for the different rt tolerances ...
-    features_1 = all_data[0].features
-    features_2 = all_data[1].features
+    first_file = all_data[0]
+    second_file = all_data[1]
     ax1 = None
     for t in range(len(rt_tols)):
+        
         rt_tol = rt_tols[t]
         print 'Processing rt_tol=' + str(rt_tol)
+
         # enumerate the no. of potential matches for each feature
         num_matches = []
-        for f1 in features_1:
-            mass_ok = all_data[1].mass_match(f1.mass, all_data[1].mass, mass_tol)
-            rt_ok = all_data[1].rt_match(f1.rt, all_data[1].rt, rt_tol)
+        for f1 in first_file.features:
+            mass_ok = utils.mass_match(f1.mass, second_file.mass, mass_tol)
+            rt_ok = utils.rt_match(f1.rt, second_file.rt, rt_tol)
             pos = np.flatnonzero(rt_ok*mass_ok)
             count = len(pos)
             num_matches.append(count)
+                                                
         # share the axis for subplots
         if ax1 is None:
             ax1 = plt.subplot(1, len(rt_tols), t+1)
             plt.ylabel('# potential matches')
         else:
-            plt.subplot(1, len(rt_tols), t+1, sharey=ax1)
-        # make boxplot and show median, mean of potential matches
-        plt.boxplot(num_matches)
-        plt.xticks([1], ['Features'])
+            plt.subplot(1, len(rt_tols), t+1, sharex=ax1, sharey=ax1)
+        
+        # plt.boxplot(num_matches)
+        # plt.xticks([1], ['Features'])
+        plt.hist(num_matches, bins=range(highest_bin))
+        c = Counter()
+        c.update(num_matches)
+        print "\tbin freq: " + str(c.most_common(100))                        
+        
         plt.title('rt_tol=' + str(rt_tol))
         mean = np.mean(np.array(num_matches))
         median = np.median(np.array(num_matches))
@@ -66,6 +77,7 @@ def make_boxplot(filenames, mass_tol, rt_tols, title):
         print("\tmedian={:.2f}".format(median))
         print("\tstd={:.2f}".format(std))
         plt.suptitle('# matches per feature (' + title + '), mass_tol=' + str(mass_tol))
+    
     plt.show()
     
 mass_tol = 10
@@ -79,7 +91,7 @@ filenames = [
 ]
 label = "STD1 POS"
 print label + ", mass_tol=" + str(mass_tol)
-make_boxplot(filenames, mass_tol, rt_tols, label)
+make_boxplot(filenames, mass_tol, rt_tols, label, 15)
 print '---------------------------------------------------------------------'
 print
 
@@ -91,7 +103,7 @@ filenames = [
 ]
 label = "STD3 POS"
 print label + ", mass_tol=" + str(mass_tol)
-make_boxplot(filenames, mass_tol, rt_tols, label)
+make_boxplot(filenames, mass_tol, rt_tols, label, 15)
 print
 
 ''' mass_tol is set based on inspection of the ground truth for M1 & M2, 
@@ -111,7 +123,7 @@ filenames = [
 ]
 label = "M1"
 print label + ", mass_tol=" + str(mass_tol)
-make_boxplot(filenames, mass_tol, rt_tols, label)
+make_boxplot(filenames, mass_tol, rt_tols, label, 15)
 print '---------------------------------------------------------------------'
 print
 
@@ -123,7 +135,7 @@ filenames = [
 ]
 label = "M2"
 print label + ", mass_tol=" + str(mass_tol)
-make_boxplot(filenames, mass_tol, rt_tols, label)
+make_boxplot(filenames, mass_tol, rt_tols, label, 15)
 print
 
 ''' 
@@ -146,7 +158,7 @@ filenames = [
 ]
 label = "P1"
 print label + ", mass_tol=" + str(mass_tol)
-make_boxplot(filenames, mass_tol, rt_tols, label)
+make_boxplot(filenames, mass_tol, rt_tols, label, 35)
 print '---------------------------------------------------------------------'
 print
 
@@ -158,5 +170,5 @@ filenames = [
 ]
 label = "P2"
 print label + ", mass_tol=" + str(mass_tol)
-make_boxplot(filenames, mass_tol, rt_tols, label)
+make_boxplot(filenames, mass_tol, rt_tols, label, 35)
 print
