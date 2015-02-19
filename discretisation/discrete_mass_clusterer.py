@@ -1,9 +1,9 @@
 from random import shuffle
 import time
 
-import sample_reporter
-
 import numpy as np
+import sample_reporter
+import scipy.sparse as sp
 
 
 class DiscreteGibbs:
@@ -21,19 +21,15 @@ class DiscreteGibbs:
             self.possible = peak_data.possible
             self.transformed = peak_data.transformed
             self.bins = peak_data.bins
-            self.matRT = peak_data.matRT
-
-            # Dirichlet smoothing parameter
-            self.alpha = float(hyperpars.alpha)
-
-            # precision for RT
-            self.sigma = float(hyperpars.rt_prec)
-                        
-            # hyperparameter precision for RT
-            self.tau_zero = float(hyperpars.rt_prior_prec)
+            self.matRT = peak_data.matRT            
+            self.n_samples = 20
+            self.n_burn = 10
+            self.alpha = float(hyperpars.alpha) # Dirichlet smoothing parameter
+            self.sigma = float(hyperpars.rt_prec) # precision for RT
+            self.tau_zero = float(hyperpars.rt_prior_prec) # hyperparameter precision for RT
             
-            # total number of samples
-            self.nsamps = nsamps  
+            # peak to cluster probabilities
+            self.peak_cluster_probs = sp.lil_matrix((peak_data.num_peaks, peak_data.num_peaks), dtype=np.float)
             
         def run(self):
             '''
@@ -50,8 +46,9 @@ class DiscreteGibbs:
             feature_annotation = {}  # tracks f - transformation & precursor mass assignment
                 
             # now start the gibbs sampling                
-            for s in range(self.nsamps):
+            for s in range(self.n_samples):
 
+                # TODO: vectorise this part onwards!
                 start_time = time.time()
 
                 # for f in self.features:                
@@ -78,7 +75,6 @@ class DiscreteGibbs:
                     possible_precursor_masses = [self.transformed[n, k] for k in idx]
                     possible_precursor_rts = [self.matRT[n, k] for k in idx]
 
-                    # TODO: we really should vectorise this bit!
                     log_posts = []
                     for k in range(len(matching_bins)):
 
@@ -126,8 +122,15 @@ class DiscreteGibbs:
                     feature_annotation[f] = adduct.name + ' @ ' + str(precursor)
 
                 time_taken = time.time() - start_time
-                sample_reporter.print_cluster_sizes(self.bins, s, time_taken)
+                if s >= self.n_burn:
+                    # store sample
+                    self.peak_cluster_probs[n, k] += 1.0
+                    sample_reporter.print_cluster_sizes(self.bins, s, time_taken, True)
+                else:
+                    # discard sample
+                    sample_reporter.print_cluster_sizes(self.bins, s, time_taken, False)
                         
             print 'DONE!'      
             print
             sample_reporter.print_last_sample(self.bins, feature_annotation)
+            self.peak_cluster_probs /= (self.n_samples-self.n_burn) # normalise the counts

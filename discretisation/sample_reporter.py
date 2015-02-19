@@ -3,12 +3,15 @@ from collections import Counter
 def print_cluster_size(cluster_size, samp):
     print "Sample " + str(samp) + " biggest cluster: " + str(cluster_size.max()) + " (" + str(cluster_size.argmax()) + ")"
 
-def print_cluster_sizes(bins, samp, time_taken):
+def print_cluster_sizes(bins, samp, time_taken, is_sample):
     cluster_sizes = [str(mb.get_features_count()) for mb in bins]
     c = Counter()
     c.update(cluster_sizes) # count frequencies of each size 
-    print('SAMPLE %d %4.2fs\t%s' % ((samp+1), time_taken, str(c)))
-    
+    if is_sample:
+        print('SAMPLE %d %4.2fs\t%s' % ((samp+1), time_taken, str(c)))
+    else:
+        print('BURN %d %4.2fs\t%s' % ((samp+1), time_taken, str(c)))
+        
 def print_last_sample(bins, feature_annotation):
     """ Print bins (clusters) in descending order of size and the features inside
 
