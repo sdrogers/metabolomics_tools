@@ -32,7 +32,7 @@ class ClusterPlotter(object):
     def __init__(self,peak_data,cluster_model):
         self.cluster_model = cluster_model
         self.peak_data = peak_data
-        self.cluster_membership = (cluster_model.peak_cluster_probs>0.5)
+        self.cluster_membership = (cluster_model.Z>0.5)
 
     def summary(self):
         print "Cluster output"
@@ -130,9 +130,7 @@ class PeakData(object):
     def make_precursor_bin(self, bin_id, mass_centre, rt_centre, mass_tol, rt_tol):
         mass_centre = np.asscalar(mass_centre)
         rt_centre = np.asscalar(rt_centre)        
-        mass_start, mass_end = utils.mass_range(mass_centre, mass_tol)
-        rt_start, rt_end = utils.rt_range(rt_centre, rt_tol)
-        pcb = PrecursorBin(bin_id, mass_start, mass_end, rt_start, rt_end)
+        pcb = PrecursorBin(bin_id, mass_centre, mass_tol, rt_centre, rt_tol)
         return pcb
 
     def discretise(self, mass_tol, rt_tol):       
@@ -177,7 +175,7 @@ class PeakData(object):
             prior_mass = (current_mass - adduct_sub)/adduct_mul + adduct_del
             rt_ok = utils.rt_match(current_rt, self.rt, rt_tol)
             intensity_ok = (current_intensity <= self.intensity)
-            for t in np.arange(adduct_sub.size):
+            for t in np.arange(len(self.transformations)):
                 mass_ok = utils.mass_match(prior_mass[t], bin_centre, mass_tol)
                 pos = np.flatnonzero(rt_ok*mass_ok*intensity_ok)
                 possible[n, pos] = t+1
@@ -276,10 +274,12 @@ class FileLoader:
 # Probably useful for identification and plotting later
 class PrecursorBin(object):
     
-    def __init__(self, bin_id, mass_start, mass_end, rt_start, rt_end):
+    def __init__(self, bin_id, mass_centre, mass_tol, rt_centre, rt_tol):
         self.bin_id = bin_id
-        self.mass_range = (mass_start, mass_end)
-        self.rt_range = (rt_start, rt_end)
+        self.mass_centre = mass_centre
+        self.rt_centre = rt_centre
+        self.mass_range = utils.mass_range(mass_centre, mass_tol)
+        self.rt_range = utils.rt_range(rt_centre, rt_tol)
         self.features = []
         self.molecules = set()
         

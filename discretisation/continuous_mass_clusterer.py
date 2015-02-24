@@ -36,7 +36,7 @@ class ContinuousGibbs:
 		print "Running the clustering"
 
 		# Find the peaks that we need to re-sample
-		self.peak_cluster_probs = sp.lil_matrix((self.n_peaks,self.n_peaks),dtype=np.float)
+		self.Z = sp.lil_matrix((self.n_peaks,self.n_peaks),dtype=np.float)
 		todo = np.nonzero((self.possible>0).sum(1)>1)[0]
 		print str(todo.size) + " peaks to be re-sampled"
 		for samp in np.arange(self.n_samples):
@@ -73,16 +73,16 @@ class ContinuousGibbs:
 				self.cluster_rt_sum[new_cluster]+=self.rt[peak]
 				self.cluster_mass_sum[new_cluster]+=self.transformed[peak,new_cluster]
 				if samp>=self.n_burn:
-					self.peak_cluster_probs[peak,new_cluster] += 1.0
+					self.Z[peak,new_cluster] += 1.0
 
-		self.peak_cluster_probs /= (self.n_samples-self.n_burn)
+		self.Z /= (self.n_samples-self.n_burn)
 
 		# This sets the probabilities to one for the peaks that were not resampled
 		not_done = np.nonzero((self.possible>0).sum(1)==1)[0]
 		for i in np.arange(not_done.size):
 			peak = not_done[0,i]
 			cluster = self.possible.getrowview(peak).nonzero()[1]
-			self.peak_cluster_probs[peak,cluster] = 1.0
+			self.Z[peak,cluster] = 1.0
 
 		# we also need a consistent set of cluster precursor masses with precisions
 		self.cluster_rt_prec = self.hyper_pars.rt_prior_prec + self.cluster_size*self.hyper_pars.rt_prec
