@@ -1,9 +1,10 @@
 from random import shuffle
-from scipy.special import psi
 import time
 
+from scipy.special import psi
+
 import numpy as np
-import sample_reporter
+import plotting
 import scipy.sparse as sp
 
 
@@ -127,14 +128,14 @@ class DiscreteGibbs:
             if s >= self.n_burn:
                 # store sample
                 self.peak_cluster_probs[n, found_bin.bin_id] += 1.0
-                sample_reporter.print_cluster_sizes(self.bins, s, time_taken, True)
+                plotting.print_cluster_sizes(self.bins, s, time_taken, True)
             else:
                 # discard sample
-                sample_reporter.print_cluster_sizes(self.bins, s, time_taken, False)
+                plotting.print_cluster_sizes(self.bins, s, time_taken, False)
                     
         print 'DONE!'      
         print
-        sample_reporter.print_last_sample(self.bins, feature_annotation)
+        plotting.print_last_sample(self.bins, feature_annotation)
         self.peak_cluster_probs /= (self.n_samples-self.n_burn) # normalise the counts
 
     def __repr__(self):
@@ -163,7 +164,7 @@ class DiscreteVB:
         self.alpha = hyperpars.alpha
         
         # Initially assign all peaks to its own cluster
-        self.QZ = sp.identity(self.n_peaks, format="lil")
+        self.Z = sp.identity(self.n_peaks, format="lil")
                     
     def run(self):
 
@@ -174,7 +175,7 @@ class DiscreteVB:
         for it in range(self.n_iterations):
             print "Iteration " + str(it)
             
-            count_Z = np.array(self.QZ.sum(0))
+            count_Z = np.array(self.Z.sum(0))
             
             # update thetas
             alpha_ks = self.alpha/self.n_peaks
@@ -183,14 +184,18 @@ class DiscreteVB:
             E_log_theta = (psi(dir_params) - psi(dir_params.sum())).T              
             
             # update mus
-            sum_Z = np.array(self.QZ.multiply(self.matRT).sum(0))
+            sum_Z = np.array(self.Z.multiply(self.matRT).sum(0))
             b = self.delta_0 + self.delta*count_Z
             E_mu = (1.0/b) * (self.delta_0*self.prior_rt.T + self.delta*sum_Z)
             var_mu = (1.0/b)
             E_mu2 = var_mu + np.square(E_mu)
             
-            # update QZ
-            oldQZ = sp.lil_matrix(self.QZ,copy=True)    
+            # for plotting
+            self.cluster_rt_mean = E_mu.T
+            self.cluster_rt_prec = b.T
+            
+            # update Z
+            oldQZ = sp.lil_matrix(self.Z,copy=True)    
             for i in range(todo.size):
 
                 this_row = todo[0, i]
@@ -207,10 +212,10 @@ class DiscreteVB:
 
                 temp = np.exp(temp - temp.max())
                 temp = temp/temp.sum()
-                self.QZ[this_row, this_pos] = temp
+                self.Z[this_row, this_pos] = temp
 
-            QChange = ((oldQZ-self.QZ).data**2).sum()
-            print "Change in QZ: " + str(QChange)
+            QChange = ((oldQZ-self.Z).data**2).sum()
+            print "Change in Z: " + str(QChange)
                 
     def __repr__(self):
         return "Variational Bayes for discrete mass model\n" + self.hyperpars.__repr__() + \

@@ -1,10 +1,11 @@
-from models import PeakData
 import sys
-import numpy as np
-import scipy.sparse as sp
+
 from scipy.special import psi
-import time
-import sample_reporter
+
+import numpy as np
+import plotting
+import scipy.sparse as sp
+
 
 class ContinuousGibbs:
 	# This is the continuous mass gibbs sampler
@@ -41,7 +42,7 @@ class ContinuousGibbs:
 		print str(todo.size) + " peaks to be re-sampled"
 		for samp in np.arange(self.n_samples):
 			if samp%1 == 0:
-				sample_reporter.print_cluster_size(self.cluster_size, samp)
+				plotting.print_cluster_size(self.cluster_size, samp)
 				sys.stdout.flush()
 
 			# for i in np.arange(todo.size):
@@ -137,7 +138,7 @@ class ContinuousVB:
 		todo = np.nonzero((self.possible>0).sum(1)>1)[0]
 		print str(todo.size) + " peaks to be re-sampled"
 
-		self.QZ = sp.identity(self.n_peaks,format="lil")
+		self.Z = sp.identity(self.n_peaks,format="lil")
 
 		# print "Started inefficient matrix nonsense"
 
@@ -160,23 +161,29 @@ class ContinuousVB:
 				sys.stdout.flush()
 
 			
-			sZ = np.array(self.QZ.sum(0))
+			sZ = np.array(self.Z.sum(0))
 			hyps = sZ + self.hyper_pars.alpha/self.n_peaks
 			self.EPi = hyps/hyps.sum()
 			self.ELogPi = (psi(hyps) - psi(hyps.sum())).T
 
 			# update RT mean
 			b = self.hyper_pars.rt_prior_prec + self.hyper_pars.rt_prec*sZ
-			self.hyper_pars.rt_prior_prec*self.prior_rt.T + self.hyper_pars.rt_prec*(self.QZ.multiply(self.matRT)).sum(0)
-			self.EMuRT = (1.0/b)*(self.hyper_pars.rt_prior_prec*self.prior_rt.T + np.array(self.hyper_pars.rt_prec*(self.QZ.multiply(self.matRT)).sum(0)))
+			self.hyper_pars.rt_prior_prec*self.prior_rt.T + self.hyper_pars.rt_prec*(self.Z.multiply(self.matRT)).sum(0)
+			self.EMuRT = (1.0/b)*(self.hyper_pars.rt_prior_prec*self.prior_rt.T + np.array(self.hyper_pars.rt_prec*(self.Z.multiply(self.matRT)).sum(0)))
 			self.EMuRT2 = (1.0/b) + np.square(self.EMuRT)
 
 			# Update mass mean
 			d = self.hyper_pars.mass_prior_prec + self.hyper_pars.mass_prec*sZ
-			self.EMuMass = (1.0/d)*(self.hyper_pars.mass_prior_prec*self.prior_mass.T + np.array(self.hyper_pars.mass_prec*(self.QZ.multiply(self.transformed)).sum(0)))
+			self.EMuMass = (1.0/d)*(self.hyper_pars.mass_prior_prec*self.prior_mass.T + np.array(self.hyper_pars.mass_prec*(self.Z.multiply(self.transformed)).sum(0)))
 			self.EMuMass2 = (1.0/d) + np.square(self.EMuMass)
 
-			oldQZ = sp.lil_matrix(self.QZ,copy=True)
+			# for plotting
+			self.cluster_rt_mean = self.EMuRT.T
+			self.cluster_rt_prec = b.T
+			self.cluster_mass_mean = self.EMuMass.T
+			self.cluster_mass_prec = d.T
+
+			oldQZ = sp.lil_matrix(self.Z,copy=True)
 		
 
 			for i in np.arange(todo.size):
@@ -196,10 +203,10 @@ class ContinuousVB:
 
 				temp = np.exp(temp - temp.max())
 				temp = temp/temp.sum()
-				self.QZ[thisRow,thisPos] = temp
+				self.Z[thisRow,thisPos] = temp
 				# print t2a-t2,t2b-t2a,t3-t2b,t4-t3
-			QChange = ((oldQZ-self.QZ).data**2).sum()
-			print "Change in QZ: " + str(QChange)
+			QChange = ((oldQZ-self.Z).data**2).sum()
+			print "Change in Z: " + str(QChange)
 
 
 
