@@ -1,3 +1,4 @@
+import re
 import numpy as np
 from interval_tree import IntervalTree
 
@@ -11,6 +12,12 @@ def print_all_attributes(another_object):
         else:
             sb.append("{key}={value}".format(key=key, value=value))
     return ', '.join(sb)
+
+def natural_sort(l): 
+    ''' Sorts list l in a natural order, e.g. 1, 2, 10, 20 ''' 
+    convert = lambda text: int(text) if text.isdigit() else text.lower() 
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] 
+    return sorted(l, key = alphanum_key)    
 
 def num(s):
     try:

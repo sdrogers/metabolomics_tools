@@ -41,7 +41,7 @@ def main():
     ann = MolAnnotator()
     
     moldb = peak_data.database
-    precursor_masses = peak_data.precursor_mass    
+    precursor_masses = peak_data.precursor_masses    
     bins = peak_data.bins
 
     ann.identify_normal(moldb, precursor_masses)
