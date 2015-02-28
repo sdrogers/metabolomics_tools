@@ -19,16 +19,17 @@ class DiscreteGibbs:
         self.transformations = {}
         for t in peak_data.transformations:
             self.transformations[t.trans_id] = t # map id to transformation
-        self.database = peak_data.database
+
         self.possible = peak_data.possible
         self.transformed = peak_data.transformed
         self.bins = peak_data.bins
         self.precursor_rts = peak_data.precursor_rts            
+
         self.n_samples = 20
         self.n_burn = 10
-        self.alpha = float(hyperpars.alpha) # Dirichlet smoothing parameter
-        self.sigma = float(hyperpars.rt_prec) # precision for RT
-        self.tau_zero = float(hyperpars.rt_prior_prec) # hyperparameter precision for RT
+        self.alpha = float(hyperpars.alpha)
+        self.sigma = float(hyperpars.rt_prec)
+        self.tau_zero = float(hyperpars.rt_prior_prec)
         
         self.Z = sp.lil_matrix((peak_data.num_peaks, peak_data.num_peaks), dtype=np.float)
         self.cluster_rt_mean = np.zeros(peak_data.num_peaks)
@@ -40,19 +41,15 @@ class DiscreteGibbs:
         transformation and RTs
         '''
 
-        # initially put all peak into its own bin
-        Znk = {}  # z_nk, tracks feature to bin assignment
-        feature_annotation = {}  # tracks f - transformation & precursor mass assignment
+        # initially put all peaks into its own bin
+        Znk = {}
+        annots = {}  # used for reporting only
         for n in range(len(self.features)):
             f = self.features[n]
             current_bin = self.bins[n]
             current_bin.add_feature(f)
             Znk[f] = current_bin
-            k = current_bin.bin_id
-            adduct_id = self.possible[n, k]
-            precursor = self.transformed[n, k]
-            adduct = self.transformations[adduct_id]            
-            feature_annotation[f] = adduct.name + ' @ ' + str(precursor)
+            self._annotate(annots, n, f, current_bin)
             
         # now start the gibbs sampling  
         samples_taken = 0              
@@ -83,8 +80,6 @@ class DiscreteGibbs:
                 # perform reassignment of peak to bin
                 idx = list(possible_clusters)
                 matching_bins = [self.bins[k] for k in idx]
-                possible_adducts_ids = [self.possible[n, k] for k in idx]
-                possible_precursor_masses = [self.transformed[n, k] for k in idx]
                 possible_precursor_rts = [self.precursor_rts[n, k] for k in idx]
 
                 log_posts = []
@@ -106,8 +101,8 @@ class DiscreteGibbs:
                     prec = 1 / ((1 / param_beta) + (1 / self.sigma))
 
                     # for plotting
-                    self.cluster_rt_mean[n] = mu
-                    self.cluster_rt_prec[n] = prec
+                    self.cluster_rt_mean[mass_bin.bin_id] = mu
+                    self.cluster_rt_prec[mass_bin.bin_id] = prec
                     
                     log_likelihood = -0.5 * np.log(2 * np.pi)
                     log_likelihood = log_likelihood + 0.5 * np.log(prec)
@@ -129,15 +124,12 @@ class DiscreteGibbs:
                     c = cumsum[k]
                     if random_number <= c:
                         break
-                found_bin = matching_bins[k]
-                found_bin.add_feature(f)
-                Znk[f] = found_bin
-                adduct_id = possible_adducts_ids[k]
-                precursor = possible_precursor_masses[k]
-                adduct = self.transformations[adduct_id]
-                feature_annotation[f] = adduct.name + ' @ ' + str(precursor)
+                current_bin = matching_bins[k]
+                current_bin.add_feature(f)
+                Znk[f] = current_bin
+                self._annotate(annots, n, f, current_bin)
                 if s >= self.n_burn:
-                    self.Z[n, found_bin.bin_id] += 1.0
+                    self.Z[n, current_bin.bin_id] += 1.0
 
             # done looping through all todo features
             time_taken = time.time() - start_time
@@ -151,8 +143,14 @@ class DiscreteGibbs:
                     
         print 'DONE!'      
         print
-        plotting.print_last_sample(self.bins, feature_annotation)
+        plotting.print_last_sample(self.bins, annots)
         self.Z /= samples_taken
+        
+    def _annotate(self, annots, n, feature, current_bin):
+        adduct_id = self.possible[n, current_bin.bin_id]
+        transformed_mass = self.transformed[n, current_bin.bin_id]
+        adduct = self.transformations[adduct_id]            
+        annots[feature] = adduct.name + ' @ ' + str(transformed_mass)                
                 
     def __repr__(self):
         return "Gibbs sampling for discrete mass model\n" + self.hyperpars.__repr__() + \
@@ -232,7 +230,7 @@ class DiscreteVB:
 
             QChange = ((oldQZ-self.Z).data**2).sum()
             print "Change in Z: " + str(QChange)
-                
+                    
     def __repr__(self):
         return "Variational Bayes for discrete mass model\n" + self.hyperpars.__repr__() + \
         "\nn_iterations = " + str(self.n_iterations)
