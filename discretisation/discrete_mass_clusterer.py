@@ -30,8 +30,9 @@ class DiscreteGibbs:
         self.sigma = float(hyperpars.rt_prec) # precision for RT
         self.tau_zero = float(hyperpars.rt_prior_prec) # hyperparameter precision for RT
         
-        # peak to cluster probabilities
-        self.peak_cluster_probs = sp.lil_matrix((peak_data.num_peaks, peak_data.num_peaks), dtype=np.float)
+        self.Z = sp.lil_matrix((peak_data.num_peaks, peak_data.num_peaks), dtype=np.float)
+        self.cluster_rt_mean = np.zeros(peak_data.num_peaks)
+        self.cluster_rt_prec = np.zeros(peak_data.num_peaks)
         
     def run(self):
         '''
@@ -39,15 +40,22 @@ class DiscreteGibbs:
         transformation and RTs
         '''
 
-        # initially put all peak into one bin
-        z = {}  # z_nk, tracks feature to bin assignment
-        first_bin = self.bins[0]
-        for f in self.features:
-            first_bin.add_feature(f)
-            z[f] = first_bin
+        # initially put all peak into its own bin
+        Znk = {}  # z_nk, tracks feature to bin assignment
         feature_annotation = {}  # tracks f - transformation & precursor mass assignment
+        for n in range(len(self.features)):
+            f = self.features[n]
+            current_bin = self.bins[n]
+            current_bin.add_feature(f)
+            Znk[f] = current_bin
+            k = current_bin.bin_id
+            adduct_id = self.possible[n, k]
+            precursor = self.transformed[n, k]
+            adduct = self.transformations[adduct_id]            
+            feature_annotation[f] = adduct.name + ' @ ' + str(precursor)
             
-        # now start the gibbs sampling                
+        # now start the gibbs sampling  
+        samples_taken = 0              
         for s in range(self.n_samples):
 
             # TODO: vectorise this part onwards!
@@ -59,17 +67,18 @@ class DiscreteGibbs:
             for n in random_order:
 
                 f = self.features[n]
-
-                # remove peak from model
-                current_bin = z[f]
-                current_bin.remove_feature(f)
                 
                 # find possible target clusters
+                current_bin = Znk[f]
                 possible_clusters = np.nonzero(self.possible[n, :])[1]
                 if len(possible_clusters) == 1:
-                    self.peak_cluster_probs[n, current_bin.bin_id] += 1.0
-                    # no reassignment to be done
+                    # no reassignment to be done if only 1 possible cluster
+                    if s >= self.n_burn:
+                        self.Z[n, current_bin.bin_id] += 1.0                    
                     continue
+
+                # remove peak from model
+                current_bin.remove_feature(f)
                                                                                                 
                 # perform reassignment of peak to bin
                 idx = list(possible_clusters)
@@ -95,6 +104,10 @@ class DiscreteGibbs:
                     temp = (self.tau_zero * mass_bin_rt) + (self.sigma * mass_bin.get_features_rt())
                     mu = (1 / param_beta) * temp
                     prec = 1 / ((1 / param_beta) + (1 / self.sigma))
+
+                    # for plotting
+                    self.cluster_rt_mean[n] = mu
+                    self.cluster_rt_prec[n] = prec
                     
                     log_likelihood = -0.5 * np.log(2 * np.pi)
                     log_likelihood = log_likelihood + 0.5 * np.log(prec)
@@ -118,16 +131,19 @@ class DiscreteGibbs:
                         break
                 found_bin = matching_bins[k]
                 found_bin.add_feature(f)
-                z[f] = found_bin
+                Znk[f] = found_bin
                 adduct_id = possible_adducts_ids[k]
                 precursor = possible_precursor_masses[k]
                 adduct = self.transformations[adduct_id]
                 feature_annotation[f] = adduct.name + ' @ ' + str(precursor)
+                if s >= self.n_burn:
+                    self.Z[n, found_bin.bin_id] += 1.0
 
+            # done looping through all todo features
             time_taken = time.time() - start_time
             if s >= self.n_burn:
                 # store sample
-                self.peak_cluster_probs[n, found_bin.bin_id] += 1.0
+                samples_taken += 1
                 plotting.print_cluster_sizes(self.bins, s, time_taken, True)
             else:
                 # discard sample
@@ -136,8 +152,8 @@ class DiscreteGibbs:
         print 'DONE!'      
         print
         plotting.print_last_sample(self.bins, feature_annotation)
-        self.peak_cluster_probs /= (self.n_samples-self.n_burn) # normalise the counts
-
+        self.Z /= samples_taken
+                
     def __repr__(self):
         return "Gibbs sampling for discrete mass model\n" + self.hyperpars.__repr__() + \
         "\nn_samples = " + str(self.n_samples)

@@ -96,7 +96,7 @@ class Discretiser(object):
         for n in np.arange(num_peaks):
 
             current_mass, current_rt, current_intensity = mass[n], rt[n], intensity[n]
-            pc_bin = self.__make_precursor_bin__(n, precursor_masses[n], current_rt, self.mass_tol, self.rt_tol)
+            pc_bin = self._make_precursor_bin(n, precursor_masses[n], current_rt, self.mass_tol, self.rt_tol)
             bins.append(pc_bin)
             
             prior_mass = (current_mass - adduct_sub)/adduct_mul + adduct_del
@@ -113,7 +113,7 @@ class Discretiser(object):
         discrete_info = DiscreteInfo(possible, transformed, precursor_masses, precursor_rts, bins)
         return discrete_info
     
-    def __make_precursor_bin__(self, bin_id, mass_centre, rt_centre, mass_tol, rt_tol):
+    def _make_precursor_bin(self, bin_id, mass_centre, rt_centre, mass_tol, rt_tol):
         mass_centre = np.asscalar(mass_centre)
         rt_centre = np.asscalar(rt_centre)        
         pcb = PrecursorBin(bin_id, mass_centre, mass_tol, rt_centre, rt_tol)

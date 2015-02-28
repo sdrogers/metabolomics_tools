@@ -38,7 +38,7 @@ def print_last_sample(bins, feature_annotation):
             for f in mass_bin.features:
                 table.append([str(f.feature_id), str(f.mass), str(f.rt), str(f.intensity), 
                               feature_annotation[f], str(f.gt_metabolite), str(f.gt_adduct)])
-            __print_table(table)
+            _print_table(table)
             print
         else:
             count_empty_bins = count_empty_bins + 1
@@ -46,7 +46,7 @@ def print_last_sample(bins, feature_annotation):
     print 'Empty bins=' + str(count_empty_bins)
     print 'Occupied bins=' + str(len(bins) - count_empty_bins) 
 
-def __print_table(table):
+def _print_table(table):
     col_width = [max(len(x) for x in col) for col in zip(*table)]
     for line in table:
         print "| " + " | ".join("{:{}}".format(x, col_width[i])
