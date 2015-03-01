@@ -10,23 +10,23 @@ def main():
     basedir = '.'
     hp = HyperPars()
 
-#     # load synthetic data
-#     input_file = basedir + '/input/synthetic/synthdata_0.txt'
-#     database_file = basedir + '/database/std1_20_mols.csv'
-#     transformation_file = basedir + '/mulsubs/mulsub_synth.txt'
-#     mass_tol = 2
-#     rt_tol = 5
-#     loader = FileLoader()
-#     peak_data = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol)
-
-    # load std1 file
-    input_file = basedir + '/input/std1_csv/std1-file1.identified.csv'    
-    database_file = basedir + '/database/std1_mols.csv'
-    transformation_file = basedir + '/mulsubs/mulsub2.txt'
+    # load synthetic data
+    input_file = basedir + '/input/synthetic_small'
+    database_file = basedir + '/database/std1_20_mols.csv'
+    transformation_file = basedir + '/mulsubs/mulsub_synth.txt'
     mass_tol = 2
     rt_tol = 5
     loader = FileLoader()
     peak_data = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol)
+
+#     # load std1 file
+#     input_file = basedir + '/input/std1_csv/std1-file1.identified.csv'    
+#     database_file = basedir + '/database/std1_mols.csv'
+#     transformation_file = basedir + '/mulsubs/mulsub2.txt'
+#     mass_tol = 2
+#     rt_tol = 5
+#     loader = FileLoader()
+#     peak_data = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol)
            
     # try gibbs sampling
     discrete = DiscreteGibbs(peak_data, hp)
@@ -36,15 +36,15 @@ def main():
     discrete.run() 
     continuous.run()
 
-#     # try continuous
-#     discrete = DiscreteVB(peak_data, hp)
-#     continuous = ContinuousVB(peak_data, hp)
-#     discrete.n_iterations = 20
-#     continuous.n_iterations = 20
-#     print discrete
-#     discrete.run()        
-#     print continuous
-#     continuous.run()  
+    # try continuous
+    discrete = DiscreteVB(peak_data, hp)
+    continuous = ContinuousVB(peak_data, hp)
+    discrete.n_iterations = 20
+    continuous.n_iterations = 20
+    print discrete
+    discrete.run()        
+    print continuous
+    continuous.run()  
   
     discrete_Z = discrete.Z
     cont_Z = discrete.Z

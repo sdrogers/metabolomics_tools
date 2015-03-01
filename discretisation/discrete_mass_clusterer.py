@@ -23,7 +23,7 @@ class DiscreteGibbs:
         self.possible = peak_data.possible
         self.transformed = peak_data.transformed
         self.bins = peak_data.bins
-        self.precursor_rts = peak_data.precursor_rts            
+        self.matRT = peak_data.matRT            
 
         self.n_samples = 20
         self.n_burn = 10
@@ -41,15 +41,17 @@ class DiscreteGibbs:
         transformation and RTs
         '''
 
-        # initially put all peaks into its own bin
+        # initially put peaks into any bin that fits
         Znk = {}
         annots = {}  # used for reporting only
         for n in range(len(self.features)):
             f = self.features[n]
-            current_bin = self.bins[n]
-            current_bin.add_feature(f)
-            Znk[f] = current_bin
-            self._annotate(annots, n, f, current_bin)
+            possible_clusters = np.nonzero(self.possible[n, :])[1]
+            k = possible_clusters[0]
+            any_bin = self.bins[k]
+            any_bin.add_feature(f)
+            Znk[f] = any_bin
+            self._annotate(annots, n, f, any_bin)
             
         # now start the gibbs sampling  
         samples_taken = 0              
@@ -80,7 +82,7 @@ class DiscreteGibbs:
                 # perform reassignment of peak to bin
                 idx = list(possible_clusters)
                 matching_bins = [self.bins[k] for k in idx]
-                possible_precursor_rts = [self.precursor_rts[n, k] for k in idx]
+                possible_precursor_rts = [self.matRT[n, k] for k in idx]
 
                 log_posts = []
                 for k in range(len(matching_bins)):
@@ -167,7 +169,7 @@ class DiscreteVB:
         self.features = peak_data.features
         self.n_peaks = len(self.features)
         self.possible = peak_data.possible
-        self.precursor_rts = peak_data.precursor_rts
+        self.matRT = peak_data.matRT
         self.rt = np.copy(peak_data.rt)
         self.prior_rt = np.copy(peak_data.rt)
 
@@ -198,7 +200,7 @@ class DiscreteVB:
             E_log_theta = (psi(dir_params) - psi(dir_params.sum())).T              
             
             # update mus
-            sum_Z = np.array(self.Z.multiply(self.precursor_rts).sum(0))
+            sum_Z = np.array(self.Z.multiply(self.matRT).sum(0))
             b = self.delta_0 + self.delta*count_Z
             E_mu = (1.0/b) * (self.delta_0*self.prior_rt.T + self.delta*sum_Z)
             var_mu = (1.0/b)
@@ -215,7 +217,7 @@ class DiscreteVB:
                 this_row = todo[0, i]
                 this_pos = self.possible.getrowview(this_row).nonzero()[1]
 
-                # this_RT = np.array(self.precursor_rts[this_row,this_pos].toarray())
+                # this_RT = np.array(self.matRT[this_row,this_pos].toarray())
                 this_possible = np.array(self.possible.getrowview(this_row).data[0])[:, None].T
                 this_RT = np.tile(self.rt[this_row],(1, this_possible.size))
                 

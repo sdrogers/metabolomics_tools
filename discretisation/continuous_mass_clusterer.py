@@ -126,7 +126,7 @@ class ContinuousVB:
 		self.prior_rt = np.copy(peak_data.rt)
 		self.prior_mass = peak_data.precursor_masses.copy()
 		self.n_peaks = self.prior_mass.size
-		self.precursor_rts = peak_data.precursor_rts
+		self.matRT = peak_data.matRT
 
 		print 'Continuous Clusterer initialised - wow'
 
@@ -142,16 +142,16 @@ class ContinuousVB:
 
 		# print "Started inefficient matrix nonsense"
 
-		# precursor_rts = sp.lil_matrix((self.n_peaks,self.n_peaks))
+		# matRT = sp.lil_matrix((self.n_peaks,self.n_peaks))
 		# for i in np.arange(self.n_peaks):
 		# 	pos = np.nonzero(self.possible[i,:])[0]
-		# 	precursor_rts[i,pos] = self.rt[pos].T
+		# 	matRT[i,pos] = self.rt[pos].T
 
 		# print "Finished inefficient matrix nonsense"
 
 
 		# These lines dont do anything
-		self.precursor_rts.tocsr()
+		self.matRT.tocsr()
 		self.possible.tocsr()
 		self.transformed.tocsr()
 
@@ -168,8 +168,8 @@ class ContinuousVB:
 
 			# update RT mean
 			b = self.hyper_pars.rt_prior_prec + self.hyper_pars.rt_prec*sZ
-			self.hyper_pars.rt_prior_prec*self.prior_rt.T + self.hyper_pars.rt_prec*(self.Z.multiply(self.precursor_rts)).sum(0)
-			self.EMuRT = (1.0/b)*(self.hyper_pars.rt_prior_prec*self.prior_rt.T + np.array(self.hyper_pars.rt_prec*(self.Z.multiply(self.precursor_rts)).sum(0)))
+			self.hyper_pars.rt_prior_prec*self.prior_rt.T + self.hyper_pars.rt_prec*(self.Z.multiply(self.matRT)).sum(0)
+			self.EMuRT = (1.0/b)*(self.hyper_pars.rt_prior_prec*self.prior_rt.T + np.array(self.hyper_pars.rt_prec*(self.Z.multiply(self.matRT)).sum(0)))
 			self.EMuRT2 = (1.0/b) + np.square(self.EMuRT)
 
 			# Update mass mean
@@ -193,7 +193,7 @@ class ContinuousVB:
 				
 				temp = self.ELogPi[thisPos].T
 				
-				# thisRT = np.array(self.precursor_rts[thisRow,thisPos].toarray())
+				# thisRT = np.array(self.matRT[thisRow,thisPos].toarray())
 				thisTr = np.array(self.transformed.getrowview(thisRow).data[0])[:,None].T
 				thisRT = np.tile(self.rt[thisRow],(1,thisTr.size))
 				

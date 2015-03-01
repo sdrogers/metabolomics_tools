@@ -20,9 +20,17 @@ def natural_sort(l):
     return sorted(l, key = alphanum_key)    
 
 def num(s):
+    if isinstance(s, np.ndarray):
+        return np.asscalar(s)    
     try:
         return int(s)
     except ValueError:
+        return float(s)
+
+def as_scalar(s):
+    if isinstance(s, np.ndarray):
+        return np.asscalar(s)    
+    else:
         return float(s)
 
 def mass_match(mass, other_masses, tol):
