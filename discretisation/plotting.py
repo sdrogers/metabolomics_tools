@@ -1,6 +1,7 @@
 from collections import Counter
 from matplotlib import pylab as plt
 import numpy as np
+import sys
 
 def print_cluster_size(cluster_size, samp):
     print "Sample " + str(samp) + " biggest cluster: " + str(cluster_size.max()) + " (" + str(cluster_size.argmax()) + ")"
@@ -14,8 +15,10 @@ def print_cluster_sizes(bins, samp, time_taken, is_sample):
     else:
         print('BURN %d %4.2fs\t%s' % ((samp+1), time_taken, str(c)))
         
-def print_last_sample(bins, feature_annotation):
-    print 'Last sample report'
+def print_last_sample(bins, feature_annotation, outfile):
+    print "Last sample report written to " + outfile
+    oldstdout = sys.stdout
+    sys.stdout = open(outfile, 'w')
     count_empty_bins = 0
     bin_mols = []
     bin_mols_unique = set()
@@ -43,8 +46,10 @@ def print_last_sample(bins, feature_annotation):
         else:
             count_empty_bins = count_empty_bins + 1
 
+    sys.stdout = oldstdout
     print 'Empty bins=' + str(count_empty_bins)
     print 'Occupied bins=' + str(len(bins) - count_empty_bins) 
+
 
 def _print_table(table):
     col_width = [max(len(x) for x in col) for col in zip(*table)]

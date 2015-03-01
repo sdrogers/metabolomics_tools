@@ -1,5 +1,5 @@
 from identification import MolAnnotator
-from models import FileLoader
+from preprocessing import FileLoader
 import numpy as np
 import pylab as plt
     

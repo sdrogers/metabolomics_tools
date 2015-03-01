@@ -16,16 +16,33 @@ class ContinuousGibbs:
 		self.n_burn = 10
 		self.hyper_pars = hyper_pars
 		self.rt = np.copy(peak_data.rt)
-		self.prior_rt = np.copy(peak_data.rt)
-		self.prior_mass = np.copy(peak_data.precursor_masses)
-		self.n_peaks = self.prior_mass.size
+		self.prior_rt = np.copy(peak_data.prior_rts)
+		self.prior_mass = np.copy(peak_data.prior_masses)
+		self.n_peaks = peak_data.num_peaks
+		self.k_clusters = peak_data.num_clusters
 
 
 		# This is peak to cluster assignment
-		self.Z = sp.lil_matrix((self.n_peaks,self.n_peaks),dtype=np.float)
-		self.cluster_size = np.ones(self.n_peaks)[:,None]
-		self.cluster_rt_sum = np.copy(self.rt)
-		self.cluster_mass_sum = np.copy(self.prior_mass)
+		# self.Z = sp.lil_matrix((self.n_peaks,self.n_peaks),dtype=np.float)
+		# self.cluster_size = np.ones(self.n_peaks)[:,None]
+		# self.cluster_rt_sum = np.copy(self.rt)
+		# self.cluster_mass_sum = np.copy(self.prior_mass)
+
+		# N != K now, so put all peaks into the first cluster instead		
+		self.Z = sp.lil_matrix((self.n_peaks,self.k_clusters),dtype=np.float)
+	
+		self.cluster_size = np.zeros(self.k_clusters)
+		self.cluster_rt_sum = np.zeros(self.k_clusters)
+		self.cluster_mass_sum = np.zeros(self.k_clusters)
+		
+		self.cluster_size[0] = self.n_peaks
+		self.cluster_rt_sum[0] = self.rt.sum()
+		self.cluster_mass_sum[0] = self.prior_mass.sum()
+		
+		self.cluster_size = self.cluster_size[:,None]
+		self.cluster_rt_sum = self.cluster_rt_sum[:,None]
+		self.cluster_mass_sum = self.cluster_mass_sum[:,None]		
+		
 
 		print 'Continuous Clusterer initialised'
 
@@ -37,6 +54,7 @@ class ContinuousGibbs:
 
 		# Find the peaks that we need to re-sample
 		Znk = np.arange(self.n_peaks)[:,None]
+		Znk = Znk * 0
 
 		todo = np.nonzero((self.possible>0).sum(1)>1)[0]
 		print str(todo.size) + " peaks to be re-sampled"
@@ -123,9 +141,10 @@ class ContinuousVB:
 		self.n_iterations = 100
 		self.hyper_pars = hyper_pars
 		self.rt = np.copy(peak_data.rt)
-		self.prior_rt = np.copy(peak_data.rt)
-		self.prior_mass = peak_data.precursor_masses.copy()
-		self.n_peaks = self.prior_mass.size
+		self.prior_rt = peak_data.prior_rts.copy()
+		self.prior_mass = peak_data.prior_masses.copy()
+		self.n_peaks = peak_data.num_peaks
+		self.k_clusters = peak_data.num_clusters		
 		self.matRT = peak_data.matRT
 
 		print 'Continuous Clusterer initialised - wow'
@@ -138,7 +157,13 @@ class ContinuousVB:
 		todo = np.nonzero((self.possible>0).sum(1)>1)[0]
 		print str(todo.size) + " peaks to be re-sampled"
 
-		self.Z = sp.identity(self.n_peaks,format="lil")
+		# self.Z = sp.identity(self.n_peaks,format="lil")		  
+		# N != K now, so initially put peaks into any bin that fits
+		self.Z = sp.lil_matrix((self.n_peaks, self.k_clusters),dtype=np.float) 
+		for n in range(self.n_peaks):
+			possible_clusters = np.nonzero(self.possible[n, :])[1]
+			k = possible_clusters[0]
+			self.Z[n, k] = 1
 
 		# print "Started inefficient matrix nonsense"
 

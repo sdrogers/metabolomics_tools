@@ -31,7 +31,7 @@ class DiscreteGibbs:
         self.sigma = float(hyperpars.rt_prec)
         self.tau_zero = float(hyperpars.rt_prior_prec)
         
-        self.Z = sp.lil_matrix((peak_data.num_peaks, peak_data.num_peaks), dtype=np.float)
+        self.Z = sp.lil_matrix((peak_data.num_peaks, peak_data.num_clusters), dtype=np.float)
         self.cluster_rt_mean = np.zeros(peak_data.num_peaks)
         self.cluster_rt_prec = np.zeros(peak_data.num_peaks)
         
@@ -145,7 +145,7 @@ class DiscreteGibbs:
                     
         print 'DONE!'      
         print
-        plotting.print_last_sample(self.bins, annots)
+        plotting.print_last_sample(self.bins, annots, 'last_sample.log')
         self.Z /= samples_taken
         
     def _annotate(self, annots, n, feature, current_bin):
@@ -167,11 +167,12 @@ class DiscreteVB:
         '''
         print 'DiscreteVB initialised'
         self.features = peak_data.features
-        self.n_peaks = len(self.features)
+        self.n_peaks = peak_data.num_peaks
+        self.k_clusters = peak_data.num_clusters        
         self.possible = peak_data.possible
         self.matRT = peak_data.matRT
         self.rt = np.copy(peak_data.rt)
-        self.prior_rt = np.copy(peak_data.rt)
+        self.prior_rt = np.copy(peak_data.prior_rts)
 
         self.n_iterations = 100
         self.hyperpars = hyperpars
@@ -180,7 +181,14 @@ class DiscreteVB:
         self.alpha = hyperpars.alpha
         
         # Initially assign all peaks to its own cluster
-        self.Z = sp.identity(self.n_peaks, format="lil")
+        # self.Z = sp.identity(self.n_peaks, format="lil")
+          
+        # N != K now, so initially put peaks into any bin that fits
+        self.Z = sp.lil_matrix((self.n_peaks, self.k_clusters),dtype=np.float) 
+        for n in range(self.n_peaks):
+            possible_clusters = np.nonzero(self.possible[n, :])[1]
+            k = possible_clusters[0]
+            self.Z[n, k] = 1
                     
     def run(self):
 
