@@ -68,7 +68,7 @@ class Discretiser(object):
         
         else: # otherwise need to do some checking ...
         
-            # make new bins only for new features that cannot go into any existing bins
+            # we want to make new bins only for features that cannot go into any existing bins from the previous files
             bins = binning.bins
             prior_masses = np.array([b.mass for b in bins])[:, None]
             prior_rts = np.array([b.rt for b in bins])[:, None]
