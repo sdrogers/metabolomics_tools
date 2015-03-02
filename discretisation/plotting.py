@@ -2,6 +2,7 @@ from collections import Counter
 from matplotlib import pylab as plt
 import numpy as np
 import sys
+import random
 
 def print_cluster_size(cluster_size, samp):
     print "Sample " + str(samp) + " biggest cluster: " + str(cluster_size.max()) + " (" + str(cluster_size.argmax()) + ")"
@@ -99,7 +100,9 @@ class ClusterPlotter(object):
             for peak in peaks:
                 plt.plot((self.peak_data.mass[peak], self.peak_data.mass[peak]),(0,self.peak_data.intensity[peak]))
                 tr = self.peak_data.possible[peak,cluster]-1
-                plt.text(self.peak_data.mass[peak],self.peak_data.intensity[peak],self.peak_data.transformations[tr].name)
+                x = self.peak_data.mass[peak] + random.random()
+                y = self.peak_data.intensity[peak] + random.random()
+                plt.text(x,y,self.peak_data.transformations[tr].name)
                 title_string = "Mean RT: " + str(self.cluster_model.cluster_rt_mean[cluster]) + "(" + \
                     str(1.0/self.cluster_model.cluster_rt_prec[cluster]) + ")"                    
                 if hasattr(self.cluster_model, 'cluster_mass_mean'):

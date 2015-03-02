@@ -19,12 +19,14 @@ class HyperPars(object):
 class DatabaseEntry(object):
     
     # this is mostly called by io.FileLoader.load_database() 
-    def __init__(self, db_id, name, formula, mass, mass_tol):
+    def __init__(self, db_id, name, formula, mass):
         self.db_id = db_id
         self.name = name
         self.formula = formula
         self.mass = mass
-        self.mass_range = utils.mass_range(mass, mass_tol)
+        
+    def set_ranges(self, mass_tol):
+        self.mass_range = utils.mass_range(self.mass, mass_tol)
         
     def get_begin(self):
         return self.mass_range[0]

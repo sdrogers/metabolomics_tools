@@ -4,8 +4,10 @@ import utils
 
 class MolAnnotator:
 
-    def identify_normal(self, moldb, precursor_masses):
-        print 'Checking normal identification'
+    def identify_normal(self, moldb, precursor_masses, mass_tol):
+        print "Checking normal identification"
+        for db_entry in moldb:
+            db_entry.set_ranges(mass_tol)
         found = 0
         unique = set()
         for pc in precursor_masses:
@@ -16,7 +18,7 @@ class MolAnnotator:
         print '\tunique = ' + str(len(unique))
         
     def identify_bins(self, moldb, bins):            
-        print 'Checking discrete identification'
+        print "Checking discrete identification"
         T = IntervalTree(bins) # store bins in an interval tree
         found = 0
         ambiguous = 0

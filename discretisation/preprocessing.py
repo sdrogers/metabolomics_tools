@@ -139,7 +139,7 @@ class FileLoader:
         """ Load everything that a clustering model requires """
 
         # load database and transformations
-        database = self.load_database(database_file, mass_tol)
+        database = self.load_database(database_file)
         transformations = self.load_transformation(transformation_file)
 
         # if this is a directory, process all files inside
@@ -227,7 +227,7 @@ class FileLoader:
                 feature_id = feature_id + 1
         return features
 
-    def load_database(self, database, tol):
+    def load_database(self, database):
         moldb = []
         if not os.path.exists(database):
             return moldb
@@ -235,7 +235,7 @@ class FileLoader:
             reader = csv.reader(csvfile, delimiter=',')
             for elements in reader:
                 mol = DatabaseEntry(db_id=elements[0], name=elements[1], formula=elements[2], \
-                                    mass=utils.num(elements[3]), mass_tol=tol)
+                                    mass=utils.num(elements[3]))
                 moldb.append(mol)
         return moldb
     
