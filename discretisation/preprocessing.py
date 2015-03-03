@@ -180,6 +180,7 @@ class FileLoader:
         else:            
             # process only a single file
             features = self.load_features(input_file, synthetic=synthetic)
+            binning = None
             if make_bins:
                 discretiser = Discretiser(transformations, mass_tol, rt_tol)
                 binning = discretiser.run([], features, None)
@@ -260,9 +261,14 @@ class FileLoader:
         with open(database, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter=',')
             for elements in reader:
-                mol = DatabaseEntry(db_id=elements[0], name=elements[1], formula=elements[2], \
-                                    mass=utils.num(elements[3]))
-                moldb.append(mol)
+                if len(elements)==5:
+                    mol = DatabaseEntry(db_id=elements[0], name=elements[1], formula=elements[2], \
+                                        mass=utils.num(elements[3]), rt=utils.num(elements[4]))
+                    moldb.append(mol)
+                elif len(elements)==4:
+                    mol = DatabaseEntry(db_id=elements[0], name=elements[1], formula=elements[2], \
+                                        mass=utils.num(elements[3]), rt=0)                    
+                    moldb.append(mol)
         return moldb
     
     def load_transformation(self, transformation):
