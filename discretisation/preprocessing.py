@@ -47,6 +47,9 @@ class Discretiser(object):
             
             # populate possible, transformed, matRT
             for n in range(N):
+                
+                if n%100 == 0:
+                    print '.',
     
                 current_mass, current_rt, current_intensity = feature_masses[n], prior_rts[n], prior_intensities[n]
                 pc_bin = self._make_precursor_bin(n, prior_masses[n], current_rt, current_intensity, self.mass_tol, self.rt_tol)
@@ -62,6 +65,7 @@ class Discretiser(object):
                     transformed[n, pos] = prior_mass[t]
                     matRT[n, pos] = current_rt            
 
+            print
             print "Total bins=" + str(K) + " total features=" + str(N)
             binning = DiscreteInfo(possible, transformed, matRT, bins, prior_masses, prior_rts)
             return binning         
@@ -192,7 +196,8 @@ class FileLoader:
                 features = self.load_features_sima(input_file)
             else:
                 # in tab-separated format from mzMatch
-                features = self.load_features_txt(input_file)                
+                features = self.load_features_txt(input_file)   
+        print str(len(features)) + " features read"             
         return features
     
     def load_features_csv(self, input_file):
@@ -231,13 +236,15 @@ class FileLoader:
             reader = csv.reader(csvfile, delimiter='\t')
             feature_id = 1
             for elements in reader:
-                mass = utils.num(elements[0])
-                charge = utils.num(elements[1]) # unused
+                mass = float(elements[0])
+                charge = float(elements[1])
+                mass = mass/charge
                 intensity = utils.num(elements[2])
                 rt = utils.num(elements[3])
                 feature = Feature(feature_id, mass, rt, intensity)
                 if len(elements)>4:
-                    gt_peak_id = utils.num(elements[4]) # unused
+                    # for debugging with synthetic data
+                    gt_peak_id = utils.num(elements[4])
                     gt_metabolite_id = utils.num(elements[5])
                     gt_adduct_type = elements[6]
                     feature.gt_metabolite = gt_metabolite_id
