@@ -135,7 +135,8 @@ class Discretiser(object):
 
 class FileLoader:
         
-    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol, make_bins=True):
+    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol, 
+                         make_bins=True, synthetic=False):
         """ Load everything that a clustering model requires """
 
         # load database and transformations
@@ -160,7 +161,7 @@ class FileLoader:
             file_id = 0
             for file_path in filelist:
                 # file_path = os.path.abspath(file_path)
-                new_features = self.load_features(file_path)
+                new_features = self.load_features(file_path, synthetic=synthetic)
                 for f in new_features:
                     f.file_id = file_id
                 print "Processing file_id=" + str(file_id) + " " + file_path + " " + str(len(new_features)) + " features"
@@ -174,20 +175,24 @@ class FileLoader:
                     
         else:            
             # process only a single file
-            features = self.load_features(input_file)
+            features = self.load_features(input_file, synthetic=synthetic)
             if make_bins:
                 discretiser = Discretiser(transformations, mass_tol, rt_tol)
                 binning = discretiser.run([], features, None)
             data = PeakData(features, database, transformations, binning)
             return data
         
-    def load_features(self, input_file):
+    def load_features(self, input_file, synthetic=False):
         features = []
         if input_file.endswith(".csv"):
             features = self.load_features_csv(input_file)
         elif input_file.endswith(".txt"):
-            # in SIMA (.txt) format, used for some old synthetic data
-            features = self.load_features_sima(input_file)                
+            if synthetic:
+                # in SIMA (.txt) format, used for some old synthetic data
+                features = self.load_features_sima(input_file)
+            else:
+                # in tab-separated format from mzMatch
+                features = self.load_features_txt(input_file)                
         return features
     
     def load_features_csv(self, input_file):
@@ -202,14 +207,28 @@ class FileLoader:
                                   rt=utils.num(elements[2]), intensity=utils.num(elements[3]))
                 features.append(feature)
         return features
-    
-    def load_features_sima(self, input_file):
+
+    def load_features_txt(self, input_file):
         features = []
         if not os.path.exists(input_file):
             return features
         with open(input_file, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter='\t')
             next(reader, None)  # skip the headers
+            feature_id = 1
+            for elements in reader:
+                feature = Feature(feature_id=feature_id, mass=utils.num(elements[0]), \
+                                  rt=utils.num(elements[1]), intensity=utils.num(elements[2]))
+                features.append(feature)
+                feature_id = feature_id + 1
+        return features
+        
+    def load_features_sima(self, input_file):
+        features = []
+        if not os.path.exists(input_file):
+            return features
+        with open(input_file, 'rb') as csvfile:
+            reader = csv.reader(csvfile, delimiter='\t')
             feature_id = 1
             for elements in reader:
                 mass = utils.num(elements[0])

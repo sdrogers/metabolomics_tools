@@ -30,19 +30,20 @@ def main():
     basedir = '.'
     hp = HyperPars()
 
-#     # load synthetic data
-#     # input_file = basedir + '/input/synthetic/synthdata_0.txt'
-#     input_file = basedir + '/input/synthetic_subset'
+    # load synthetic data
+#     input_file = basedir + '/input/synthetic/synthdata_0.txt'
+#     # input_file = basedir + '/input/synthetic_subset'
 #     database_file = basedir + '/database/std1_20_mols.csv'
 #     transformation_file = basedir + '/mulsubs/mulsub_synth2.txt'
 #     mass_tol = 2
 #     rt_tol = 5
 #     loader = FileLoader()
-#     peak_data = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol)
+#     peak_data = loader.load_model_input(input_file, database_file, transformation_file,
+#                                          mass_tol, rt_tol, synthetic=True)
 
     # load std1 file
-    # input_file = basedir + '/input/std1_csv/std1-file1.identified.csv'    
-    input_file = basedir + '/input/std1_csv_subset'    
+    input_file = basedir + '/input/std1_csv/std1-file1.identified.csv'    
+    # input_file = basedir + '/input/std1_csv_subset'    
     database_file = basedir + '/database/std1_mols.csv'
     transformation_file = basedir + '/mulsubs/mulsub2.txt'
     mass_tol = 2
