@@ -1,3 +1,7 @@
+# if the discreisation module below is not found, remember to set PYTHONPATH 
+# e.g. 
+# export PYTHONPATH="/home/joewandy/git/metabolomics_tools:$PYTHONPATH"
+
 from discretisation.continuous_mass_clusterer import ContinuousVB
 from discretisation.models import HyperPars
 from discretisation.plotting import ClusterPlotter
