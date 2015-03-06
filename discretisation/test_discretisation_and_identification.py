@@ -17,7 +17,7 @@ def plot_hist(mapping, filename, mass_tol, rt_tol):
     title = 'MASS_TOL ' + str(mass_tol) + ', RT_TOL ' + str(rt_tol)
     plt.title(title)
     plt.subplot(1, 2, 2)
-    plt.imshow(mapping)
+    plt.spy(mapping, markersize=1)
     plt.title('possible')
     plt.suptitle(filename)
     plt.show()    
@@ -29,8 +29,8 @@ def main():
     database = basedir + '/database/std1_mols.csv'
     transformation = basedir + '/mulsubs/mulsub.txt'
     input_file = basedir + '/input/std1_csv/std1-file1.identified.csv'
-    mass_tol = 3
-    rt_tol = 30
+    mass_tol = 2
+    rt_tol = 5
 
     # load the std file, database_file molecules and transformation_file
     loader = FileLoader()
@@ -41,10 +41,10 @@ def main():
     ann = MolAnnotator()
     
     moldb = peak_data.database
-    precursor_masses = peak_data.precursor_masses    
+    prior_masses = peak_data.prior_masses    
     bins = peak_data.bins
 
-    ann.identify_normal(moldb, precursor_masses)
+    ann.identify_normal(moldb, prior_masses, mass_tol)
 
     ann.identify_bins(moldb, bins)
 
