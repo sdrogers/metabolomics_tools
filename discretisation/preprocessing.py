@@ -133,12 +133,21 @@ class FileLoader:
         print str(len(features)) + " features read"             
         return features
     
+    def detect_delimiter(self, input_file):
+        with open(input_file, 'rb') as csvfile:
+            header = csvfile.readline()
+            if header.find(":")!=-1:
+                return ':'
+            elif header.find(",")!=-1:
+                return ','
+    
     def load_features_csv(self, input_file):
         features = []
         if not os.path.exists(input_file):
             return features
+        delim = self.detect_delimiter(input_file)
         with open(input_file, 'rb') as csvfile:
-            reader = csv.reader(csvfile, delimiter=':')
+            reader = csv.reader(csvfile, delimiter=delim)
             next(reader, None)  # skip the headers
             for elements in reader:
                 feature = Feature(feature_id=utils.num(elements[0]), mass=utils.num(elements[1]), \
