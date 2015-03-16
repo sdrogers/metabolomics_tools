@@ -150,17 +150,28 @@ class FileLoader:
             reader = csv.reader(csvfile, delimiter=delim)
             next(reader, None)  # skip the headers
             for elements in reader:
-                feature_id = utils.num(elements[0])
-                mz = utils.num(elements[1])
-                rt = utils.num(elements[2])
-                feature = Feature(feature_id=feature_id, mass=mz, rt=rt, intensity=0)                    
-                if len(elements)>4:
+                if len(elements)==6:
+                    feature_id = utils.num(elements[0])
+                    mz = utils.num(elements[1])
+                    rt = utils.num(elements[2])                    
+                    feature = Feature(feature_id=feature_id, mass=mz, rt=rt, intensity=0)                    
                     feature.into = utils.num(elements[3]) # integrated peak intensity
                     feature.maxo = utils.num(elements[4]) # maximum peak intensity
                     feature.intb = utils.num(elements[5]) # baseline corrected integrated peak intensities
                     feature.intensity = feature.maxo # we will use this for now
-                else:
-                    feature.intensity = utils.num(elements[3])
+                elif len(elements)==5:
+                    feature_id = utils.num(elements[0])
+                    mz = utils.num(elements[1])
+                    rt = utils.num(elements[2])                    
+                    intensity = utils.num(elements[3])
+                    identification = elements[4] # unused
+                    feature = Feature(feature_id=feature_id, mass=mz, rt=rt, intensity=intensity)
+                elif len(elements)==4:
+                    feature_id = utils.num(elements[0])
+                    mz = utils.num(elements[1])
+                    rt = utils.num(elements[2])
+                    intensity = utils.num(elements[3])
+                    feature = Feature(feature_id=feature_id, mass=mz, rt=rt, intensity=intensity)
                 features.append(feature)
         return features
 
