@@ -71,6 +71,9 @@ class PeakData(object):
         self.intensity = np.array([f.intensity for f in self.features])[:, None]    # N x 1
         
         if discrete_info is not None:
+            self.set_discrete_info(discrete_info)
+            
+    def set_discrete_info(self, discrete_info):
             self.possible = discrete_info.possible
             self.transformed = discrete_info.transformed
             self.matRT = discrete_info.matRT

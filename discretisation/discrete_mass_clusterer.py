@@ -35,7 +35,7 @@ class DiscreteGibbs:
         self.cluster_rt_mean = np.zeros(peak_data.num_peaks)
         self.cluster_rt_prec = np.zeros(peak_data.num_peaks)
         
-    def run(self):
+    def run_single(self):
         '''
         Performs Gibbs sampling to reassign peak to bins based on the possible 
         transformation and RTs
@@ -190,7 +190,7 @@ class DiscreteVB:
             k = possible_clusters[0]
             self.Z[n, k] = 1
                     
-    def run(self):
+    def run_single(self):
 
         # Find peaks with more than 1 possible clusters to reassign
         todo = np.nonzero((self.possible>0).sum(1)>1)[0]
