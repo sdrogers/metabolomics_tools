@@ -70,21 +70,16 @@ class Discretiser(object):
         self.current_features.extend(features)
         return binning         
 
-    def run_multiple(self, common, new_features):
+    def run_multiple(self, features):
                         
-        # if there's some existing common bins, use them .. otherwise initialise an empty list
-        if common is None:
-            common_bins = []
-        else:
-            common_bins = common.bins
-
         # for each potential new cluster (i.e. feature) ..
-        for n in range(len(new_features)):
+        common_bins = []
+        for n in range(len(features)):
 
             if n%200 == 0:
                 sys.stdout.write('.')                             
 
-            f = new_features[n]
+            f = features[n]
             precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]                 
             current_mass, current_rt, current_intensity = f.mass, f.rt, f.intensity         
                
@@ -115,7 +110,7 @@ class Discretiser(object):
                                                       self.mass_tol, self.rt_tol)
                     common_bins.append(pc_bin)
 
-        self.current_features.extend(new_features)
+        self.current_features.extend(features)
         N = len(self.current_features)
         K = len(common_bins)
 
@@ -138,9 +133,15 @@ class Discretiser(object):
             rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_tol)
             intensity_ok = (current_intensity <= prior_intensities)
             for t in np.arange(len(self.transformations)):
-                mass_ok = utils.mass_match(transformed_masses[t], prior_masses, self.mass_tol)
+                transformed_mass = transformed_masses[t]
+                mass_ok = utils.mass_match(transformed_mass, prior_masses, self.mass_tol)
                 check = self._check(mass_ok, rt_ok, intensity_ok)            
                 pos = np.flatnonzero(check)
+#                 if len(pos)>1:
+#                     idx = pos.tolist()
+#                     for k in idx:
+#                         print "mass " + str(transformed_mass) + " rt " + str(current_rt) + " intensity " + str(current_intensity) + \
+#                             " go into bin " + str(common_bins[k])
                 possible[n, pos] = t+1
                 transformed[n, pos] = transformed_masses[t]
                 matRT[n, pos] = current_rt            
@@ -185,8 +186,10 @@ class FileLoader:
             # load the files
             file_id = 0
             data_list = []
+            all_features = []
             for file_path in filelist:
                 features = self.load_features(file_path, synthetic=synthetic)
+                all_features.extend(features)
                 for f in features:
                     f.file_id = file_id
                 file_id += 1
@@ -195,13 +198,9 @@ class FileLoader:
 
             # bin the files if necessary
             if make_bins:
-                common = None
+                # make common bins shared across files
                 discretiser = Discretiser(transformations, mass_tol, rt_tol)
-                for j in range(len(data_list)):
-                    print "Binning file " + str(j)
-                    data = data_list[j]
-                    features = data.features
-                    common = discretiser.run_multiple(common, features) # and make common bins shared across files                   
+                common = discretiser.run_multiple(all_features)                    
                 # assign common bins to all peak data
                 for data in data_list:
                     data.set_discrete_info(common)
