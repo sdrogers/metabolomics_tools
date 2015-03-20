@@ -34,8 +34,7 @@ def main():
 
     # load the std file, database_file molecules and transformation_file
     loader = FileLoader()
-    data_list = loader.load_model_input(input_file, database, transformation, mass_tol, rt_tol)
-    peak_data = data_list[0]
+    peak_data = loader.load_model_input(input_file, database, transformation, mass_tol, rt_tol)
     plot_hist(peak_data.possible, input_file, mass_tol, rt_tol)
 
     # try identify
