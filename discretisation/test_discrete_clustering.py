@@ -60,8 +60,8 @@ def main():
     discrete.n_burn = n_burn
     continuous.n_samples = n_samples
     continuous.n_burn = n_burn
-    discrete.run_single() 
-    continuous.run_single()
+    discrete.run() 
+    continuous.run()
     print_stats(peak_data, discrete, continuous)
 
     # try VB
@@ -71,9 +71,9 @@ def main():
     discrete.n_iterations = n_iters
     continuous.n_iterations = n_iters
     print discrete
-    discrete.run_single()        
+    discrete.run()        
     print continuous
-    continuous.run_single()    
+    continuous.run()    
     print_stats(peak_data, discrete, continuous)
 
 if __name__ == "__main__": main()

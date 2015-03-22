@@ -47,7 +47,7 @@ class ContinuousGibbs:
 		print 'Continuous Clusterer initialised'
 
 
-	def run_single(self):
+	def run(self):
 		# I should factorise this a bit more I think...
 
 		print "Running the clustering"
@@ -149,7 +149,7 @@ class ContinuousVB:
 
 		print 'Continuous Clusterer initialised - wow'
 
-	def run_single(self):
+	def run(self):
 		print "Running the clustering"
 
 		# Find the peaks that we need to re-sample

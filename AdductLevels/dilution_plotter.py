@@ -30,11 +30,11 @@ class DilutionPlotter(object):
             self.transformations_colours[trans] = cmap(t)
         
         # lots of dictionaries to store intermediate results
-        self.trans_results = {}
-        self.trans_logged_results = {}
-        self.trans_masses = {}
-        self.dilution_logged_results = {}
-        self.dilution_masses = {}
+        self.trans_results = {}             # key is transformation t, value is a D x L matrix of the detected intensities
+        self.trans_logged_results = {}      # key is transformation t, value is a D x L matrix of the detected logged intensities
+        self.trans_masses = {}              # key is transformation t, value is a D x L matrix of the detected masses
+        self.dilution_logged_results = {}   # key is dilution l, value is a D x T matrix of the detected logged intensities
+        self.dilution_masses = {}           # key is dilution l, value is a D x T matrix of the detected masses
         self.dilution_colours = ['b', 'g', 'r', 'k', 'y', 'm']        
         self.trans_freq = Counter()
         
@@ -58,7 +58,7 @@ class DilutionPlotter(object):
             # filename of the previously stored results for each transformation t
             fname = './transformations_data/' + self.stdfile + '/' + str(t) + '.txt'
     
-            # results is I by L, where I is the no. of molecules in database and 
+            # results is D by L, where D is the no. of molecules in database and 
             # L is the no. of dilution levels
             results = np.loadtxt(fname)
             logged = np.log2(results) # log base 2 to follow the spreadsheet
