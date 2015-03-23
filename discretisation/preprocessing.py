@@ -1,3 +1,4 @@
+import copy
 import csv
 import glob
 import os
@@ -162,7 +163,11 @@ class Discretiser(object):
                     matRT[n, pos] = current_rt            
                 
             print
-            binning = DiscreteInfo(possible, transformed, matRT, common_bins, prior_masses, prior_rts)
+            # for each file, store copies of the common bins, not the original
+            common_bins_copy = copy.deepcopy(common_bins)
+            for bb in common_bins_copy:
+                bb.origin = j
+            binning = DiscreteInfo(possible, transformed, matRT, common_bins_copy, prior_masses, prior_rts)
             all_binning.append(binning)
 
         return all_binning     

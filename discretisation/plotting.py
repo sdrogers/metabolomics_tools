@@ -1,8 +1,12 @@
 from collections import Counter
-from matplotlib import pylab as plt
-import numpy as np
-import sys
+import itertools
 import random
+import sys
+
+from matplotlib import pylab as plt
+
+import numpy as np
+
 
 def print_cluster_size(cluster_size, samp):
     print "Sample " + str(samp) + " biggest cluster: " + str(cluster_size.max()) + " (" + str(cluster_size.argmax()) + ")"
@@ -81,6 +85,18 @@ class ClusterPlotter(object):
         print "Trans: count"
         for i in np.arange(len(self.peak_data.transformations)):
             print self.peak_data.transformations[i].name + ": " + str((t==i).sum())
+        plt.figure()
+        x = []
+        cx = self.cluster_model.Z.tocoo()    
+        for i,j,v in itertools.izip(cx.row, cx.col, cx.data):
+            x.append(v)       
+        x = np.array(x) 
+#         x = x[~np.isnan(x)]    
+        plt.hist(x, 10)
+        plt.title('Distribution of values in Z')
+        plt.xlabel('Probabilities')
+        plt.ylabel('Count')
+        plt.show()
 
     def plot_biggest(self,n_plot):
         # plots the n_plot biggest clusters

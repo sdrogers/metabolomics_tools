@@ -1,3 +1,5 @@
+from collections import Counter
+from collections import defaultdict
 from random import shuffle
 import sys
 import time
@@ -10,12 +12,13 @@ class DpMixtureGibbs:
     
     def __init__(self, data, hyperpars):
         ''' 
-        Clusters bins by RT into mixture with DP prior
+        Clusters bins by DP mixture model using Gibbs sampling
         '''
         print 'DpMixtureGibbs initialised'
-        self.data = np.array(data)
-        self.N = len(self.data)
-        self.mu_zero = np.mean(self.data)
+        self.rts = np.array(data[0])
+        self.bins = data[1]
+        self.N = len(self.rts)
+        self.mu_zero = np.mean(self.rts)
         self.rt_prec = float(hyperpars.rt_prec)
         self.rt_prior_prec = float(hyperpars.rt_prior_prec)
         self.alpha = float(hyperpars.alpha)
@@ -26,17 +29,13 @@ class DpMixtureGibbs:
         self.ZZ_all = sp.lil_matrix((self.N, self.N),dtype=np.float)
         self.cluster_rt_mean = None
         self.cluster_rt_prec = None
-        
+                
     def run(self):
-        '''
-        Performs Gibbs sampling to reassign peak to bins based on the possible 
-        transformation and RTs
-        '''
         
         # initialise all rows under one cluster
         K = 1
         cluster_counts = np.array([float(self.N)])
-        cluster_sums = np.array([self.data.sum()])
+        cluster_sums = np.array([self.rts.sum()])
         current_ks = np.zeros(self.N, dtype=np.int)
 
         # start sampling
@@ -47,10 +46,10 @@ class DpMixtureGibbs:
             
             # loop through the objects in random order
             random_order = range(self.N)
-            # shuffle(random_order)
+            shuffle(random_order)
             for n in random_order:
 
-                current_data = self.data[n]
+                current_data = self.rts[n]
                 k = current_ks[n] # the current cluster of this item
                 
                 # remove from model, detecting empty table if necessary
@@ -126,6 +125,22 @@ class DpMixtureGibbs:
                 print('\tBURN-IN\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))                
             sys.stdout.flush()
             
+#             # count co-occuring bins in each sample
+#             # for each cluster ... 
+#             for k in range(K):
+#                 # group common bins by their ids, since the same bins have the same ids across files
+#                 pos = np.flatnonzero(current_ks==k)
+#                 members = [self.bins[a] for a in pos.tolist()]
+#                 groups= defaultdict( list )
+#                 for bb in members:
+#                     groups[bb.bin_id].append(bb)
+#                 grouped_members = groups.values()
+#                 print "Cluster " + str(k)
+#                 for g in grouped_members:
+#                     print " - " + str(g)
+#                     fs = [bb.features for bb in g]
+                    
+            
         # end sample loop
         
         self.ZZ_all = self.ZZ_all / samples_obtained
@@ -149,3 +164,14 @@ class DpMixtureGibbs:
     def __repr__(self):
         return "Gibbs sampling for DP mixture model\n" + self.hyperpars.__repr__() + \
         "\nn_samples = " + str(self.n_samples)
+        
+class DpMixtureVariational:
+    
+    def __init__(self, data, hyperpars):
+        ''' 
+        Clusters bins by DP mixture model using variational inference
+        '''
+        print 'DpMixtureVariational initialised'
+        
+    def run(self):
+        print "Hello"
