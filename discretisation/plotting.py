@@ -82,7 +82,6 @@ class ClusterPlotter(object):
         for i in np.arange(len(self.peak_data.transformations)):
             print self.peak_data.transformations[i].name + ": " + str((t==i).sum())
 
-
     def plot_biggest(self,n_plot):
         # plots the n_plot biggest clusters
         s = self.cluster_membership.sum(0)

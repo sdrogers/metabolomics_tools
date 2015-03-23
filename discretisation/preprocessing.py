@@ -13,10 +13,10 @@ class Discretiser(object):
 
     def __init__(self, transformations, mass_tol, rt_tol):
 
-        print "Discretising at mass_tol=" + str(mass_tol) + ", rt_tol=" + str(rt_tol)
+        print "Discretising at mass_tol=" + str(mass_tol) + ", rt_prec=" + str(rt_tol)
         self.transformations = transformations
         self.mass_tol = mass_tol
-        self.rt_tol = rt_tol
+        self.rt_prec = rt_tol
 
         self.adduct_name = np.array([t.name for t in self.transformations])[:,None]      # A x 1
         self.adduct_mul = np.array([t.mul for t in self.transformations])[:,None]        # A x 1
@@ -47,11 +47,11 @@ class Discretiser(object):
                 sys.stdout.write('.')
 
             current_mass, current_rt, current_intensity = feature_masses[n], prior_rts[n], prior_intensities[n]
-            pc_bin = self._make_precursor_bin(n, prior_masses[n], current_rt, current_intensity, self.mass_tol, self.rt_tol)
+            pc_bin = self._make_precursor_bin(n, prior_masses[n], current_rt, current_intensity, self.mass_tol, self.rt_prec)
             bins.append(pc_bin)
             
             prior_mass = (current_mass - self.adduct_sub)/self.adduct_mul + self.adduct_del
-            rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_tol)
+            rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_prec)
             intensity_ok = (current_intensity <= prior_intensities)
             for t in np.arange(len(self.transformations)):
                 mass_ok = utils.mass_match(prior_mass[t], prior_masses, self.mass_tol)
@@ -94,7 +94,7 @@ class Discretiser(object):
             prior_masses = np.array(bin_masses)[:, None]
             prior_rts = np.array(bin_rts)[:, None]            
             mass_ok = utils.mass_match(precursor_mass, prior_masses, self.mass_tol)
-            rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_tol)
+            rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_prec)
             conditions= (mass_ok, rt_ok)
             check = self._check(conditions, intensity_check=False)
                 
@@ -117,7 +117,7 @@ class Discretiser(object):
             mass = bin_masses[k]
             rt = bin_rts[k]
             intensity = bin_intensities[k]
-            pc_bin = self._make_precursor_bin(k, mass, rt, intensity, self.mass_tol, self.rt_tol)
+            pc_bin = self._make_precursor_bin(k, mass, rt, intensity, self.mass_tol, self.rt_prec)
             common_bins.append(pc_bin)            
         print
         print "Total clusters=" + str(K) + " total features=" + str(N)                                           
@@ -148,7 +148,7 @@ class Discretiser(object):
                 current_mass, current_rt, current_intensity = f.mass, f.rt, f.intensity
                 
                 transformed_masses = (current_mass - self.adduct_sub)/self.adduct_mul + self.adduct_del
-                rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_tol)
+                rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_prec)
                 intensity_ok = (current_intensity <= prior_intensities)
                 for t in np.arange(len(self.transformations)):
                     # fill up the target bins that this transformation allows
@@ -186,7 +186,7 @@ class Discretiser(object):
 class FileLoader:
         
     def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol, 
-                         make_bins=True, synthetic=False):
+                         make_bins=True, synthetic=False, limit_n=-1):
         """ Load everything that a clustering model requires """
 
         # load database and transformations
@@ -214,6 +214,8 @@ class FileLoader:
                 for f in features:
                     f.file_id = file_id
                 file_id += 1
+                if limit_n > -1:
+                    features = features[0:limit_n]
                 data = PeakData(features, database, transformations)
                 all_features.extend(features)
                 data_list.append(data)
@@ -235,6 +237,8 @@ class FileLoader:
                      
             # process only a single file
             features = self.load_features(input_file, synthetic=synthetic)
+            if limit_n > -1:
+                features = features[0:limit_n]
             binning = None
             if make_bins:
                 discretiser = Discretiser(transformations, mass_tol, rt_tol)
