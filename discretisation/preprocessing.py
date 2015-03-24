@@ -14,7 +14,7 @@ class Discretiser(object):
 
     def __init__(self, transformations, mass_tol, rt_tol):
 
-        print "Discretising at mass_tol=" + str(mass_tol) + ", rt_prec=" + str(rt_tol)
+        print "Discretising at mass_tol=" + str(mass_tol) + ", rt_tol=" + str(rt_tol)
         self.transformations = transformations
         self.mass_tol = mass_tol
         self.rt_prec = rt_tol
@@ -216,10 +216,14 @@ class FileLoader:
             all_features = []
             for file_path in filelist:
                 features = self.load_features(file_path, synthetic=synthetic)
+                seq_id = 0
                 for f in features:
                     f.file_id = file_id
+                    f.seq_id = seq_id
+                    seq_id += 1
                 file_id += 1
                 if limit_n > -1:
+                    print "Using only " + str(limit_n) + " features from " + file_path
                     features = features[0:limit_n]
                 data = PeakData(features, database, transformations)
                 all_features.extend(features)

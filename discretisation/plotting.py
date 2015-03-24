@@ -69,7 +69,7 @@ class ClusterPlotter(object):
         self.peak_data = peak_data
         self.cluster_membership = (cluster_model.Z>0.5)
 
-    def summary(self):
+    def summary(self, file_idx=0):
         print "Cluster output"
         s = self.cluster_membership.sum(0)
         nnz = (s>0).sum()
@@ -93,7 +93,7 @@ class ClusterPlotter(object):
         x = np.array(x) 
 #         x = x[~np.isnan(x)]    
         plt.hist(x, 10)
-        plt.title('Distribution of values in Z')
+        plt.title('Precursor mass clustering -- Z for file ' + str(file_idx))
         plt.xlabel('Probabilities')
         plt.ylabel('Count')
         plt.show()
@@ -124,7 +124,7 @@ class ClusterPlotter(object):
                     title_string += " Mean Mass: " + str(self.cluster_model.cluster_mass_mean[cluster]) + \
                         "(" + str(1.0/self.cluster_model.cluster_mass_prec[cluster]) + ")"
                 plt.title(title_string) 
-        plt.show()
+        plt.show(block=False)
 
         
     def intensity_plot(self):

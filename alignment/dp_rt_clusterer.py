@@ -3,6 +3,7 @@ from collections import defaultdict
 from random import shuffle
 import sys
 import time
+import math
 
 import numpy as np
 import scipy.sparse as sp
@@ -29,6 +30,9 @@ class DpMixtureGibbs:
         self.ZZ_all = sp.lil_matrix((self.N, self.N),dtype=np.float)
         self.cluster_rt_mean = None
         self.cluster_rt_prec = None
+        self.matching_results = []
+        self.samples_obtained = 0
+
                 
     def run(self):
         
@@ -39,7 +43,7 @@ class DpMixtureGibbs:
         current_ks = np.zeros(self.N, dtype=np.int)
 
         # start sampling
-        samples_obtained = 0
+        self.samples_obtained = 0
         for s in range(self.nsamps):
             
             start_time = time.time()
@@ -117,33 +121,70 @@ class DpMixtureGibbs:
             
             time_taken = time.time() - start_time
             if s >= self.burn_in:
+            
                 print('\tSAMPLE\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))
                 self.Z = self.get_Z(self.N, K, current_ks)
                 self.ZZ_all = self.ZZ_all + self.get_ZZ(self.Z)
-                samples_obtained += 1
+                self.samples_obtained += 1
+            
+                # construct the actual alignment here
+                for k in range(K):
+                    # group common bins by their ids, since the same bins would have the same ids across files
+                    pos = np.flatnonzero(current_ks==k)
+                    members = [self.bins[a] for a in pos.tolist()]
+                    groups = defaultdict(list)
+                    for bb in members:
+                        groups[bb.bin_id].append(bb)
+                    groups = groups.values()
+                    # construct matching of peaks across the same bins
+                    results = []
+                    for same_bins in groups:
+                        if len(same_bins) == 1:
+                            # just singleton things
+                            features = same_bins[0].features
+                            for f in features:
+                                tup = (f, )
+                                results.append(tup)                        
+                        else:
+                            # need to match across the same bins
+                            processed = set()
+                            for bb1 in same_bins:
+                                features1 = bb1.features
+                                for f1 in features1:
+                                    if f1 in processed:
+                                        continue
+                                    # find features in other bins that are the closest in mass to f1
+                                    temp = []
+                                    temp.append(f1)
+                                    processed.add(f1)
+                                    for bb2 in same_bins:
+                                        if bb1.origin == bb2.origin:
+                                            continue
+                                        else:
+                                            features2 = bb2.features
+                                            closest = None
+                                            min_diff = float('inf')
+                                            for f2 in features2:
+                                                if f2 in processed:
+                                                    continue
+                                                diff = abs(f1.mass - f2.mass)
+                                                if diff < min_diff:
+                                                    min_diff = diff
+                                                    closest = f2
+                                            if closest is not None:
+                                                temp.append(closest)
+                                                processed.add(closest)
+                                    tup = tuple(temp)
+                                    results.append(tup)    
+                    self.matching_results.extend(results)                     
+                            
             else:
                 print('\tBURN-IN\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))                
             sys.stdout.flush()
-            
-#             # count co-occuring bins in each sample
-#             # for each cluster ... 
-#             for k in range(K):
-#                 # group common bins by their ids, since the same bins have the same ids across files
-#                 pos = np.flatnonzero(current_ks==k)
-#                 members = [self.bins[a] for a in pos.tolist()]
-#                 groups= defaultdict( list )
-#                 for bb in members:
-#                     groups[bb.bin_id].append(bb)
-#                 grouped_members = groups.values()
-#                 print "Cluster " + str(k)
-#                 for g in grouped_members:
-#                     print " - " + str(g)
-#                     fs = [bb.features for bb in g]
-                    
-            
+                        
         # end sample loop
         
-        self.ZZ_all = self.ZZ_all / samples_obtained
+        self.ZZ_all = self.ZZ_all / self.samples_obtained
         print "DONE!"
         
     def reindex(self, deleted_k, current_ks):
