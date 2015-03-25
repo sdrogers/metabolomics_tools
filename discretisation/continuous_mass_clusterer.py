@@ -219,7 +219,7 @@ class ContinuousVB:
 				temp = self.ELogPi[thisPos].T
 				
 				# thisRT = np.array(self.matRT[thisRow,thisPos].toarray())
-				thisTr = np.array(self.transformed.getrowview(thisRow).rts[0])[:,None].T
+				thisTr = np.array(self.transformed.getrowview(thisRow).data[0])[:,None].T
 				thisRT = np.tile(self.rt[thisRow],(1,thisTr.size))
 				
 
@@ -230,7 +230,7 @@ class ContinuousVB:
 				temp = temp/temp.sum()
 				self.Z[thisRow,thisPos] = temp
 				# print t2a-t2,t2b-t2a,t3-t2b,t4-t3
-			QChange = ((oldQZ-self.Z).rts**2).sum()
+			QChange = ((oldQZ-self.Z).data**2).sum()
 			print "Change in Z: " + str(QChange)
 
 

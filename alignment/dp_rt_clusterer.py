@@ -87,6 +87,21 @@ class DpMixtureGibbs:
                 log_likelihood = log_likelihood + 0.5*np.log(prec)
                 log_likelihood = log_likelihood - 0.5*np.multiply(prec, np.square(current_data-param_alpha))
                 
+                # Only bins that have to same top_ids can be together
+                this_bin = self.bins[n]
+                for kk in range(K):
+                    # find which items in cluster kk
+                    pos = np.flatnonzero(current_ks==kk)
+                    pos = pos.tolist()
+                    tops = [self.bins[binpos].top_id for binpos in pos]
+                    valid_cluster = True
+                    for tt in tops:
+                        if tt != this_bin.top_id:
+                            valid_cluster = False
+                            break
+                    if not valid_cluster:
+                        log_likelihood[kk] = float('-inf')
+                
                 # sample from posterior
                 post = log_likelihood + np.log(prior)
                 post = np.exp(post - post.max())
@@ -129,53 +144,46 @@ class DpMixtureGibbs:
             
                 # construct the actual alignment here
                 for k in range(K):
-                    # group common bins by their ids, since the same bins would have the same ids across files
                     pos = np.flatnonzero(current_ks==k)
                     members = [self.bins[a] for a in pos.tolist()]
-                    groups = defaultdict(list)
-                    for bb in members:
-                        groups[bb.bin_id].append(bb)
-                    groups = groups.values()
-                    # construct matching of peaks across the same bins
                     results = []
-                    for same_bins in groups:
-                        if len(same_bins) == 1:
-                            # just singleton things
-                            features = same_bins[0].features
-                            for f in features:
-                                tup = (f, )
-                                results.append(tup)                        
-                        else:
-                            # need to match across the same bins
-                            processed = set()
-                            for bb1 in same_bins:
-                                features1 = bb1.features
-                                for f1 in features1:
-                                    if f1 in processed:
+                    if len(members) == 1:
+                        # just singleton things
+                        features = members[0].features
+                        for f in features:
+                            tup = (f, )
+                            results.append(tup)                        
+                    else:
+                        # need to match across the same bins
+                        processed = set()
+                        for bb1 in members:
+                            features1 = bb1.features
+                            for f1 in features1:
+                                if f1 in processed:
+                                    continue
+                                # find features in other bins that are the closest in mass to f1
+                                temp = []
+                                temp.append(f1)
+                                processed.add(f1)
+                                for bb2 in members:
+                                    if bb1.origin == bb2.origin:
                                         continue
-                                    # find features in other bins that are the closest in mass to f1
-                                    temp = []
-                                    temp.append(f1)
-                                    processed.add(f1)
-                                    for bb2 in same_bins:
-                                        if bb1.origin == bb2.origin:
-                                            continue
-                                        else:
-                                            features2 = bb2.features
-                                            closest = None
-                                            min_diff = float('inf')
-                                            for f2 in features2:
-                                                if f2 in processed:
-                                                    continue
-                                                diff = abs(f1.mass - f2.mass)
-                                                if diff < min_diff:
-                                                    min_diff = diff
-                                                    closest = f2
-                                            if closest is not None:
-                                                temp.append(closest)
-                                                processed.add(closest)
-                                    tup = tuple(temp)
-                                    results.append(tup)    
+                                    else:
+                                        features2 = bb2.features
+                                        closest = None
+                                        min_diff = float('inf')
+                                        for f2 in features2:
+                                            if f2 in processed:
+                                                continue
+                                            diff = abs(f1.mass - f2.mass)
+                                            if diff < min_diff:
+                                                min_diff = diff
+                                                closest = f2
+                                        if closest is not None:
+                                            temp.append(closest)
+                                            processed.add(closest)
+                                tup = tuple(temp)
+                                results.append(tup)    
                     self.matching_results.extend(results)                     
                             
             else:

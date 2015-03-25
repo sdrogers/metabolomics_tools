@@ -124,7 +124,7 @@ class ClusterPlotter(object):
                     title_string += " Mean Mass: " + str(self.cluster_model.cluster_mass_mean[cluster]) + \
                         "(" + str(1.0/self.cluster_model.cluster_mass_prec[cluster]) + ")"
                 plt.title(title_string) 
-        plt.show(block=False)
+        plt.show()
 
         
     def intensity_plot(self):

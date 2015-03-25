@@ -141,6 +141,15 @@ class PrecursorBin(object):
 
     def remove_molecule(self, molecule):
         self.molecules.remove(molecule)
+        
+    def __key(self):
+        return (self.bin_id)
+
+    def __eq__(x, y):
+        return x.__key() == y.__key()
+
+    def __hash__(self):
+        return hash(self.__key())           
     
     def __repr__(self):
         return "PrecursorBin " + utils.print_all_attributes(self)
