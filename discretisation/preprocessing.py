@@ -16,7 +16,6 @@ class Discretiser(object):
 
     def __init__(self, transformations, mass_tol, rt_tol):
 
-        print "Discretising at mass_tol=" + str(mass_tol) + ", rt_tol=" + str(rt_tol)
         self.transformations = transformations
         self.mass_tol = mass_tol
         self.rt_tol = rt_tol
@@ -31,6 +30,7 @@ class Discretiser(object):
             
     def run_single(self, features):       
 
+        print "Discretising at mass_tol=" + str(self.mass_tol) + ", rt_tol=" + str(self.rt_tol)
         # make bins using all the features in the file
         N = len(features)
         K = N # by definition
@@ -72,7 +72,8 @@ class Discretiser(object):
 
     def run_multiple(self, data_list):
 
-        sys.stdout.write('Making common bins\t')
+        print "Discretising at mass_tol=" + str(self.mass_tol)
+        sys.stdout.write('Making top-level bins shared across files')
         all_features = []
         for peak_data in data_list:
             all_features.extend(peak_data.features)    
@@ -112,6 +113,8 @@ class Discretiser(object):
         all_binning = []
         for j in range(len(data_list)):
             
+            sys.stdout.write("Instantiating local bins for file " + str(j))
+            
             peak_data = data_list[j]            
             features = peak_data.features
             N = len(features)        
@@ -119,7 +122,12 @@ class Discretiser(object):
             # initialise the 'concrete' realisations of the top bin realisations in this file
             local_bins = []
             k = 0
-            for tb in top_bins:
+            for a in range(len(top_bins)):
+                
+                if a%200 == 0:
+                    sys.stdout.write('.')                             
+                
+                tb = top_bins[a]
                 fs = self._find_features(tb, features)
                 if fs is not None:
                     if len(fs) == 1:
@@ -156,7 +164,8 @@ class Discretiser(object):
                                     processed.add(f2)
 
             K = len(local_bins)
-            print "- File " + str(j) + " K=" + str(K)
+            print
+            print "File " + str(j) + " has " + str(K) + " local bins instantiated"
             prior_masses = np.array([bb.mass for bb in local_bins])[:, None]                # K x 1                                
             prior_rts = np.array([bb.rt for bb in local_bins])[:, None]                     # K x 1
             prior_intensities = np.array([bb.intensity for bb in local_bins])[:, None]      # K x 1
@@ -165,7 +174,7 @@ class Discretiser(object):
             matRT = sp.lil_matrix((N, K), dtype=np.float)       # N x K, RTs of f n in bin k
             possible = sp.lil_matrix((N, K), dtype=np.int)      # N x K, transformation id+1 of f n in bin k
             transformed = sp.lil_matrix((N, K), dtype=np.float) # N x K, transformed masses of f n in bin k
-            sys.stdout.write("Discretising file " + str(j) + "\t")
+            sys.stdout.write("Building matrices for file " + str(j))
             for n in range(N):
                 
                 if n%200 == 0:
@@ -202,11 +211,13 @@ class Discretiser(object):
         return pcb
     
     def _find_features(self, bb, features):
-        results = []
-        for f in features:
-            precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos] 
-            if bb.get_begin() < precursor_mass and precursor_mass < bb.get_end():
-                results.append(f)
+        masses = np.array([f.mass for f in features])
+        precursor_masses = (masses - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]
+        check1 = bb.get_begin() < precursor_masses
+        check2 = precursor_masses < bb.get_end()
+        pos = np.flatnonzero(check1*check2)
+        pos = pos.tolist()
+        results = [features[i] for i in pos]
         if len(results) == 0:
             return None
         elif len(results) == 1:

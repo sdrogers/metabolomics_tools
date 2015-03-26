@@ -38,7 +38,7 @@ class DatabaseEntry(object):
     def __key(self):
         return (self.db_id, self.name)
 
-    def __eq__(x, y):
+    def __eq__(self, x, y):
         return x.__key() == y.__key()
 
     def __hash__(self):
@@ -61,7 +61,7 @@ class Feature(object):
     def __key(self):
         return (self.feature_id, self.file_id)
 
-    def __eq__(x, y):
+    def __eq__(self, x, y):
         return x.__key() == y.__key()
 
     def __hash__(self):
@@ -145,7 +145,7 @@ class PrecursorBin(object):
     def __key(self):
         return (self.bin_id)
 
-    def __eq__(x, y):
+    def __eq__(self, x, y):
         return x.__key() == y.__key()
 
     def __hash__(self):

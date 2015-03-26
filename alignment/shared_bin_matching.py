@@ -4,7 +4,6 @@ from operator import itemgetter
 import time
 
 from discretisation.discrete_mass_clusterer import DiscreteVB
-from discretisation.continuous_mass_clusterer import ContinuousVB
 from discretisation.models import HyperPars
 from discretisation.plotting import ClusterPlotter
 from discretisation.preprocessing import FileLoader
@@ -12,7 +11,6 @@ import discretisation.utils as utils
 from dp_rt_clusterer import DpMixtureGibbs
 import numpy as np
 import pylab as plt
-
 
 def plot_hist(mapping, filename, mass_tol, rt_tol):
     no_trans = (mapping > 0).sum(1)
@@ -69,11 +67,11 @@ across_file_rt_sd = 10.0                # standard deviation of mixture componen
 alpha_mass = 10000.0                    # concentration parameter for precursor mass clustering
 alpha_rt = 10000.0                      # concentration parameter for DP mixture on RT
 t = 0.50                                # threshold for cluster membership for precursor mass clustering
-limit_n = 500                           # the number of features to load per file to make debugging easier, -1 to load all
+limit_n = -1                            # the number of features to load per file to make debugging easier, -1 to load all
 
 mass_clustering_n_iterations = 20       # no. of iterations for VB precursor clustering
-rt_clustering_nsamps = 10              # no. of total samples for Gibbs RT clustering
-rt_clustering_burnin = 0               # no. of burn-in samples for Gibbs RT clustering
+rt_clustering_nsamps = 200              # no. of total samples for Gibbs RT clustering
+rt_clustering_burnin = 100              # no. of burn-in samples for Gibbs RT clustering
     
 # First stage clustering. 
 # Here we cluster peak features by their precursor masses to the common bins shared across files.
@@ -118,6 +116,9 @@ for j in range(len(data_list)):
     bin_rts = discrete.cluster_rt_mean[nnz_idx]
     plt.figure()
     plt.plot(bin_rts, '.b')
+    plt.title("Posterior RT values for file " + str(j))
+    plt.xlabel("Non-empty bins")
+    plt.ylabel("RT")
     plt.show()
     bin_rts = bin_rts.ravel().tolist()
     posterior_bin_rts.extend(bin_rts)
@@ -147,11 +148,6 @@ first_bins = file_bins[0]
 first_rts = file_post_rts[0]
 second_bins = file_bins[1]
 second_rts = file_post_rts[1]
-print len(first_bins)
-print len(first_rts)
-print len(second_bins)
-print len(second_rts)
-
 xs = []
 ys = []
 for j1 in range(len(first_bins)):
@@ -163,16 +159,11 @@ for j1 in range(len(first_bins)):
         xs.append(rt1)
         ys.append(rt2)
 
-# ids = [bb.bin_id for bb in all_bins]
-# plt.figure()
-# plt.plot(np.array(posterior_bin_rts), 'r.')
-# plt.show()
-        
 plt.figure()
 plt.plot(np.array(xs), np.array(ys), '.b')
-plt.xlabel('File 0')
-plt.ylabel('File 1')
-plt.title('Bin-vs-bin posterior RTs')
+plt.xlabel("File 0")
+plt.ylabel("File 1")
+plt.title("Bin-vs-bin posterior RTs")
 plt.show()
 
 sizes = []
@@ -184,7 +175,9 @@ sizes = []
 for bin2 in second_bins:
     sizes.append(bin2.get_features_count())
 plt.plot(np.array(sizes), 'g.')
-plt.title('Bin sizes in file 0 & 1')
+plt.title("Bin sizes in file 0 & 1")
+plt.xlabel("Bins")
+plt.ylabel("Sizes")
 plt.show()
         
 # Second-stage clustering
@@ -211,9 +204,9 @@ for i,j,v in itertools.izip(cx.row, cx.col, cx.data):
 x = np.array(x)
 plt.figure() 
 plt.hist(x, 10)
-plt.title('DP RT clustering -- ZZ_all')
-plt.xlabel('Probabilities')
-plt.ylabel('Count')
+plt.title("DP RT clustering -- ZZ_all")
+plt.xlabel("Probabilities")
+plt.ylabel("Count")
 plt.show()        
 
 # count frequencies of aligned peaksets produced across the Gibbs samples
@@ -256,7 +249,8 @@ for item in sorted_list:
     print str(i+1) + ". avg m/z=" + str(avg_mz) + " avg RT=" + str(avg_rt) + " prob=" + str(prob)
     for f in features:
         msg = annotations[f]            
-        output = "\tfile_id {:d} mz {:3.5f} RT {:4.2f} intensity {:.4e}\t{:s}".format(f.file_id, f.mass, f.rt, f.intensity, msg)
+        output = "\tfeature_id {:d} file_id {:d} mz {:3.5f} RT {:5.2f} intensity {:.4e}\t{:s}".format(
+                    f.feature_id, f.file_id, f.mass, f.rt, f.intensity, msg)
         print(output) 
     probs.append(prob)
     i += 1
@@ -264,9 +258,9 @@ for item in sorted_list:
 probs = np.array(probs) 
 plt.figure()
 plt.hist(probs, 10)
-plt.title('Aligned peaksets probabilities')
-plt.xlabel('Probabilities')
-plt.ylabel('Count')
+plt.title("Aligned peaksets probabilities")
+plt.xlabel("Probabilities")
+plt.ylabel("Count")
 plt.show()     
 
 end = time.time()
