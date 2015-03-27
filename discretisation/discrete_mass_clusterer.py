@@ -1,4 +1,5 @@
 from random import shuffle
+import sys
 import time
 
 from scipy.special import psi
@@ -29,7 +30,7 @@ class DiscreteGibbs:
         self.n_burn = 10
         self.alpha = float(hyperpars.alpha)
         self.sigma = float(hyperpars.rt_prec)
-        self.tau_zero = float(hyperpars.rt_prior_prec)
+        self.rt_prior_prec = float(hyperpars.rt_prior_prec)
         
         self.Z = sp.lil_matrix((peak_data.num_peaks, peak_data.num_clusters), dtype=np.float)
         self.cluster_rt_mean = np.zeros(peak_data.num_peaks)
@@ -97,8 +98,8 @@ class DiscreteGibbs:
                     log_likelihood_mass = np.log(1.0) - np.log(len(matching_bins))
                                             
                     # compute RT likelihood -- mu is a random variable, marginalise this out
-                    param_beta = self.tau_zero + (self.sigma * mass_bin.get_features_count())
-                    temp = (self.tau_zero * mass_bin_rt) + (self.sigma * mass_bin.get_features_rt())
+                    param_beta = self.rt_prior_prec + (self.sigma * mass_bin.get_features_count())
+                    temp = (self.rt_prior_prec * mass_bin_rt) + (self.sigma * mass_bin.get_features_rt())
                     mu = (1 / param_beta) * temp
                     prec = 1 / ((1 / param_beta) + (1 / self.sigma))
 
@@ -165,7 +166,7 @@ class DiscreteVB:
         Clusters peak features by the possible precursor masses, 
         based on the specified list of adducts, using variational Bayes.
         '''
-        print 'DiscreteVB initialised'
+        print 'DiscreteVB initialising'
         self.features = peak_data.features
         self.n_peaks = peak_data.num_peaks
         self.k_clusters = peak_data.num_clusters        
@@ -184,11 +185,15 @@ class DiscreteVB:
         # self.Z = sp.identity(self.n_peaks, format="lil")
           
         # N != K now, so initially put peaks into any bin that fits
+        sys.stdout.write('Startup ')
         self.Z = sp.lil_matrix((self.n_peaks, self.k_clusters),dtype=np.float) 
         for n in range(self.n_peaks):
+            if n%200 == 0:
+                sys.stdout.write('.')                                         
             possible_clusters = np.nonzero(self.possible[n, :])[1]
             k = possible_clusters[0]
             self.Z[n, k] = 1
+        print
                     
     def run(self):
 
@@ -197,7 +202,7 @@ class DiscreteVB:
         print str(todo.size) + " peaks to be re-sampled"
                     
         for it in range(self.n_iterations):
-            print "Iteration " + str(it)
+            sys.stdout.write("Iteration " + str(it) + " ")                  
             
             count_Z = np.array(self.Z.sum(0))
             

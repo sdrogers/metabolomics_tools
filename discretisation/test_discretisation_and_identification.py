@@ -28,24 +28,21 @@ def main():
 
     database = basedir + '/database/std1_mols.csv'
     transformation = basedir + '/mulsubs/mulsub.txt'
-    input_file = basedir + '/input/std1_csv/std1-file1.identified.csv'
+    input_file = basedir + '/input/std1_csv_subset'
     mass_tol = 2
     rt_tol = 5
 
     # load the std file, database_file molecules and transformation_file
     loader = FileLoader()
     peak_data = loader.load_model_input(input_file, database, transformation, mass_tol, rt_tol)
-    plot_hist(peak_data.possible.todense(), input_file, mass_tol, rt_tol)
+    plot_hist(peak_data.possible, input_file, mass_tol, rt_tol)
 
     # try identify
-    ann = MolAnnotator()
-    
-    moldb = peak_data.database
-    prior_masses = peak_data.prior_masses    
-    bins = peak_data.bins
-
-    ann.identify_normal(moldb, prior_masses, mass_tol)
-
-    ann.identify_bins(moldb, bins)
+#     ann = MolAnnotator()    
+#     moldb = peak_data.database
+#     prior_masses = peak_data.prior_masses    
+#     bins = peak_data.bins
+#     ann.identify_normal(moldb, prior_masses, mass_tol)
+#     ann.identify_bins(moldb, bins)
 
 if __name__ == "__main__": main()

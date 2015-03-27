@@ -8,4 +8,4 @@ Explanations:
 * **AdductLevels** contains adduct stuff.
 * **alignment** contains some alignment experiments.
 * **discretisation** contains various models to cluster peak features after discretised, based on their mass relationships etc.  
-* **precursor_clustering** contains codes to cluster peak by precursor masses without discretisation?
+* **precursor_clustering** don't know what it's for

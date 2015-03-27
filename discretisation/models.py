@@ -34,6 +34,15 @@ class DatabaseEntry(object):
 
     def get_end(self):
         return self.mass_range[1]
+    
+    def __key(self):
+        return (self.db_id, self.name)
+
+    def __eq__(self, x, y):
+        return x.__key() == y.__key()
+
+    def __hash__(self):
+        return hash(self.__key())       
         
     def __repr__(self):
         return "DatabaseEntry " + utils.print_all_attributes(self)
@@ -48,6 +57,15 @@ class Feature(object):
         self.file_id = file_id
         self.gt_metabolite = None   # used for synthetic data
         self.gt_adduct = None       # used for synthetic data
+        
+    def __key(self):
+        return (self.feature_id, self.file_id)
+
+    def __eq__(self, x, y):
+        return x.__key() == y.__key()
+
+    def __hash__(self):
+        return hash(self.__key())    
         
     def __repr__(self):
         return "Feature " + utils.print_all_attributes(self)
@@ -71,6 +89,9 @@ class PeakData(object):
         self.intensity = np.array([f.intensity for f in self.features])[:, None]    # N x 1
         
         if discrete_info is not None:
+            self.set_discrete_info(discrete_info)
+            
+    def set_discrete_info(self, discrete_info):
             self.possible = discrete_info.possible
             self.transformed = discrete_info.transformed
             self.matRT = discrete_info.matRT
@@ -90,8 +111,9 @@ class PrecursorBin(object):
         self.intensity = intensity
         self.mass_range = utils.mass_range(mass, mass_tol)
         self.rt_range = utils.rt_range(rt, rt_tol)
-        self.features = []
+        self.features = set()
         self.molecules = set()
+        self.origin = 0
         
     def get_begin(self):
         return self.mass_range[0]
@@ -100,11 +122,10 @@ class PrecursorBin(object):
         return self.mass_range[1]
     
     def add_feature(self, feature):
-        self.features.append(feature)
+        self.features.add(feature)
     
     def remove_feature(self, feature):
-        if feature in self.features: 
-            self.features.remove(feature)
+        self.features.remove(feature)
     
     def get_features_count(self):
         return len(self.features)
@@ -117,6 +138,18 @@ class PrecursorBin(object):
     
     def add_molecule(self, molecule):
         self.molecules.add(molecule)
+
+    def remove_molecule(self, molecule):
+        self.molecules.remove(molecule)
+        
+    def __key(self):
+        return (self.bin_id)
+
+    def __eq__(self, x, y):
+        return x.__key() == y.__key()
+
+    def __hash__(self):
+        return hash(self.__key())           
     
     def __repr__(self):
         return "PrecursorBin " + utils.print_all_attributes(self)
