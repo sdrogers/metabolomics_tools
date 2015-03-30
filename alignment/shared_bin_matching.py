@@ -108,7 +108,7 @@ across_file_rt_sd = 10.0               # standard deviation of mixture component
 alpha_mass = 100.0                     # concentration parameter for precursor mass clustering
 alpha_rt = 100.0                       # concentration parameter for DP mixture on RT
 t = 0.50                               # threshold for cluster membership for precursor mass clustering
-limit_n = 500                          # the number of features to load per file to make debugging easier, -1 to load all
+limit_n = 3600                         # the number of features to load per file to make debugging easier, -1 to load all
 
 mass_clustering_n_iterations = 20      # no. of iterations for VB precursor clustering
 rt_clustering_nsamps = 20              # no. of total samples for Gibbs RT clustering
@@ -150,6 +150,7 @@ for j in range(len(data_list)):
 
     # find the non-empty bins
     bins = [peak_data.bins[a] for a in nnz_idx]
+    print "Non-empty bins=" + str(len(bins))
     all_bins.extend(bins)
     file_bins.append(bins)
 

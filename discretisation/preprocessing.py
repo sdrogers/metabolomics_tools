@@ -131,45 +131,19 @@ class Discretiser(object):
                 tb = top_bins[a]
                 fs = self._find_features(tb, features) 
                 if fs is not None:
-                    if len(fs) == 1:
-                        # if only 1 suitable feature, then this becomes its own concrete bin
-                        f = fs[0]
-                        precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos] 
+                    for f1 in fs:
+                        # make a new concrete bin from the feature based on mass and RT
+                        precursor_mass = (f1.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos] 
                         precursor_mass = np.asscalar(precursor_mass)
-                        concrete_bin = PrecursorBin(k, precursor_mass, f.rt, f.intensity, self.mass_tol, self.rt_tol)
+                        concrete_bin = PrecursorBin(k, precursor_mass, f1.rt, f1.intensity, self.mass_tol, self.rt_tol)
                         concrete_bin.top_id = tb.bin_id
                         concrete_bin.origin = j
                         concrete_bins.append(concrete_bin)
                         k += 1
-                    else:
-                        # otherwise we must make sure that all features can go into at least one concrete bin
-                        processed = set()
-                        for f1 in fs: # fs are already ordered by intensity descending
-                            if f1 in processed:
-                                continue
-                            # make a new concrete bin from the first unprocessed feature
-                            precursor_mass = (f1.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos] 
-                            precursor_mass = np.asscalar(precursor_mass)
-                            concrete_bin = PrecursorBin(k, precursor_mass, f1.rt, f1.intensity, self.mass_tol, self.rt_tol)
-                            concrete_bin.top_id = tb.bin_id
-                            concrete_bin.origin = j
-                            concrete_bins.append(concrete_bin)
-                            k += 1
-                            processed.add(f1)
-                            # then put every other features that can go into the above concrete bin inside it
-                            for f2 in fs:
-                                if f2 in processed:
-                                    continue
-                                (mass_begin, mass_end) = concrete_bin.mass_range
-                                (rt_begin, rt_end) = concrete_bin.rt_range
-                                if mass_begin < f2.mass and f2.mass < mass_end and \
-                                    rt_begin < f2.rt and f2.rt < rt_end and \
-                                    f2.intensity < concrete_bin.intensity:                                    
-                                    processed.add(f2)
 
             K = len(concrete_bins)
             print
-            print "File " + str(j) + " has " + str(K) + " local bins instantiated"
+            print "File " + str(j) + " has " + str(K) + " concrete bins instantiated"
             prior_masses = np.array([bb.mass for bb in concrete_bins])[:, None]                # K x 1                                
             prior_rts = np.array([bb.rt for bb in concrete_bins])[:, None]                     # K x 1
             prior_intensities = np.array([bb.intensity for bb in concrete_bins])[:, None]      # K x 1
@@ -187,9 +161,6 @@ class Discretiser(object):
                 f = features[n]    
                 current_mass, current_rt, current_intensity = f.mass, f.rt, f.intensity
                 transformed_masses = (current_mass - self.adduct_sub)/self.adduct_mul + self.adduct_del
-
-#                 if f.feature_id == 3308 and f.file_id == 1:
-#                     print "Here"                                                                    
 
                 rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_tol)
                 intensity_ok = (current_intensity <= prior_intensities)
@@ -230,10 +201,8 @@ class Discretiser(object):
         results = [features[i] for i in pos]
         if len(results) == 0:
             return None
-        elif len(results) == 1:
+        else:
             return results
-        elif len(results) > 1:
-            return sorted(results, key = attrgetter('intensity'), reverse=True)      
     
 class FileLoader:
         
