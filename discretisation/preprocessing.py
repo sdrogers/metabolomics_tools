@@ -73,7 +73,7 @@ class Discretiser(object):
     def run_multiple(self, data_list):
 
         print "Discretising at mass_tol=" + str(self.mass_tol)
-        sys.stdout.write('Making top-level bins shared across files')
+        sys.stdout.write('Making top-level bins shared across files ')
         all_features = []
         for peak_data in data_list:
             all_features.extend(peak_data.features)    
@@ -109,36 +109,37 @@ class Discretiser(object):
         print
         print "Total top bins=" + str(K) + " total features=" + str(N)
 
-        # for each file, we want to instantiatie its local bins -- based on the top bins
+        # for each file, we want to instantiatie its concrete bins -- based on the top bins
         all_binning = []
         for j in range(len(data_list)):
             
-            sys.stdout.write("Instantiating local bins for file " + str(j))
+            sys.stdout.write("Instantiating concrete bins for file " + str(j) + " ")
             
             peak_data = data_list[j]            
             features = peak_data.features
             N = len(features)        
 
-            # initialise the 'concrete' realisations of the top bin realisations in this file
-            local_bins = []
+            # initialise the 'concrete' realisations of the top bins in this file
+            concrete_bins = []
             k = 0
             for a in range(len(top_bins)):
                 
                 if a%200 == 0:
                     sys.stdout.write('.')                             
                 
+                # find all features that can fit by mass in the top level bin
                 tb = top_bins[a]
-                fs = self._find_features(tb, features)
+                fs = self._find_features(tb, features) 
                 if fs is not None:
                     if len(fs) == 1:
                         # if only 1 suitable feature, then this becomes its own concrete bin
                         f = fs[0]
                         precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos] 
                         precursor_mass = np.asscalar(precursor_mass)
-                        local_bin = PrecursorBin(k, precursor_mass, f.rt, f.intensity, self.mass_tol, self.rt_tol)
-                        local_bin.top_id = tb.bin_id
-                        local_bin.origin = j
-                        local_bins.append(local_bin)
+                        concrete_bin = PrecursorBin(k, precursor_mass, f.rt, f.intensity, self.mass_tol, self.rt_tol)
+                        concrete_bin.top_id = tb.bin_id
+                        concrete_bin.origin = j
+                        concrete_bins.append(concrete_bin)
                         k += 1
                     else:
                         # otherwise we must make sure that all features can go into at least one concrete bin
@@ -146,35 +147,38 @@ class Discretiser(object):
                         for f1 in fs: # fs are already ordered by intensity descending
                             if f1 in processed:
                                 continue
-                            # make a new local bin
+                            # make a new concrete bin from the first unprocessed feature
                             precursor_mass = (f1.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos] 
                             precursor_mass = np.asscalar(precursor_mass)
-                            local_bin = PrecursorBin(k, precursor_mass, f1.rt, f1.intensity, self.mass_tol, self.rt_tol)
-                            local_bin.top_id = tb.bin_id
-                            local_bin.origin = j
-                            local_bins.append(local_bin)
+                            concrete_bin = PrecursorBin(k, precursor_mass, f1.rt, f1.intensity, self.mass_tol, self.rt_tol)
+                            concrete_bin.top_id = tb.bin_id
+                            concrete_bin.origin = j
+                            concrete_bins.append(concrete_bin)
                             k += 1
                             processed.add(f1)
-                            # ignore every other features that can go into the above local bin
+                            # then put every other features that can go into the above concrete bin inside it
                             for f2 in fs:
                                 if f2 in processed:
                                     continue
-                                (rt_begin, rt_end) = local_bin.rt_range
-                                if rt_begin < f2.rt and f2.rt < rt_end:
+                                (mass_begin, mass_end) = concrete_bin.mass_range
+                                (rt_begin, rt_end) = concrete_bin.rt_range
+                                if mass_begin < f2.mass and f2.mass < mass_end and \
+                                    rt_begin < f2.rt and f2.rt < rt_end and \
+                                    f2.intensity < concrete_bin.intensity:                                    
                                     processed.add(f2)
 
-            K = len(local_bins)
+            K = len(concrete_bins)
             print
             print "File " + str(j) + " has " + str(K) + " local bins instantiated"
-            prior_masses = np.array([bb.mass for bb in local_bins])[:, None]                # K x 1                                
-            prior_rts = np.array([bb.rt for bb in local_bins])[:, None]                     # K x 1
-            prior_intensities = np.array([bb.intensity for bb in local_bins])[:, None]      # K x 1
+            prior_masses = np.array([bb.mass for bb in concrete_bins])[:, None]                # K x 1                                
+            prior_rts = np.array([bb.rt for bb in concrete_bins])[:, None]                     # K x 1
+            prior_intensities = np.array([bb.intensity for bb in concrete_bins])[:, None]      # K x 1
 
             # build the matrices for this file
             matRT = sp.lil_matrix((N, K), dtype=np.float)       # N x K, RTs of f n in bin k
             possible = sp.lil_matrix((N, K), dtype=np.int)      # N x K, transformation id+1 of f n in bin k
             transformed = sp.lil_matrix((N, K), dtype=np.float) # N x K, transformed masses of f n in bin k
-            sys.stdout.write("Building matrices for file " + str(j))
+            sys.stdout.write("Building matrices for file " + str(j) + " ")
             for n in range(N):
                 
                 if n%200 == 0:
@@ -183,6 +187,9 @@ class Discretiser(object):
                 f = features[n]    
                 current_mass, current_rt, current_intensity = f.mass, f.rt, f.intensity
                 transformed_masses = (current_mass - self.adduct_sub)/self.adduct_mul + self.adduct_del
+
+#                 if f.feature_id == 3308 and f.file_id == 1:
+#                     print "Here"                                                                    
 
                 rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_tol)
                 intensity_ok = (current_intensity <= prior_intensities)
@@ -196,9 +203,12 @@ class Discretiser(object):
                     # and other prior values too
                     transformed[n, pos] = transformed_masses[t]
                     matRT[n, pos] = current_rt            
+                    
+                possible_clusters = np.nonzero(possible[n, :])[1]
+                assert len(possible_clusters) > 0, str(f) + " has no possible clusters"
                 
             print
-            binning = DiscreteInfo(possible, transformed, matRT, local_bins, prior_masses, prior_rts)
+            binning = DiscreteInfo(possible, transformed, matRT, concrete_bins, prior_masses, prior_rts)
             all_binning.append(binning)
 
         return all_binning     

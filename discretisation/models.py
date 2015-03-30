@@ -143,7 +143,7 @@ class PrecursorBin(object):
         self.molecules.remove(molecule)
         
     def __key(self):
-        return (self.bin_id)
+        return (self.bin_id, self.origin)
 
     def __eq__(self, x, y):
         return x.__key() == y.__key()
