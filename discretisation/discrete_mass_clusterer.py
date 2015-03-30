@@ -171,6 +171,7 @@ class DiscreteVB:
         self.n_peaks = peak_data.num_peaks
         self.k_clusters = peak_data.num_clusters        
         self.possible = peak_data.possible
+        self.transformed = peak_data.transformed
         self.matRT = peak_data.matRT
         self.rt = np.copy(peak_data.rt)
         self.prior_rt = np.copy(peak_data.prior_rts)

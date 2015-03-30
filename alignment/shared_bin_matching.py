@@ -53,6 +53,47 @@ def find_same_top_id(key, items):
             indices.append(a)
             results.append(check)
     return indices, results
+
+def match_features(members):
+    results = []
+    if len(members) == 1:
+        # just singleton things
+        features = members[0].features
+        for f in features:
+            tup = (f, )
+            results.append(tup)                        
+    else:
+        # need to match across the same bins
+        processed = set()
+        for bb1 in members:
+            features1 = bb1.features
+            for f1 in features1:
+                if f1 in processed:
+                    continue
+                # find features in other bins that are the closest in mass to f1
+                temp = []
+                temp.append(f1)
+                processed.add(f1)
+                for bb2 in members:
+                    if bb1.origin == bb2.origin:
+                        continue
+                    else:
+                        features2 = bb2.features
+                        closest = None
+                        min_diff = float('inf')
+                        for f2 in features2:
+                            if f2 in processed:
+                                continue
+                            diff = abs(f1.mass - f2.mass)
+                            if diff < min_diff:
+                                min_diff = diff
+                                closest = f2
+                        if closest is not None:
+                            temp.append(closest)
+                            processed.add(closest)
+                tup = tuple(temp)
+                results.append(tup)  
+    return results
     
 start = time.time()
 
@@ -60,18 +101,18 @@ database = '../discretisation/database/std1_mols.csv'
 transformation = '../discretisation/mulsubs/mulsub2.txt'
 input_file = './input/std1_csv_2'
 
-binning_mass_tol = 2.0                  # mass tolerance in ppm when binning
-binning_rt_tol = 5.0                    # rt tolerance in seconds when binning
-within_file_rt_sd = 2.5                 # standard deviation of each cluster when clustering by precursor masses in a single file
-across_file_rt_sd = 10.0                # standard deviation of mixture component when clustering by RT across files
-alpha_mass = 10000.0                    # concentration parameter for precursor mass clustering
-alpha_rt = 10000.0                      # concentration parameter for DP mixture on RT
-t = 0.50                                # threshold for cluster membership for precursor mass clustering
-limit_n = -1                            # the number of features to load per file to make debugging easier, -1 to load all
+binning_mass_tol = 2.0                 # mass tolerance in ppm when binning
+binning_rt_tol = 5.0                   # rt tolerance in seconds when binning
+within_file_rt_sd = 2.5                # standard deviation of each cluster when clustering by precursor masses in a single file
+across_file_rt_sd = 10.0               # standard deviation of mixture component when clustering by RT across files
+alpha_mass = 100.0                     # concentration parameter for precursor mass clustering
+alpha_rt = 100.0                       # concentration parameter for DP mixture on RT
+t = 0.50                               # threshold for cluster membership for precursor mass clustering
+limit_n = 500                          # the number of features to load per file to make debugging easier, -1 to load all
 
-mass_clustering_n_iterations = 20       # no. of iterations for VB precursor clustering
-rt_clustering_nsamps = 200              # no. of total samples for Gibbs RT clustering
-rt_clustering_burnin = 100              # no. of burn-in samples for Gibbs RT clustering
+mass_clustering_n_iterations = 20      # no. of iterations for VB precursor clustering
+rt_clustering_nsamps = 20              # no. of total samples for Gibbs RT clustering
+rt_clustering_burnin = 10              # no. of burn-in samples for Gibbs RT clustering
     
 # First stage clustering. 
 # Here we cluster peak features by their precursor masses to the common bins shared across files.
@@ -140,8 +181,9 @@ for j in range(len(data_list)):
         # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
         bin_prob = discrete.Z[i, j]
         trans_idx = discrete.possible[i, j]
-        tran = tmap[trans_idx]
-        msg = "{:s}@{:3.5f} prob={:.2f}".format(tran.name, bb.mass, bin_prob)            
+        transformed_value = discrete.transformed[i, j]
+        transformation = tmap[trans_idx]
+        msg = "{:s}@{:3.5f} prob={:.2f}".format(transformation.name, transformed_value, bin_prob)            
         annotate(annotations, f, msg)            
     
 first_bins = file_bins[0]
@@ -209,18 +251,18 @@ plt.xlabel("Probabilities")
 plt.ylabel("Count")
 plt.show()        
 
-# count frequencies of aligned peaksets produced across the Gibbs samples
+# count frequencies of aligned bins produced across the Gibbs samples
 print "Counting frequencies of aligned peaksets"
 matching_results = dp.matching_results
 counter = dict()
-for peakset in matching_results:
-    if len(peakset) > 1:
-        peakset = sorted(peakset, key = attrgetter('file_id'))
-        peakset = tuple(peakset)
-    if peakset not in counter:
-        counter[peakset] = 1
+for bins in matching_results:
+    if len(bins) > 1:
+        bins = sorted(bins, key = attrgetter('origin'))
+        bins = tuple(bins)
+    if bins not in counter:
+        counter[bins] = 1
     else:
-        counter[peakset] += 1
+        counter[bins] += 1
 
 # normalise the counts
 print "Normalising counts"
@@ -238,22 +280,26 @@ sorted_list = sorted(counter.items(), key=itemgetter(1), reverse=True)
 probs = []
 i = 0
 for item in sorted_list:
-    features = item[0]
-    if len(features)==1:
+    members = item[0]
+    if len(members)==1:
         continue # skip all the singleton stuff
     prob = item[1]
-    mzs = np.array([f.mass for f in features])
-    rts = np.array([f.rt for f in features])
-    avg_mz = np.mean(mzs)
-    avg_rt = np.mean(rts)
-    print str(i+1) + ". avg m/z=" + str(avg_mz) + " avg RT=" + str(avg_rt) + " prob=" + str(prob)
-    for f in features:
-        msg = annotations[f]            
-        output = "\tfeature_id {:d} file_id {:d} mz {:3.5f} RT {:5.2f} intensity {:.4e}\t{:s}".format(
-                    f.feature_id, f.file_id, f.mass, f.rt, f.intensity, msg)
-        print(output) 
-    probs.append(prob)
-    i += 1
+    matched_list = match_features(members)
+    for features in matched_list:
+        if len(features)==1:
+            continue
+        mzs = np.array([f.mass for f in features])
+        rts = np.array([f.rt for f in features])
+        avg_mz = np.mean(mzs)
+        avg_rt = np.mean(rts)
+        print str(i+1) + ". avg m/z=" + str(avg_mz) + " avg RT=" + str(avg_rt) + " prob=" + str(prob)
+        for f in features:
+            msg = annotations[f]            
+            output = "\tfeature_id {:5d} file_id {:d} mz {:3.5f} RT {:5.2f} intensity {:.4e}\t{:s}".format(
+                        f.feature_id, f.file_id, f.mass, f.rt, f.intensity, msg)
+            print(output) 
+        probs.append(prob)
+        i += 1
 
 probs = np.array(probs) 
 plt.figure()
