@@ -177,27 +177,28 @@ class shape_clusterer_greedy(object):
     def __init__(self,corr_mat,intensities,thresh=0.7,output = 1):
         self.thresh = thresh
         self.corr_mat = corr_mat
-        self.intensities = np.copy(intensities)
+        self.intensities = intensities
         self.n_peaks = (self.corr_mat.shape)[0]
         self.output = output
 
     def _cluster(self):
         print "Running greedy clustering"
         self.Z = np.zeros(self.n_peaks,dtype=np.int64)-1
+        temp_intensities = np.copy(self.intensities)
         finished = False
         cl_no = 0
         number_left = self.n_peaks
         self.counts = []
         while not finished:
-            biggest_peak = np.argmax(self.intensities)
+            biggest_peak = np.argmax(temp_intensities)
             if self.output>0:
                 print "Iteration " + str(cl_no) + ", " + str(number_left) + " peaks left"
             self.Z[biggest_peak] = cl_no
-            self.intensities[biggest_peak] = -1
-            pos = np.where((self.corr_mat[biggest_peak,:]>=self.thresh)*(self.intensities > 0))[0]
+            temp_intensities[biggest_peak] = -1
+            pos = np.where((self.corr_mat[biggest_peak,:]>=self.thresh)*(temp_intensities > 0))[0]
             self.Z[pos] = cl_no
-            self.intensities[pos] = -1
-            number_left = np.sum(self.intensities>0)
+            temp_intensities[pos] = -1
+            number_left = np.sum(temp_intensities>0)
             self.counts.append((self.Z==cl_no).sum())
             cl_no += 1
             if number_left == 0:
