@@ -2,6 +2,7 @@
 import numpy as np
 from scipy.special import gammaln
 from scipy.stats import beta
+import pylab as plt
 
 class shape_cluster_gibbs(object):
 
@@ -48,7 +49,10 @@ class shape_cluster_gibbs(object):
 
         # Creeate output structures
         self.post_sim = np.zeros((self.n_peaks,self.n_peaks))
-
+        self.all_K = []
+        self.all_total_like = []
+        self.best_Z = self.Z
+        self.best_like = -np.inf
     def _sample(self):
         base_like = self.out_like.sum(axis=0)
         for samp in np.arange(self.n_samples):
@@ -103,11 +107,40 @@ class shape_cluster_gibbs(object):
                             self.temp[new_cluster,:] += self.in_like[this_peak,:] - self.out_like[this_peak,:]
 
             if samp > self.n_burn:
+                total_like = base_like.sum()
                 for k in np.arange(self.K):
                     pos = np.where(self.Z==k)[0]
                     self.post_sim[pos[:,np.newaxis],pos] += 1
+                    total_like -= self.out_like[pos[:,np.newaxis],pos].sum()
+                    total_like += self.in_like[pos[:,np.newaxis],pos].sum()
+                self.all_K.append(self.K)
+                self.all_total_like.append(total_like)
+                if total_like > self.best_like:
+                    self.best_like = total_like
+                    self.best_Z = self.Z
+
+
 
         self.post_sim /= (self.n_samples - self.n_burn)
+
+    def _summary(self):
+        print "K = " + str(self.K)
+        plt.figure()
+        plt.pcolor(self.post_sim)
+        plt.figure()
+        plt.hist(np.sort(self.counts),np.arange(np.min(self.counts),np.max(self.counts)+1))
+        plt.xlabel('Cluster size')
+        plt.ylabel('Count')
+        if self.infinite:
+            plt.figure()
+            plt.plot(np.arange(self.n_samples-self.n_burn-1),np.array(self.all_K))
+            plt.xlabel('Samples')
+            plt.ylabel('K')
+        plt.figure()
+        plt.plot(np.arange(self.n_samples-self.n_burn-1),np.array(self.all_total_like))
+        plt.xlabel('Samples')
+        plt.ylabel('Log likelihood')
+        print "Best Log Like = " + str(self.best_like) + " (K = " + str(np.max(self.best_Z)+1) + ")"
 
     def _create_like_mats(self):
         print "Creating likelihood matrices"
@@ -138,6 +171,48 @@ def log_beta_pdf(x,a,b):
     o = gammaln(a + b) - gammaln(a) - gammaln(b)
     o = o + (a-1)*np.log(x) + (b-1)*np.log(1-x)
     return o
+
+
+class shape_clusterer_greedy(object):
+    def __init__(self,corr_mat,intensities,thresh=0.7,output = 1):
+        self.thresh = thresh
+        self.corr_mat = corr_mat
+        self.intensities = np.copy(intensities)
+        self.n_peaks = (self.corr_mat.shape)[0]
+        self.output = output
+
+    def _cluster(self):
+        print "Running greedy clustering"
+        self.Z = np.zeros(self.n_peaks,dtype=np.int64)-1
+        finished = False
+        cl_no = 0
+        number_left = self.n_peaks
+        self.counts = []
+        while not finished:
+            biggest_peak = np.argmax(self.intensities)
+            if self.output>0:
+                print "Iteration " + str(cl_no) + ", " + str(number_left) + " peaks left"
+            self.Z[biggest_peak] = cl_no
+            self.intensities[biggest_peak] = -1
+            pos = np.where((self.corr_mat[biggest_peak,:]>=self.thresh)*(self.intensities > 0))[0]
+            self.Z[pos] = cl_no
+            self.intensities[pos] = -1
+            number_left = np.sum(self.intensities>0)
+            self.counts.append((self.Z==cl_no).sum())
+            cl_no += 1
+            if number_left == 0:
+                finished = True
+
+    def _summary(self):
+        print ""
+        print "Greedy Clustering Summary"
+        print "K = " + str(np.max(self.Z)+1)
+        plt.figure()
+        plt.pcolor(self.Z == self.Z[:,np.newaxis])
+        plt.figure()
+        plt.hist(np.sort(self.counts),np.arange(np.min(self.counts),np.max(self.counts)+1))
+        plt.xlabel('Cluster size')
+        plt.ylabel('Count')
 
 class hyper(object):
     in_alpha = 10.0
@@ -173,8 +248,10 @@ class data_generator(object):
                 self.counts[pos] += 1
 
         self.Z = np.sort(self.Z)
-
-
+        self.K = np.max(self.Z)
+        self.intensities = []
+        for n in np.arange(self.n_peaks):
+            self.intensities.append(np.random.rand())
         self.corr_mat = np.zeros((self.n_peaks,self.n_peaks))
         for n in np.arange(self.n_peaks-1):
             this_cluster = self.Z[n]
@@ -192,4 +269,6 @@ class data_generator(object):
                 
                 self.corr_mat[n,m] = this_val
                 self.corr_mat[m,n] = this_val
+
+
 
