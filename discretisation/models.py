@@ -75,7 +75,7 @@ DiscreteInfo = namedtuple('DiscreteInfo', ['possible', 'transformed', 'matRT', '
     
 class PeakData(object):
     
-    def __init__(self, features, database, transformations, corr_mat=None, discrete_info=None):
+    def __init__(self, features, database, transformations, discrete_info=None, corr_mat=None):
                 
         # list of feature, database entry and transformation objects
         self.features = features

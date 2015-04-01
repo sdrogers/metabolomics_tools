@@ -266,7 +266,7 @@ class FileLoader:
             if make_bins:
                 discretiser = Discretiser(transformations, mass_tol, rt_tol)
                 binning = discretiser.run_single(features)
-            data = PeakData(features, database, transformations, binning, corr_mat=corr_mat)
+            data = PeakData(features, database, transformations, discrete_info=binning, corr_mat=corr_mat)
             return data
                 
     def load_features(self, input_file, load_correlations=False, synthetic=False):
