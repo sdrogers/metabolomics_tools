@@ -1,4 +1,3 @@
-import copy
 import csv
 import glob
 from operator import attrgetter
@@ -8,6 +7,7 @@ import sys
 from discretisation.interval_tree import IntervalTree
 from models import DiscreteInfo, PrecursorBin, PeakData, Feature, DatabaseEntry, Transformation
 import numpy as np
+import scipy.io as sio
 import scipy.sparse as sp
 import utils
 
@@ -231,7 +231,7 @@ class FileLoader:
             data_list = []
             all_features = []
             for file_path in filelist:
-                features = self.load_features(file_path, synthetic=synthetic)
+                features, corr_mat = self.load_features(file_path, synthetic=synthetic)
                 # TODO: feature really should be immutable!!
                 for f in features:
                     f.file_id = file_id
@@ -239,7 +239,7 @@ class FileLoader:
                 if limit_n > -1:
                     print "Using only " + str(limit_n) + " features from " + file_path
                     features = features[0:limit_n]
-                data = PeakData(features, database, transformations)
+                data = PeakData(features, database, transformations, corr_mat=corr_mat)
                 all_features.extend(features)
                 data_list.append(data)
                 
@@ -259,17 +259,19 @@ class FileLoader:
         else:   
                      
             # process only a single file
-            features = self.load_features(input_file, synthetic=synthetic)
+            features, corr_mat = self.load_features(input_file, synthetic=synthetic)
             if limit_n > -1:
                 features = features[0:limit_n]
             binning = None
             if make_bins:
                 discretiser = Discretiser(transformations, mass_tol, rt_tol)
                 binning = discretiser.run_single(features)
-            data = PeakData(features, database, transformations, binning)
+            data = PeakData(features, database, transformations, binning, corr_mat=corr_mat)
             return data
                 
-    def load_features(self, input_file, synthetic=False):
+    def load_features(self, input_file, load_correlations=False, synthetic=False):
+
+        # first load the features
         features = []
         if input_file.endswith(".csv"):
             features = self.load_features_csv(input_file)
@@ -281,7 +283,18 @@ class FileLoader:
                 # in tab-separated format from mzMatch
                 features = self.load_features_txt(input_file)   
         print str(len(features)) + " features read from " + input_file             
-        return features
+
+        # also check if the correlation matrix is there, if yes load it too
+        corr_mat = None
+        if load_correlations:
+            front_part, extension = os.path.splitext(input_file)
+            matfile = front_part + '.corr.mat'
+            if os.path.isfile(matfile):
+                print "Reading peak shape correlations from " + matfile
+                mdict = sio.loadmat(matfile)
+                corr_mat = mdict['corr_mat'] 
+
+        return features, corr_mat
     
     def detect_delimiter(self, input_file):
         with open(input_file, 'rb') as csvfile:
