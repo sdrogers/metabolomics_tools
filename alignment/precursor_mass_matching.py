@@ -3,11 +3,12 @@ import glob
 import itertools
 import os
 
-from matching import MaxWeightedMatching
+from alignment.ground_truth import GroundTruth
 from discretisation import utils
 from discretisation.continuous_mass_clusterer import ContinuousVB
 from discretisation.models import HyperPars
 from discretisation.preprocessing import FileLoader
+from matching import MaxWeightedMatching
 from models import AlignmentFile, Feature, AlignmentRow
 import numpy as np
 
@@ -26,21 +27,22 @@ file_list = utils.natural_sort(file_list)
 
 binning_mass_tol = 2.0                 # mass tolerance in ppm when binning
 binning_rt_tol = 5.0                   # rt tolerance in seconds when binning
-limit_n = 1000                         # the number of features to load per file to make debugging easier, -1 to load all
+limit_n = -1                           # the number of features to load per file to make debugging easier, -1 to load all
 t = 0.5
     
-# load alignment ground truth here
-
-
 # First stage clustering. 
 # Here we cluster peak features by their precursor masses to the common bins shared across files.
 feature_to_bin = {}
 file_bins = []
+file_peak_data = []
 for j in range(len(file_list)):
     
     input_file = file_list[j]
     loader = FileLoader()
     peak_data = loader.load_model_input(input_file, database, transformation, binning_mass_tol, binning_rt_tol, limit_n=limit_n)
+    for f in peak_data.features:
+        f.file_id = j
+    file_peak_data.append(peak_data)
 
     # run precursor mass clustering
     print "Clustering file " + input_file + " by precursor masses"
@@ -146,3 +148,6 @@ for row in matched_results.rows:
     print matched_bins
     
 print "Performance evaluation"
+gt_file = '/home/joewandy/git/metabolomics_tools/alignment/input/std1_csv_2/ground_truth/std1.positive.dat'
+gt = GroundTruth(gt_file, file_list, file_peak_data)
+gt.evaluate_bins(file_bins, feature_to_bin, matched_results)
