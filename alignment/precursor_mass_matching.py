@@ -3,7 +3,7 @@ import glob
 import itertools
 import os
 
-from alignment.ground_truth import GroundTruth
+from ground_truth import GroundTruth
 from discretisation import utils
 from discretisation.continuous_mass_clusterer import ContinuousVB
 from discretisation.models import HyperPars
@@ -15,7 +15,7 @@ import numpy as np
 
 database = '/home/joewandy/git/metabolomics_tools/discretisation/database/std1_mols.csv'
 transformation = '/home/joewandy/git/metabolomics_tools/discretisation/mulsubs/mulsub2.txt'
-input_dir = './input/std1_csv_2'
+input_dir = '/home/joewandy/git/metabolomics_tools/alignment/input/std1_csv_2'
 
 # find all the .txt and csv files in input_dir
 file_list = []

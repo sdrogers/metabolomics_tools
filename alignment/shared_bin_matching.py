@@ -1,16 +1,20 @@
 import itertools
 from operator import attrgetter
 from operator import itemgetter
+import sys
 import time
 
+from discretisation.continuous_mass_clusterer import ContinuousVB
 from discretisation.discrete_mass_clusterer import DiscreteVB
-from discretisation.models import HyperPars
+from discretisation.models import HyperPars, Feature, PeakData
 from discretisation.plotting import ClusterPlotter
 from discretisation.preprocessing import FileLoader
 import discretisation.utils as utils
 from dp_rt_clusterer import DpMixtureGibbs
 import numpy as np
 import pylab as plt
+import scipy.sparse as sp
+
 
 def plot_hist(mapping, filename, mass_tol, rt_tol):
     no_trans = (mapping > 0).sum(1)
@@ -122,6 +126,7 @@ transformations = data_list[0].transformations
 tmap = get_transformation_map(transformations)
 all_bins = []
 posterior_bin_rts = []    
+posterior_bin_masses = []
 annotations = {}
 
 file_bins = []
@@ -136,14 +141,13 @@ for j in range(len(data_list)):
     hp = HyperPars()
     hp.rt_prec = 1.0/(within_file_rt_sd*within_file_rt_sd)
     hp.alpha = alpha_mass
-    discrete = DiscreteVB(peak_data, hp)
-    # discrete = ContinuousVB(peak_data, hp)
-    discrete.n_iterations = mass_clustering_n_iterations
-    print discrete
-    discrete.run()
+    continuous = ContinuousVB(peak_data, hp)
+    continuous.n_iterations = mass_clustering_n_iterations
+    print continuous
+    continuous.run()
 
     # pick the non-empty bins for the second stage clustering
-    cluster_membership = (discrete.Z>t)
+    cluster_membership = (continuous.Z>t)
     s = cluster_membership.sum(0)
     nnz_idx = s.nonzero()[1]  
     nnz_idx = np.squeeze(np.asarray(nnz_idx)) # flatten the thing
@@ -155,7 +159,7 @@ for j in range(len(data_list)):
     file_bins.append(bins)
 
     # find the non-empty bins' posterior RT values
-    bin_rts = discrete.cluster_rt_mean[nnz_idx]
+    bin_rts = continuous.cluster_rt_mean[nnz_idx]
     plt.figure()
     plt.plot(bin_rts, '.b')
     plt.title("Posterior RT values for file " + str(j))
@@ -165,9 +169,11 @@ for j in range(len(data_list)):
     bin_rts = bin_rts.ravel().tolist()
     posterior_bin_rts.extend(bin_rts)
     file_post_rts.append(bin_rts)
+    bin_masses = continuous.cluster_mass_mean[nnz_idx]    
+    posterior_bin_masses.extend(bin_masses)
 
     # make some plots
-    cp = ClusterPlotter(peak_data, discrete)
+    cp = ClusterPlotter(peak_data, continuous)
     cp.summary(file_idx=j)
     # cp.plot_biggest(3)        
 
@@ -180,9 +186,9 @@ for j in range(len(data_list)):
         bb = peak_data.bins[j] # copy of the common bin specific to file j
         bb.add_feature(f)    
         # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
-        bin_prob = discrete.Z[i, j]
-        trans_idx = discrete.possible[i, j]
-        transformed_value = discrete.transformed[i, j]
+        bin_prob = continuous.Z[i, j]
+        trans_idx = continuous.possible[i, j]
+        transformed_value = continuous.transformed[i, j]
         transformation = tmap[trans_idx]
         msg = "{:s}@{:3.5f} prob={:.2f}".format(transformation.name, transformed_value, bin_prob)            
         annotate(annotations, f, msg)            
@@ -224,53 +230,106 @@ plt.ylabel("Sizes")
 plt.show()
         
 # Second-stage clustering
+print "Second stage clustering"
 N = len(all_bins)
 assert N == len(posterior_bin_rts)
 
-# Here we cluster the 'concrete' common bins across files by their posterior RT values
 hp = HyperPars()
 hp.rt_prec = 1.0/(across_file_rt_sd*across_file_rt_sd)
 hp.rt_prior_prec = 5E-3
 hp.alpha = alpha_rt
-data = (posterior_bin_rts, all_bins)
-dp = DpMixtureGibbs(data, hp)
-dp.nsamps = rt_clustering_nsamps
-dp.burn_in = rt_clustering_burnin
-dp.run()
 
-# plot distribution of values in ZZ_all
-ZZ_all = dp.ZZ_all
+# turn all_bins into features
+features = []
+for ab in all_bins:
+    f = Feature(ab.bin_id, 0, ab.rt, 0, file_id=ab.origin)
+    f.top_id = ab.top_id
+    features.append(f)
+
+# construct the possible matrix
+data = PeakData(features, None, None, None, None)
+data.rt = posterior_bin_rts
+data.prior_rts = posterior_bin_rts
+data.prior_masses = posterior_bin_masses
+N = len(features)
+K = len(all_bins)
+data.num_clusters = K
+data.possible = sp.lil_matrix((N, K), dtype=np.int)
+data.matRT = sp.lil_matrix((N, K), dtype=np.float)
+
+# populate possible and matRT
+sys.stdout.write("Building matrices for second stage clustering ")
+for n in range(N):
+    
+    if n%200 == 0:
+        sys.stdout.write('.')                            
+
+    f = features[n]    
+    current_mass, current_rt, current_intensity = f.mass, f.rt, f.intensity
+    rt_ok = utils.rt_match(current_rt, np.array(data.prior_rts), across_file_rt_sd*2)
+    check = rt_ok
+    pos = np.flatnonzero(check)
+    for k in pos:
+        bb = all_bins[k]
+        valid = False
+        if f.feature_id == bb.bin_id and f.file_id == bb.origin:
+            valid = True
+        elif f.top_id == bb.top_id and f.file_id != bb.origin:
+            # each bin can only link to those from the same top bin but from different file
+            valid = True
+        if valid:
+            data.possible[n, k] = 1
+            data.matRT = current_rt
+    # possible_clusters = np.nonzero(data.possible[n, :])[1]
+    # assert len(possible_clusters) > 0, str(f) + " has no possible clusters"
+
+    # make the matrices more sparse
+    
+sys.stdout.write("\n")            
+
+# use variational bayes and a finite mixture model on the RT instead ...
+mm = DiscreteVB(data, hp)
+mm.n_iterations = 100
+mm.run()
+
+# plot distribution of values in ZZ
+counter = {}
+ZZ = mm.Z.tocsr() * mm.Z.tocsr().transpose()
 x = []
-cx = ZZ_all.tocoo()    
+cx = ZZ.tocoo()    
 for i,j,v in itertools.izip(cx.row, cx.col, cx.data):
     x.append(v)       
+    bin1 = all_bins[i]
+    bin2 = all_bins[j]
+    if bin1.origin != bin2.origin:
+        tup = (bin1, bin2)
+        counter[tup] = v
 x = np.array(x)
 plt.figure() 
 plt.hist(x, 10)
-plt.title("DP RT clustering -- ZZ_all")
+plt.title("DP RT clustering -- ZZ")
 plt.xlabel("Probabilities")
 plt.ylabel("Count")
 plt.show()        
 
-# count frequencies of aligned bins produced across the Gibbs samples
-print "Counting frequencies of aligned peaksets"
-matching_results = dp.matching_results
-counter = dict()
-for bins in matching_results:
-    if len(bins) > 1:
-        bins = sorted(bins, key = attrgetter('origin'))
-        bins = tuple(bins)
-    if bins not in counter:
-        counter[bins] = 1
-    else:
-        counter[bins] += 1
-
-# normalise the counts
-print "Normalising counts"
-S = dp.samples_obtained
-for key, value in counter.items():
-    new_value = float(value)/S
-    counter[key] = new_value
+# Z = mm.Z.tocsc()
+# s = Z.sum(0)
+# nnz_idx = s.nonzero()[1]  
+# nnz_idx = np.squeeze(np.asarray(nnz_idx)) # flatten the thing
+# counter = {}
+# for k in nnz_idx:
+#     col = Z.getcol(k)
+#     prod = 1.0
+#     indices = col.indices.tolist()
+#     values = col.data.tolist()
+#     members = []
+#     for i in range(len(indices)):
+#         if values[i] > 0:
+#             index = indices[i]
+#             bb = all_bins[index]
+#             prod *= values[i]
+#             members.append(bb)
+#     counter[tuple(members)] = prod
 
 # print report of aligned peaksets in descending order of probabilities
 print 
