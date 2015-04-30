@@ -289,7 +289,7 @@ sys.stdout.write("\n")
 
 # use variational bayes and a finite mixture model on the RT instead ...
 mm = DiscreteVB(data, hp)
-mm.n_iterations = 100
+mm.n_iterations = 20
 mm.run()
 
 # plot distribution of values in ZZ

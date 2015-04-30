@@ -4,7 +4,7 @@ from operator import attrgetter
 import os
 import sys
 
-from discretisation.interval_tree import IntervalTree
+from interval_tree import IntervalTree
 from models import DiscreteInfo, PrecursorBin, PeakData, Feature, DatabaseEntry, Transformation
 import numpy as np
 import scipy.io as sio

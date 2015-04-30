@@ -32,7 +32,8 @@ t = 0.5
     
 # First stage clustering. 
 # Here we cluster peak features by their precursor masses to the common bins shared across files.
-feature_to_bin = {}
+peak_feature_to_bin = {}
+alignment_feature_to_bin = {}
 file_bins = []
 file_peak_data = []
 for j in range(len(file_list)):
@@ -66,6 +67,11 @@ for j in range(len(file_list)):
         f = peak_data.features[row]
         bb = peak_data.bins[col] # copy of the common bin specific to file j
         bb.add_feature(f)    
+        if f in peak_feature_to_bin:
+            peak_feature_to_bin[f].append(bb)
+        else:
+            peak_feature_to_bin[f] = []
+            peak_feature_to_bin[f].append(bb)            
 
     # find the non-empty bins
     bins = [peak_data.bins[a] for a in nnz_idx]
@@ -97,19 +103,19 @@ feature_to_bin = {}
 for j in range(len(file_list)):
     bins = file_bins[j]
     print file_list[j] + " has " + str(len(bins)) + " bins"
-    # convert bins into features
+    # convert bins into alignment features
     this_file = AlignmentFile(file_list[j], True)
     row_id = 0
     peak_id = 0
     for bb in bins:
-        # initialise feature
+        # initialise alignment feature
         mass = bb.posterior_mass
         charge = 1
         intensity = bb.avg_intensity
         rt = bb.posterior_rt
         feat = Feature(peak_id, mass, charge, intensity, rt, this_file)
         peak_id = peak_id + 1
-        feature_to_bin[feat] = bb
+        alignment_feature_to_bin[feat] = bb
         # initialise row
         alignment_row = AlignmentRow(row_id)
         alignment_row.features.append(feat)
@@ -121,7 +127,7 @@ for j in range(len(file_list)):
     alignment_files.append(this_file)
 
 Options = namedtuple('Options', 'dmz drt alignment_method exact_match use_group use_peakshape mcs grouping_method alpha grt dp_alpha num_samples burn_in skip_matching always_recluster verbose')
-my_options = Options(dmz = 0.01, drt = 30, alignment_method = 'mw', exact_match = True, 
+my_options = Options(dmz = 0.01, drt = 30, alignment_method = 'mw', exact_match = False, 
                      use_group = False, use_peakshape = False, mcs = 0.9, 
                      grouping_method = 'posterior', alpha = 0.5, grt = 2, dp_alpha = 1, num_samples = 100, 
                      burn_in = 100, skip_matching = False, always_recluster = True,
@@ -150,4 +156,4 @@ for row in matched_results.rows:
 print "Performance evaluation"
 gt_file = '/home/joewandy/git/metabolomics_tools/alignment/input/std1_csv_2/ground_truth/std1.positive.dat'
 gt = GroundTruth(gt_file, file_list, file_peak_data)
-gt.evaluate_bins(file_bins, feature_to_bin, matched_results)
+gt.evaluate_bins(file_bins, peak_feature_to_bin, results)

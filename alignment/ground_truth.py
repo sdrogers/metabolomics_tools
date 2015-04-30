@@ -75,7 +75,7 @@ class GroundTruth:
 #         for gt_entry in self.gt_features:
 #             print gt_entry
                 
-    def evaluate_bins(self, file_bins, feature_to_bin, bin_alignment):
+    def evaluate_bins(self, file_bins, peak_feature_to_bin, results):
 
         # construct an all_bins x all_bins ground truth matrix
         all_bins = {}
@@ -85,21 +85,37 @@ class GroundTruth:
                 all_bins[bb] = a
                 a += 1
         A = len(all_bins.keys())
-        gt_mat = np.zeros(A, A)
-        
+        gt_mat = np.zeros((A, A))
+        res_mat = np.zeros((A, A))
+
+        # enumerate all the pairwise combinations for the ground truth
         for consensus in self.gt_features:
-            # enumerate all the pairwise combinations
             for f1 in consensus:
                 for f2 in consensus:
-                    bin1 = feature_to_bin[f1]
-                    bin2 = feature_to_bin[f2]
-                    i = all_bins[bin1]
-                    j = all_bins[bin2]
-                    gt_mat[i, j] = 1
-        
+                    bins1 = peak_feature_to_bin[f1]
+                    bins2 = peak_feature_to_bin[f2]
+                    for b1 in bins1:
+                        for b2 in bins2:
+                            i = all_bins[b1]
+                            j = all_bins[b2]
+                            gt_mat[i, j] = 1
         plt.figure()
         plt.pcolor(gt_mat)
         plt.show()
+        
+        # turn results into a pairwise thing too
+        for matched_bins in results:
+            for bin1 in matched_bins:
+                for bin2 in matched_bins:
+                    if bin1 == bin2:
+                        continue
+                    else:
+                        i = all_bins[bin1]
+                        j = all_bins[bin2]
+                        res_mat[i, j] = 1
+        plt.figure()
+        plt.pcolor(res_mat)
+        plt.show()                
                 
     def _find_features(self, filename, mass, rt, intensity):
         EPSILON = 0.0001;
