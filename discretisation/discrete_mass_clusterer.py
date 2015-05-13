@@ -17,12 +17,7 @@ class DiscreteGibbs:
         '''
         print 'DiscreteGibbs initialised'
         self.features = peak_data.features
-        self.transformations = {}
-        for t in peak_data.transformations:
-            self.transformations[t.trans_id] = t # map id to transformation
-
         self.possible = peak_data.possible
-        self.transformed = peak_data.transformed
         self.bins = peak_data.bins
         self.matRT = peak_data.matRT            
 
@@ -44,7 +39,6 @@ class DiscreteGibbs:
 
         # initially put peaks into any bin that fits
         Znk = {}
-        annots = {}  # used for reporting only
         for n in range(len(self.features)):
             f = self.features[n]
             possible_clusters = np.nonzero(self.possible[n, :])[1]
@@ -52,7 +46,6 @@ class DiscreteGibbs:
             any_bin = self.bins[k]
             any_bin.add_feature(f)
             Znk[f] = any_bin
-            self._annotate(annots, n, f, any_bin)
             
         # now start the gibbs sampling  
         samples_taken = 0              
@@ -130,7 +123,6 @@ class DiscreteGibbs:
                 current_bin = matching_bins[k]
                 current_bin.add_feature(f)
                 Znk[f] = current_bin
-                self._annotate(annots, n, f, current_bin)
                 if s >= self.n_burn:
                     self.Z[n, current_bin.bin_id] += 1.0
 
@@ -146,15 +138,8 @@ class DiscreteGibbs:
                     
         print 'DONE!'      
         print
-        plotting.print_last_sample(self.bins, annots, 'last_sample.log')
         self.Z /= samples_taken
-        
-    def _annotate(self, annots, n, feature, current_bin):
-        adduct_id = self.possible[n, current_bin.bin_id]
-        transformed_mass = self.transformed[n, current_bin.bin_id]
-        adduct = self.transformations[adduct_id]            
-        annots[feature] = adduct.name + ' @ ' + str(transformed_mass)                
-                
+                        
     def __repr__(self):
         return "Gibbs sampling for discrete mass model\n" + self.hyperpars.__repr__() + \
         "\nn_samples = " + str(self.n_samples)
@@ -171,7 +156,6 @@ class DiscreteVB:
         self.n_peaks = peak_data.num_peaks
         self.k_clusters = peak_data.num_clusters        
         self.possible = peak_data.possible
-        self.transformed = peak_data.transformed
         self.matRT = peak_data.matRT
         self.rt = np.copy(peak_data.rt)
         self.prior_rt = np.copy(peak_data.prior_rts)

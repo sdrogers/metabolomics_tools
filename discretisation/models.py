@@ -75,13 +75,14 @@ DiscreteInfo = namedtuple('DiscreteInfo', ['possible', 'transformed', 'matRT', '
     
 class PeakData(object):
     
-    def __init__(self, features, database, transformations, discrete_info=None):
+    def __init__(self, features, database, transformations, discrete_info=None, corr_mat=None):
                 
         # list of feature, database entry and transformation objects
         self.features = features
         self.database = database
         self.transformations = transformations
         self.num_peaks = len(features)
+        self.corr_mat = corr_mat
 
         # the same data as numpy arrays for convenience
         self.mass = np.array([f.mass for f in self.features])[:, None]              # N x 1 
