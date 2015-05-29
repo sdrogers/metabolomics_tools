@@ -1,22 +1,31 @@
-from collections import Counter
-import lda
-import lda.datasets
 import operator
 import os
+import sys
+import time
+import timeit
+
+from numpy.random.mtrand import RandomState
 from pandas.core.frame import DataFrame
 from scipy.sparse import coo_matrix
-import sys
 
+from lda_cgs import CollapseGibbsLda
 import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 import pylab as plt
 
 
+try:
+    from lda import LDA
+except Exception:
+    pass
+
+
+
 class Ms2Lda:
     
     def __init__(self, fragment_filename, neutral_loss_filename, mzdiff_filename, 
-                 ms1_filename, ms2_filename, n_topics, n_samples):
+                 ms1_filename, ms2_filename, relative_intensity=False):
         
         self.fragment_data = pd.read_csv(fragment_filename, index_col=0)
         self.neutral_loss_data = pd.read_csv(neutral_loss_filename, index_col=0)
@@ -26,68 +35,135 @@ class Ms2Lda:
             self.mzdiff_data = None
         self.ms1 = pd.read_csv(ms1_filename, index_col=0)
         self.ms2 = pd.read_csv(ms2_filename, index_col=0)
+            
+        self.relative_intensity = relative_intensity
+        self.EPSILON = 0.05
+        
+    def preprocess(self):
+
         self.ms2['fragment_bin_id'] = self.ms2['fragment_bin_id'].astype(str)
         self.ms2['loss_bin_id'] = self.ms2['loss_bin_id'].astype(str)
-    
-        self.n_topics = n_topics
-        self.n_samples = n_samples
-        self.EPSILON = 0.05
 
-    def run_lda(self):    
-                    
-        # discretise the fragment and neutral loss intensities values
-        # log and scale it from 0 .. 100
-        self.data = self.fragment_data.append(self.neutral_loss_data)
-        self.data = np.log10(self.data)
-        self.data /= self.data.max().max()
-        self.data *= 100
-    
-        # then scale mzdiff counts from 0 .. 100 too, and append it to data    
-        if self.mzdiff_data is not None:
-            self.mzdiff_data /= self.mzdiff_data.max().max()
-            self.mzdiff_data *= 100
-            self.data = self.data.append(self.mzdiff_data)
+        if self.relative_intensity: 
+
+            # discretise the fragment and neutral loss intensities values
+            # values are already normalised from 0 .. 1 during feature extraction
+            self.data = self.fragment_data.append(self.neutral_loss_data)
+            self.data *= 100 # so just convert to 0 .. 100
+        
+            # then scale mzdiff counts from 0 .. 100 too, and append it to data    
+            if self.mzdiff_data is not None:
+                self.mzdiff_data *= 100
+                self.data = self.data.append(self.mzdiff_data)
+        
+        else: # absolute intensity values
+
+            # discretise the fragment and neutral loss intensities values
+            # log and scale it from 0 .. 100
+            self.data = self.fragment_data.append(self.neutral_loss_data)
+            self.data = np.log10(self.data)
+            self.data /= self.data.max().max()
+            self.data *= 100
+        
+            # then scale mzdiff counts from 0 .. 100 too, and append it to data    
+            if self.mzdiff_data is not None:
+                self.mzdiff_data /= self.mzdiff_data.max().max()
+                self.mzdiff_data *= 100
+                self.data = self.data.append(self.mzdiff_data)
         
         # get rid of NaNs, transpose the data and floor it
         self.data = self.data.replace(np.nan,0)
         self.data = self.data.transpose()
+        vocab = self.data.columns.values
+        
         sd = coo_matrix(self.data)
-        counts, bins, bars = plt.hist(sd.data, bins=range(100))
-        plt.title('Discretised intensities')   
-        plt.xlabel('Bins')
-        plt.ylabel('Counts')     
-        plt.show()
+#         counts, bins, bars = plt.hist(sd.data, bins=range(100))
+#         plt.title('Discretised intensities')   
+#         plt.xlabel('Bins')
+#         plt.ylabel('Counts')     
+#         plt.show()
         sd = sd.floor()  
         npdata = np.array(sd.todense(),dtype='int64')
+
         print "Data shape " + str(npdata.shape)
-    
+        df = DataFrame(npdata)
+
+        return df, vocab
+
+    def run_lda(self, df, vocab, n_topics, n_samples, n_burn, n_thin, alpha, beta, 
+                use_own_model=False, use_native=False, previous_model=None):    
+                        
         print "Fitting model..."
+        self.n_topics = n_topics
+        rng = RandomState(1234567890)
         sys.stdout.flush()
-        self.model = lda.LDA(n_topics = self.n_topics, n_iter= self.n_samples, random_state=1)
-        self.model.fit(npdata)
-        print "DONE!"
+        if use_own_model:
+            self.model = CollapseGibbsLda(df, vocab, n_topics, alpha, beta, previous_model=previous_model)
+            self.n_topics = self.model.K # might change if previous_model is used
+            start = timeit.default_timer()
+            self.model.run(n_burn, n_samples, n_thin, use_native=use_native)
+        else:
+            self.model = LDA(n_topics=n_topics, n_iter=n_samples, random_state=rng, alpha=alpha, eta=beta)
+            start = timeit.default_timer()
+            self.model.fit(df.as_matrix())
+        stop = timeit.default_timer()
+        print "DONE. Time=" + str(stop-start)
         
     def write_results(self, results_prefix):
+
+        previous_model = self.model.previous_model
+        selected_topics = None
+        if previous_model is not None and hasattr(previous_model, 'selected_topics'):
+            selected_topics = previous_model.selected_topics
         
+        # create topic-word output file
+        topic_names = []
         outfile = self._get_outfile(results_prefix, '_topics.csv') 
         print "Writing topics to " + outfile
         topic_fragments = self.model.topic_word_
-        n_top_frags = 20
         with open(outfile,'w') as f:
-            for i,topic_dist in enumerate(topic_fragments):
-                topic_f = np.array(self.data.columns.values)[np.argsort(topic_dist)][:-n_top_frags:-1]
-                out_string = 'Topic {},{}'.format(i, ','.join(topic_f.astype('str')))
-                # print(out_string)
-                f.write(out_string+'\n')
+            
+            counter = 0
+            for i, topic_dist in enumerate(topic_fragments):
+
+#                 topic_f = np.array(self.data.columns.values)[np.argsort(topic_dist)][:-n_top_frags:-1]
+#                 out_string = 'Topic {},{}'.format(i, ','.join(topic_f.astype('str')))
+#                 f.write(out_string+'\n')
+
+                ordering = np.argsort(topic_dist)
+                vocab = self.data.columns.values                
+                topic_words = np.array(vocab)[ordering][::-1]
+                dist = topic_dist[ordering][::-1]
+                
+                if selected_topics is not None:
+                    if i < len(selected_topics):
+                        topic_name = 'Fixed Topic {}'.format(selected_topics[i])
+                    else:
+                        topic_name = 'Topic {}'.format(counter)
+                        counter += 1
+                else:
+                    topic_name = 'Topic {}'.format(i)                    
+                f.write(topic_name)
+                topic_names.append(topic_name)
+                
+                # filter entries to display by epsilon
+                for j in range(len(topic_words)):
+                    if dist[j] > self.EPSILON:
+                        f.write(',{}'.format(topic_words[j]))
+                    else:
+                        break
+                f.write('\n')
     
         outfile = self._get_outfile(results_prefix, '_all.csv') 
         print "Writing fragments x topics to " + outfile
+
+        # create document-topic output file        
         topic = self.model.topic_word_
         masses = np.array(self.data.transpose().index)
         d = {}
         for i in np.arange(self.n_topics):
-            topic_name = i
-            topic_series = pd.Series(topic[i],index=masses)
+            topic_name = topic_names[i]
+            topic_series = pd.Series(topic[i], index=masses)
             d[topic_name] = topic_series
         self.topicdf = pd.DataFrame(d)
 
@@ -98,8 +174,7 @@ class Ms2Lda:
         self.topicdf = self.topicdf.applymap(f)
         self.topicdf.to_csv(outfile)
     
-        # outfile = self._get_outfile(results_prefix, '_docs.csv') 
-        # print "Writing topic docs to " + outfile
+        # create topic-docs output file
         doc = self.model.doc_topic_
         (n_doc, a) = doc.shape
         topic_index = np.arange(self.n_topics)
@@ -107,7 +182,7 @@ class Ms2Lda:
         d = {}
         for i in np.arange(n_doc):
             doc_name = doc_names[i]
-            doc_series = pd.Series(doc[i],index=topic_index)
+            doc_series = pd.Series(doc[i], index=topic_index)
             d[doc_name] = doc_series
         self.docdf = pd.DataFrame(d)
         
@@ -131,49 +206,11 @@ class Ms2Lda:
         outfile = self._get_outfile(results_prefix, '_docs.csv') 
         print "Writing topic docs to " + outfile
         self.docdf.transpose().to_csv(outfile)
-            
-    def _get_outfile(self, results_prefix, doctype):
-        parent_dir = 'results/' + results_prefix
-        outfile = parent_dir + '/' + results_prefix + doctype
-        if not os.path.exists(parent_dir):
-            os.makedirs(parent_dir)        
-        return outfile
         
-    # from http://stackoverflow.com/questions/8850142/matplotlib-overlapping-annotations
-    def _get_text_positions(self, x_data, y_data, txt_width, txt_height):
-        a = zip(y_data, x_data)
-        text_positions = y_data.copy()
-        for index, (y, x) in enumerate(a):
-            local_text_positions = [i for i in a if i[0] > (y - txt_height) 
-                                and (abs(i[1] - x) < txt_width * 2) and i != (y,x)]
-            if local_text_positions:
-                sorted_ltp = sorted(local_text_positions)
-                if abs(sorted_ltp[0][0] - y) < txt_height: #True == collision
-                    differ = np.diff(sorted_ltp, axis=0)
-                    a[index] = (sorted_ltp[-1][0] + txt_height, a[index][1])
-                    text_positions[index] = sorted_ltp[-1][0] + txt_height
-                    for k, (j, m) in enumerate(differ):
-                        #j is the vertical distance between words
-                        if j > txt_height * 2: #if True then room to fit a word in
-                            a[index] = (sorted_ltp[k][0] + txt_height, a[index][1])
-                            text_positions[index] = sorted_ltp[k][0] + txt_height
-                            break
-        return text_positions
-    
-    # from http://stackoverflow.com/questions/8850142/matplotlib-overlapping-annotations
-    def _text_plotter(self, x_data, y_data, line_type, text_positions, axis, txt_width, txt_height, 
-                      fragment_fontspec, loss_fontspec):
-        for x,y,t,l in zip(x_data, y_data, text_positions, line_type):
-            if l == 'fragment':
-                axis.text(x-txt_width, 1.01*t, '%.5f'%x, rotation=0, **fragment_fontspec)
-            elif l == 'loss':
-                axis.text(x-txt_width, 1.01*t, '%.5f'%x, rotation=0, **loss_fontspec)                
-            if y != t:
-                axis.arrow(x, t,0,y-t, color='black', alpha=0.2, width=txt_width*0.01, 
-                           head_width=txt_width/4, head_length=txt_height*0.25, 
-                           zorder=0,length_includes_head=True)
+    def save_model(self, topic_indices, model_out, words_out):
+        self.model.save(topic_indices, model_out, words_out)
                 
-    def plot_lda_fragments(self, consistency=0.80):
+    def plot_lda_fragments(self, consistency=0.50):
                 
         topic_h_indices, topic_dists = self._h_index(consistency) 
         sorted_topic_counts = sorted(topic_h_indices.items(), key=operator.itemgetter(1), reverse=True)
@@ -286,7 +323,7 @@ class Ms2Lda:
                     losses_p.append(p)
                 counter += 1
 
-            wordfreq = Counter()
+            wordfreq = {}
                     
             print
             print "Fragments"
@@ -422,11 +459,14 @@ class Ms2Lda:
                 
                 #set the bbox for the text. Increase txt_width for wider text.
                 txt_width = 20*(plt.xlim()[1] - plt.xlim()[0])
-                txt_height = 1*(plt.ylim()[1] - plt.ylim()[0])
+                txt_height = 0.2*(plt.ylim()[1] - plt.ylim()[0])
     
                 # plot the parent peak first
                 parent_mass = parent_masses[n]
-                parent_intensity = np.log10(parent_intensities[n])
+                if self.relative_intensity:
+                    parent_intensity = 0.25
+                else:
+                    parent_intensity = np.log10(parent_intensities[n])
                 plt.plot((parent_mass, parent_mass), (0, parent_intensity), linewidth=2.0, color='b')
                 x = parent_mass
                 y = parent_intensity
@@ -442,23 +482,29 @@ class Ms2Lda:
                     peakid = item[0]
                     parentid = item[1]
                     mass = item[2]
-                    intensity = np.log10(item[3])
+                    if self.relative_intensity:
+                        intensity = item[3]
+                    else:
+                        intensity = np.log10(item[3])
                     plt.plot((mass, mass), (0, intensity), linewidth=1.0, color='#FF9933')
 
                 x_data = []
                 y_data = []
+                line_type = []
     
                 # plot the fragment peaks in this topic that also occur in this parent peak
                 if parent_id in parent_topic_fragments:        
                     fragments_list = parent_topic_fragments[parent_id]
                     num_peaks = len(fragments_list)
-                    line_type = []
                     for j in range(num_peaks):
                         item = fragments_list[j]
                         peakid = item[0]
                         parentid = item[1]
                         mass = item[2]
-                        intensity = np.log10(item[3])
+                        if self.relative_intensity:
+                            intensity = item[3]
+                        else:
+                            intensity = np.log10(item[3])
                         word = item[4]
                         freq = wordfreq[word]
                         ratio = float(freq)/len(parent_ids)
@@ -479,7 +525,10 @@ class Ms2Lda:
                         peakid = item[0]
                         parentid = item[1]
                         mass = item[2]
-                        intensity = np.log10(item[3])
+                        if self.relative_intensity:
+                            intensity = item[3]
+                        else:
+                            intensity = np.log10(item[3])
                         word = item[4]
                         freq = wordfreq[word]
                         ratio = float(freq)/len(parent_ids)
@@ -500,10 +549,13 @@ class Ms2Lda:
     
                 xlim_upper = max_parent_mz + 100
                 plt.xlim([0, xlim_upper])
-                plt.ylim([0, 15])
+                plt.ylim([0, 1.5])
 
                 plt.xlabel('m/z')
-                plt.ylabel('log10(intensity)')
+                if self.relative_intensity:
+                    plt.ylabel('relative intensity')                    
+                else:
+                    plt.ylabel('log10(intensity)')
                 plt.title('Topic ' + str(i) + ' -- parent peak ' + ("%.5f" % parent_mass))
                 
                 blue_patch = mpatches.Patch(color='blue', label='Parent peak')
@@ -514,8 +566,49 @@ class Ms2Lda:
                 
                 plt.show()
             
-            # break
-
+            # break        
+            
+    def _get_outfile(self, results_prefix, doctype):
+        parent_dir = 'results/' + results_prefix
+        outfile = parent_dir + '/' + results_prefix + doctype
+        if not os.path.exists(parent_dir):
+            os.makedirs(parent_dir)        
+        return outfile
+        
+    # from http://stackoverflow.com/questions/8850142/matplotlib-overlapping-annotations
+    def _get_text_positions(self, x_data, y_data, txt_width, txt_height):
+        a = zip(y_data, x_data)
+        text_positions = y_data.copy()
+        for index, (y, x) in enumerate(a):
+            local_text_positions = [i for i in a if i[0] > (y - txt_height) 
+                                and (abs(i[1] - x) < txt_width * 2) and i != (y,x)]
+            if local_text_positions:
+                sorted_ltp = sorted(local_text_positions)
+                if abs(sorted_ltp[0][0] - y) < txt_height: #True == collision
+                    differ = np.diff(sorted_ltp, axis=0)
+                    a[index] = (sorted_ltp[-1][0] + txt_height, a[index][1])
+                    text_positions[index] = sorted_ltp[-1][0] + txt_height
+                    for k, (j, m) in enumerate(differ):
+                        #j is the vertical distance between words
+                        if j > txt_height * 2: #if True then room to fit a word in
+                            a[index] = (sorted_ltp[k][0] + txt_height, a[index][1])
+                            text_positions[index] = sorted_ltp[k][0] + txt_height
+                            break
+        return text_positions
+    
+    # from http://stackoverflow.com/questions/8850142/matplotlib-overlapping-annotations
+    def _text_plotter(self, x_data, y_data, line_type, text_positions, axis, txt_width, txt_height, 
+                      fragment_fontspec, loss_fontspec):
+        for x,y,t,l in zip(x_data, y_data, text_positions, line_type):
+            if l == 'fragment':
+                axis.text(x-txt_width, 1.01*t, '%.5f'%x, rotation=0, **fragment_fontspec)
+            elif l == 'loss':
+                axis.text(x-txt_width, 1.01*t, '%.5f'%x, rotation=0, **loss_fontspec)                
+            if y != t:
+                axis.arrow(x, t,0,y-t, color='black', alpha=0.2, width=txt_width*0.01, 
+                           head_width=txt_width/4, head_length=txt_height*0.25, 
+                           zorder=0,length_includes_head=True)
+    
     # compute the h-index of topics
     def _h_index(self, data):
                 
@@ -598,84 +691,60 @@ class Ms2Lda:
             
         print "\n"
         return topic_counts, topic_dists
-
-    ## unfinished ... plot the topics for each word in a document                
-    def plot_lda_parents(self):
-        
-        n_rows = self.ms1.shape[0]
-        counter = 0
-        for n in range(n_rows):
-          
-            if counter >= 3:
-                break
-            counter += 1
-            
-            # get the parent peak
-            ms1_row = self.ms1.iloc[[n]]
-            print "Parent peak"
-            print ms1_row[['peakID', 'mz', 'rt', 'intensity']].to_string(index=False, justify='left')    
-            parent_peakid = ms1_row[['peakID']]
-            parent_mass = ms1_row[['mz']]
-            parent_intensity = ms1_row[['intensity']]
-            parent_peakid = np.asscalar(parent_peakid.values)
-            parent_mass = np.asscalar(parent_mass.values)
-            parent_intensity = np.asscalar(parent_intensity.values)
-        
-            # get the fragment peaks of this parent
-            ms2_rows = self.ms2.loc[self.ms2['MSnParentPeakID']==parent_peakid]
-            print "Fragment peaks"    
-            print ms2_rows[['peakID', 'MSnParentPeakID', 'mz', 'rt', 'intensity', 'fragment_bin_id']].to_string(index=False, justify='left')    
-            fragment_peakids = ms2_rows[['peakID']]
-            fragment_masses = ms2_rows[['mz']]
-            fragment_intensities = ms2_rows[['intensity']]
-            
-            fig = plt.figure()
-            
-            # plot the parent peak
-            parent_fontspec = {
-                'size':'10', 
-                'color':'blue', 
-                'weight':'bold'
-            }
-            parent_intensity = np.log10(parent_intensity)
-            plt.plot((parent_mass, parent_mass), (0, parent_intensity), linewidth=2.0, color='b')
-            x = parent_mass
-            y = parent_intensity
-            label = "%.5f" % parent_mass
-            plt.text(x, y, label, **parent_fontspec)   
-            
-            # plot the fragment peaks
-            fragment_fontspec = {
-                'size':'8', 
-                'color':'black', 
-                'weight':'bold'
-            }    
-            fragment_masses = fragment_masses.values.ravel().tolist()
-            fragment_intensities = fragment_intensities.values.ravel().tolist()
-            for j in range(len(fragment_masses)):
-                fragment_mass = fragment_masses[j]
-                fragment_intensity = np.log10(fragment_intensities[j])
-                plt.plot((fragment_mass, fragment_mass), (0, fragment_intensity), linewidth=2.0, color='r')
-            
-            plt.show()    
             
 def main():
-    
-    print "MS2LDA test"
+        
+    if len(sys.argv)>1:
+        n_topics = int(sys.argv[1])
+    else:
+        n_topics = 125
+    print "MS2LDA K=" + str(n_topics)
+    n_samples = 200
+    n_burn = 0
+    n_thin = 1
+    alpha = 0.1
+    beta = 0.01
 
-    n_topics = 50
-    n_samples = 100
+    # train on beer3pos
     
-    fragment_filename = 'input/Beer_3_T10_POS_fragments.csv'
-    neutral_loss_filename = 'input/Beer_3_T10_POS_losses.csv'
+#     relative_intensity = True
+#     fragment_filename = 'input/relative_intensities/Beer_3_T10_POS_fragments_rel.csv'
+#     neutral_loss_filename = 'input/relative_intensities/Beer_3_T10_POS_losses_rel.csv'
+#     mzdiff_filename = None    
+#     ms1_filename = 'input/relative_intensities/Beer_3_T10_POS_ms1_rel.csv'
+#     ms2_filename = 'input/relative_intensities/Beer_3_T10_POS_ms2_rel.csv'
+# 
+#     ms2lda = Ms2Lda(fragment_filename, neutral_loss_filename, mzdiff_filename, 
+#                 ms1_filename, ms2_filename, relative_intensity)    
+#     df, vocab = ms2lda.preprocess()    
+#     ms2lda.run_lda(df, vocab, n_topics, n_samples, n_burn, n_thin, 
+#                    alpha, beta, use_own_model=True, use_native=True)
+#     ms2lda.write_results('test')
+
+    # save some topics from beer3pos lda
+    
+#     selected_topics = [0, 1, 2, 3, 4, 5]    
+#     ms2lda.save_model(selected_topics, 'input/test.gibbs.p', 'input/test.selected.words')
+#     ms2lda.plot_lda_fragments(0.50)
+
+    # test on beer2pos
+    
+    gibbs1 = CollapseGibbsLda.load('input/test.gibbs.p')
+    if hasattr(gibbs1, 'selected_topics'):
+        print "Kept topics = " + str(gibbs1.selected_topics)
+
+    relative_intensity = True
+    fragment_filename = 'input/relative_intensities/Beer_2_T10_POS_fragments_rel.csv'
+    neutral_loss_filename = 'input/relative_intensities/Beer_2_T10_POS_losses_rel.csv'
     mzdiff_filename = None    
-    ms1_filename = 'input/Beer_3_T10_POS_ms1.csv'
-    ms2_filename = 'input/Beer_3_T10_POS_ms2.csv'
-    
+    ms1_filename = 'input/relative_intensities/Beer_2_T10_POS_ms1_rel.csv'
+    ms2_filename = 'input/relative_intensities/Beer_2_T10_POS_ms2_rel.csv'
+
     ms2lda = Ms2Lda(fragment_filename, neutral_loss_filename, mzdiff_filename, 
-                ms1_filename, ms2_filename, n_topics, n_samples)
-    ms2lda.run_lda()
-    ms2lda.write_results('beer3_pos')
-    ms2lda.plot_lda_fragments(0.25)
+                ms1_filename, ms2_filename, relative_intensity)    
+    df, vocab = ms2lda.preprocess()    
+    ms2lda.run_lda(df, vocab, n_topics, n_samples, n_burn, n_thin, 
+                   alpha, beta, use_own_model=True, use_native=True, previous_model=gibbs1)
+    ms2lda.write_results('test2')
 
 if __name__ == "__main__": main()

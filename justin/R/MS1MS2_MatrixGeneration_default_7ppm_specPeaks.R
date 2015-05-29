@@ -2,19 +2,38 @@ library(xcms)
 library(Hmisc)
 library(gtools)
 
+# beer3 and urine37 dataset
 # input_file <- '/home/joewandy/Project/justin_data/Beer_3_T10_POS.mzXML'
 # input_file <- '/home/joewandy/Project/justin_data/Beer_3_T10_NEG.mzXML'
 # input_file <- '/home/joewandy/Project/justin_data/Urine_37_Top10_POS.mzXML'
-input_file <- '/home/joewandy/Project/justin_data/Urine_37_Top10_NEG.mzXML'
+# input_file <- '/home/joewandy/Project/justin_data/Urine_37_Top10_NEG.mzXML'
+
+# beer2pos and beer3pos as training-testing data
+input_file <- '/home/joewandy/Project/justin_data/Beer_data/Positive/Beer_2_T10_POS.mzXML'
+# input_file <- '/home/joewandy/Project/justin_data/Beer_data/Positive/Beer_3_T10_POS.mzXML'
+
+# reuse prev vocabularies, if any
+prev_words_file <- '/home/joewandy/git/metabolomics_tools/justin/input/test.selected.words'
 
 # construct the output filenames
 prefix <- basename(input_file) # get the filename only
 prefix <- sub("^([^.]*).*", "\\1", prefix) # get rid of the extension 
-fragments_out <- paste(c(prefix, '_fragments.csv'), collapse="")
-losses_out <- paste(c(prefix, '_losses.csv'), collapse="")
-mzdiffs_out <- paste(c(prefix, '_mzdiffs.csv'), collapse="")
-ms1_out <- paste(c(prefix, '_ms1.csv'), collapse="")
-ms2_out <- paste(c(prefix, '_ms2.csv'), collapse="")
+
+# if true, we will use the relative intensities of the ms2 peaks instead of absolute intensity
+use_relative_intensities <- TRUE
+if (use_relative_intensities) {
+    fragments_out <- paste(c(prefix, '_fragments_rel.csv'), collapse="")
+    losses_out <- paste(c(prefix, '_losses_rel.csv'), collapse="")
+    mzdiffs_out <- paste(c(prefix, '_mzdiffs_rel.csv'), collapse="")
+    ms1_out <- paste(c(prefix, '_ms1_rel.csv'), collapse="")
+    ms2_out <- paste(c(prefix, '_ms2_rel.csv'), collapse="")
+} else {
+    fragments_out <- paste(c(prefix, '_fragments.csv'), collapse="")
+    losses_out <- paste(c(prefix, '_losses.csv'), collapse="")
+    mzdiffs_out <- paste(c(prefix, '_mzdiffs.csv'), collapse="")
+    ms1_out <- paste(c(prefix, '_ms1.csv'), collapse="")
+    ms2_out <- paste(c(prefix, '_ms2.csv'), collapse="")   
+}
 
 ################################
 ## Read in data and get peaks ##
@@ -36,31 +55,36 @@ peaks <- as.data.frame(frags@peaks)
 ##### Data filtering #####
 ##########################
 
-### MS1 ###
+source('createPeakList.R')
+results <- create_peaklist(peaks, use_relative_intensities)
+ms1 <- results$ms1
+ms2 <- results$ms2
 
-# get ms1 peaks
-ms1 <- peaks[which(peaks$msLevel==1),]
+###############################
+##### Feature Extractions #####
+###############################
 
-# keep peaks with RT > 3 mins and < 21 mins
-ms1 <- ms1[which(ms1$rt >= 3*60),]
-ms1 <- ms1[which(ms1$rt <= 21*60),]
+source('extractFragmentFeatures.R')
+results <- extract_ms2_fragment_df(ms1, ms2, prev_words_file)
+fragment_df <- results$fragment_df
+ms2 <- results$ms2
 
-### MS2 ###
+source('extractLossFeatures.R')
+results <- extract_neutral_loss_df(ms1, ms2, prev_words_file)
+neutral_loss_df <- results$neutral_loss_df
+ms2 <- results$ms2
 
-# get ms2 peaks
-ms2 <- peaks[which(peaks$msLevel==2),]
+source('extractMzdiffFeatures.R')
+results <- extract_mzdiff_df(ms1, ms2)
+mz_diff_df <- results$mz_diff_df
+ms2 <- results$ms2
 
-# keep ms2 peaks with intensity > 5000
-ms2 <- ms2[which(ms2$intensity>5000),]
+########################
+##### Write Output #####
+########################
 
-# keep ms2 peaks with parent in filtered ms1 list
-ms2 <- ms2[which(ms2$MSnParentPeakID %in% ms1$peakID),]
-
-# make sure only ms1 peaks with ms2 fragments are kept
-ms1 <- ms1[which(ms1$peakID %in% ms2$MSnParentPeakID),]
-
-### Prepare the matrices for LDA ###
-
-source('extractFeatures.R')
-extract_features(ms1, ms2, ms1_out, ms2_out, 
-                 fragments_out, losses_out, mzdiffs_out)
+write.table(ms1, file=ms1_out, col.names=NA, row.names=T, sep=",")
+write.table(ms2, file=ms2_out, col.names=NA, row.names=T, sep=",")    
+write.table(fragment_df, file=fragments_out, col.names=NA, row.names=T, sep=",")
+write.table(neutral_loss_df, file=losses_out, col.names=NA, row.names=T, sep=",")
+write.table(mz_diff_df, file=mzdiffs_out, col.names=NA, row.names=T, sep=",")
