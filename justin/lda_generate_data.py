@@ -52,7 +52,8 @@ class LdaDataGenerator:
         
         def generate_input_df(self, n_topics, vocab_size, document_length, n_docs, 
                               previous_vocab=None, vocab_prefix=None, 
-                              df_outfile=None, vocab_outfile=None):
+                              df_outfile=None, vocab_outfile=None, 
+                              n_bags=1):
                         
             print "Generating input DF"
                         
@@ -81,15 +82,28 @@ class LdaDataGenerator:
                 df.to_csv(df_outfile)        
 
             print "Generating vocabularies"
+            
+            # initialises vocab to either previous vocab or a blank list
             if previous_vocab is not None:
                 vocab = previous_vocab.tolist()
             else:
                 vocab = []
+
+            # add new words
             for n in range(vocab_size):
                 if vocab_prefix is None:
-                    vocab.append("word_" + str(n))
+                    word = "word_" + str(n)
                 else:
-                    vocab.append(vocab_prefix + "_word_" + str(n))                    
+                    word = vocab_prefix + "_word_" + str(n)
+                # if more than one bag, then initialise word type too
+                if n_bags > 1:
+                    word_type = np.random.randint(n_bags)
+                    tup = (word, word_type)
+                    vocab.append(tup)
+                else:
+                    vocab.append(word)
+            
+            # save to txt
             vocab = np.array(vocab)
             if vocab_outfile is not None:
                 np.savetxt(vocab_outfile, vocab, fmt='%s')
@@ -107,7 +121,7 @@ class LdaDataGenerator:
             # names in the dataframe to the words!
             df.rename(columns = lambda x: int(x), inplace=True)
             
-            vocab = np.loadtxt(vocab_infile, fmt='%s')
+            vocab = np.genfromtxt(vocab_infile, dtype='str')
             return df, vocab
         
         def _plot_nicely(self, mat, title, xlabel, ylabel, outfile=None):

@@ -2,19 +2,15 @@ import math
 import sys
 
 from numba import jit
-from numba.types import int64, float64, boolean
+from numba.types import int32, float64
 
 import numpy as np
 
 def sample_numba(random_state, n_burn, n_samples, n_thin, 
             D, N, K, document_indices, 
             alpha, beta, 
-            Z, cdk, ckn, cd, ck,
-            previous_ckn, previous_ck, previous_K,
-            silent):
-
-    all_lls = []
-    thin = 0
+            Z, cdk, cd, previous_K,
+            ckn, ck, previous_ckn, previous_ck):
     
     # prepare some K-length vectors to hold the intermediate results during loop
     post = np.empty(K, dtype=np.float64)
@@ -24,45 +20,64 @@ def sample_numba(random_state, n_burn, n_samples, n_thin,
     N_beta = N * beta
     K_alpha = K * alpha    
 
+    # prepare the input matrices
+    print "Preparing words"
+    all_d = []
+    all_pos = []
+    all_n = []
+    total_words = 0
+    max_pos = 0
+    for d in range(D):
+        word_locs = document_indices[d]
+        for pos, n in word_locs:
+            total_words += 1
+            all_d.append(d)
+            all_pos.append(pos)
+            all_n.append(n)
+            if pos > max_pos:
+                max_pos = pos
+    all_d = np.array(all_d, dtype=np.int32)
+    all_pos = np.array(all_pos, dtype=np.int32)
+    all_n = np.array(all_n, dtype=np.int32)
+
+    print "Preparing Z matrix"    
+    Z_mat = np.empty((D, max_pos+1), dtype=np.int32)
+    for d in range(D):
+        word_locs = document_indices[d]
+        for pos, n in word_locs:
+            k = Z[(d, pos)]
+            Z_mat[d, pos] = k
+    
+    print "DONE"
+
     # loop over samples
+    all_lls = []
+    thin = 0
     for samp in range(n_samples):
     
         s = samp+1        
-        if not silent:
-            if s >= n_burn:
-                print("Sample " + str(s) + " "),
-            else:
-                print("Burn-in " + str(s) + " "),
+        if s >= n_burn:
+            print("Sample " + str(s) + " "),
+        else:
+            print("Burn-in " + str(s) + " "),
 
-        # loop over documents
-        for d in range(D):
-
-            if not silent and d%10==0:                        
-                sys.stdout.write('.')
-                sys.stdout.flush()
-
-            # loop over words, not so easy to JIT due to rng and Z
-            word_locs = document_indices[d]
-            for pos, n in word_locs:
-                random_number = random_state.rand()                
-                k = Z[(d, pos)]                
-                k = _nb_get_new_index(d, n, k, cdk, cd, 
-                                      ckn, ck, previous_ckn, previous_ck, previous_K,
-                                      N, K, alpha, beta, 
-                                      N_beta, K_alpha,
-                                      post, cumsum, random_number)
-                Z[(d, pos)] = k
-
+        all_random = random_state.rand(total_words)
+        ll = _nb_do_sampling(s, n_burn, total_words, all_d, all_pos, all_n, all_random, Z_mat,
+                          cdk, cd, 
+                          D, N, K, previous_K, alpha, beta, 
+                          N_beta, K_alpha,                      
+                          post, cumsum,
+                          ckn, ck, previous_ckn, previous_ck)
+            
         if s > n_burn:
             thin += 1
             if thin%n_thin==0:    
-                ll = _nb_ll(D, N, K, alpha, beta, ckn, ck)
                 all_lls.append(ll)      
-                if not silent: print(" Log likelihood = %.3f " % ll)                        
+                print(" Log joint likelihood = %.3f " % ll)                        
             else:                
-                if not silent: print
+                print
         else:
-            if not silent: print
+            print
             
     # update phi
     phi = ckn + beta
@@ -75,18 +90,18 @@ def sample_numba(random_state, n_burn, n_samples, n_thin,
     all_lls = np.array(all_lls)            
     return phi, theta, all_lls
 
-@jit(int64(
-           int64, int64, int64, int64[:, :], int64[:], 
-           int64[:, :], int64[:], int64[:, :], int64[:], int64,
-           int64, int64, float64, float64,
+@jit(int32(
+           int32, int32, int32, int32[:, :], int32[:], 
+           int32, int32, int32, float64, float64,
            float64, float64,
            float64[:], float64[:], float64,
+           int32[:, :], int32[:], int32[:, :], int32[:]
 ), nopython=True)
 def _nb_get_new_index(d, n, k, cdk, cd, 
-                      ckn, ck, previous_ckn, previous_ck, previous_K,
-                      N, K, alpha, beta, 
+                      N, K, previous_K, alpha, beta, 
                       N_beta, K_alpha,                      
-                      post, cumsum, random_number):
+                      post, cumsum, random_number, 
+                      ckn, ck, previous_ckn, previous_ck):
 
     temp_ckn = ckn[:, n]
     temp_previous_ckn = previous_ckn[:, n]
@@ -98,10 +113,12 @@ def _nb_get_new_index(d, n, k, cdk, cd,
     ckn[k, n] -= 1
     ck[k] -= 1
 
+    # numpy: 
     # log_likelihood = np.log(ckn[:, n] + beta) - np.log(ck + N*beta)
     # log_prior = np.log(cdk[d, :] + alpha) - np.log(cd[d] + K*alpha)        
     # log_post = log_likelihood + log_prior
     
+    # compute likelihood, prior, posterior
     for i in range(len(post)):
 
         # we risk underflowing by not working in log space here
@@ -120,6 +137,7 @@ def _nb_get_new_index(d, n, k, cdk, cd,
 #         prior = math.log(temp_cdk[i] + alpha) - math.log(cd[d] + K_alpha)
 #         post[i] = likelihood + prior
 
+    # numpy:
     # post = np.exp(log_post - log_post.max())
     # post = post / post.sum()
 
@@ -142,7 +160,8 @@ def _nb_get_new_index(d, n, k, cdk, cd,
 #         sum_post += post[i]
 #     for i in range(len(post)):
 #         post[i] = post[i] / sum_post
-                            
+                      
+    # numpy:      
     # k = np.random.multinomial(1, post).argmax()
     total = 0
     for i in range(len(post)):
@@ -163,12 +182,48 @@ def _nb_get_new_index(d, n, k, cdk, cd,
     
     return k
 
-@jit(float64(int64, int64, int64, float64, float64, int64[:, :], int64[:]), nopython=True)
-def _nb_ll(D, N, K, alpha, beta, ckn, ck):
+@jit(float64(int32, int32, int32, float64, float64, int32[:, :], int32[:], int32[:, :], int32[:]), nopython=True)
+def _nb_ll(D, N, K, alpha, beta, cdk, cd, ckn, ck):
     ll = K * ( math.lgamma(N*beta) - (math.lgamma(beta)*N) )
     for k in range(K):
         for n in range(N):
             ll += math.lgamma(ckn[k, n]+beta)
         ll -= math.lgamma(ck[k] + N*beta)
     ll += D * ( math.lgamma(K*alpha) - (math.lgamma(alpha)*K) )
+    for d in range(D):
+        for k in range(K):
+            ll += math.lgamma(cdk[d, k]+alpha)
+        ll -= math.lgamma(cd[d] + K*alpha)                
+    
+    return ll
+
+@jit(nopython=True)   
+def _nb_do_sampling(s, n_burn, total_words, all_d, all_pos, all_n, all_random, Z_mat,
+                      cdk, cd, 
+                      D, N, K, previous_K, alpha, beta, 
+                      N_beta, K_alpha,                      
+                      post, cumsum,
+                      ckn, ck, previous_ckn, previous_ck):
+    
+    # loop over documents and all words in the document
+    for w in range(total_words):
+        
+        d = all_d[w]
+        pos = all_pos[w]
+        n = all_n[w]
+        random_number = all_random[w]
+    
+        # assign new k
+        k = Z_mat[d, pos]         
+        k = _nb_get_new_index(d, n, k, cdk, cd, 
+                              N, K, previous_K, alpha, beta, 
+                              N_beta, K_alpha,
+                              post, cumsum, random_number,
+                              ckn, ck, previous_ckn, previous_ck)
+        Z_mat[d, pos] = k
+
+    ll = 0
+    if s > n_burn:    
+        ll = _nb_ll(D, N, K, alpha, beta, cdk, cd, ckn, ck)                
+
     return ll
