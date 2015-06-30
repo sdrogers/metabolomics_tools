@@ -6,14 +6,26 @@ df = pd.read_csv('results.csv', sep=',|=', header=None)
 df = df.sort([1])
 print df
 
-X = df.ix[:, 1]
-Y = df.ix[:, 3]
-plt.plot(X, Y, linewidth=2, label='log marginal likelihood')
-plt.legend()
+ks = df.ix[:, 1]
+mean_margs = df.ix[:, 3]
+mean_perplexities = df.ix[:, 5]
+
+plt.figure()
+
+plt.subplot(1, 2, 1)
+plt.plot(np.array(ks), np.array(mean_margs))
 plt.grid()
 plt.xlabel('K')
-plt.ylabel('marg')
-plt.title('Cross-validation on No. of topics -- beer3 pos')
-plt.tight_layout()
+plt.ylabel('Log evidence')
+plt.title('Log evidence')
+
+plt.subplot(1, 2, 2)
+plt.plot(np.array(ks), np.array(mean_perplexities))
+plt.grid()
+plt.xlabel('K')
+plt.ylabel('Perplexity')
+plt.title('Perplexity')
+
+plt.suptitle('CV Results')
 plt.savefig('results.png')
 plt.show()

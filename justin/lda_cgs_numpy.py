@@ -8,9 +8,8 @@ import numpy as np
 def sample_numpy(random_state, n_burn, n_samples, n_thin, 
             D, N, K, document_indices, 
             alpha, beta, 
-            Z, cdk, ckn, cd, ck,
-            previous_ckn, previous_ck, previous_K,
-            silent):
+            Z, cdk, cd, previous_K,
+            ckn, ck, previous_ckn, previous_ck):
 
     all_lls = []
     thin = 0
@@ -19,15 +18,14 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
     for samp in range(n_samples):
     
         s = samp+1        
-        if not silent:
-            if s >= n_burn:
-                print("Sample " + str(s) + " "),
-            else:
-                print("Burn-in " + str(s) + " "),
+        if s >= n_burn:
+            print("Sample " + str(s) + " "),
+        else:
+            print("Burn-in " + str(s) + " "),
             
         for d in range(D):
 
-            if not silent and d%10==0:                        
+            if d%10==0:                        
                 sys.stdout.write('.')
                 sys.stdout.flush()
             
@@ -45,12 +43,7 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
 
                     # for training
                     log_likelihood = np.log(ckn[:, n] + beta) - np.log(ck + N_beta)
-                
-                elif previous_K == K:
-                
-                    # for cross-validation
-                    log_likelihood = np.log(previous_ckn[:, n] + beta) - np.log(previous_ck + N_beta)
-                
+                                
                 else:
                     
                     # for testing on unseen data
@@ -60,6 +53,8 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
                     # The combined likelihood: 
                     # front is from previous topic-word distribution
                     # back is from current topic-word distribution
+                    # Because of the values from the hyperparameter, we cannot do
+                    # log_likelihood = log_likelihood_previous + log_likelihood_current  
                     front = log_likelihood_previous[0:previous_K]
                     back = log_likelihood_current[previous_K:]
                     log_likelihood = np.hstack((front, back))
@@ -95,18 +90,25 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
         if s > n_burn:
             thin += 1
             if thin%n_thin==0:    
+
                 ll = K * ( gammaln(N*beta) - (gammaln(beta)*N) )
                 for k in range(K):
                     for n in range(N):
                         ll += gammaln(ckn[k, n]+beta)
                     ll -= gammaln(ck[k] + N*beta)                        
+
                 ll += D * ( gammaln(K*alpha) - (gammaln(alpha)*K) )
+                for d in range(D):
+                    for k in range(K):
+                        ll += gammaln(cdk[d, k]+alpha)
+                    ll -= gammaln(cd[d] + K*alpha)                
+                
                 all_lls.append(ll)      
-                if not silent: print(" Log likelihood = %.3f " % ll)                        
+                print(" Log joint likelihood = %.3f " % ll)                        
             else:                
-                if not silent: print
+                print
         else:
-            if not silent: print
+            print
             
     # update phi
     phi = ckn + beta
