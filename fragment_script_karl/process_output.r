@@ -1,40 +1,4 @@
 
-# output_data = read.delim('mzMatchOutput.txt',sep='\t')
-# final_data = which(colnames(output_data)=="relation.id")-1
-# data_columns = 3:final_data
-# average_spectrum = rowMeans(subset(output_data,select=final_data))
-# output_data$peak.mean = average_spectrum
-
-# # Select relation.id according to which cluster we want
-# sub_output_data = output_data[output_data$relation.id == 0,] 
-
-# # Normalise by max
-# use_col = 'peak.mean'
-# temp_col = sub_output_data[,use_col]
-# temp_col = temp_col/max(temp_col)
-
-# # Normalise by total
-# use_col = 'peak.mean'
-# temp_col = sub_output_data[,use_col]
-# temp_col = temp_col / sum(temp_col)
-
-
-# plot(c(min(sub_output_data$X),max(sub_output_data$X)),c(0,1),type='n')
-# # plot.new()
-# for (i in 1:nrow(sub_output_data)) {
-#     lines(rep(sub_output_data[i,'X'],2),c(0,temp_col[i]))
-#     }
-
-
-
-# file_name = 'output.txt'
-# write('BEGIN IONS',file_name,append=F)
-# for (i in 1:nrow(sub_output_data)) {
-#     line = paste(sub_output_data$X[i],temp_col[i],sep=" ")
-#     write(line,file_name,append=T)
-#     }
-# write('END IONS',file_name,append=T)
-
 make_mgf <- function(input_file,relation_id) {
     # Load the data
     output_data = read.delim(input_file,sep='\t')
@@ -97,6 +61,9 @@ make_msp <- function(input_file,output_file_name) {
         write.table(B,output_file_name,row.names=F,col.names=F,append=T)
         }
     }
+
+args <- commandArgs(trailingOnly = TRUE)
+print(args)
 # make_mgf('mzMATCHoutput.txt',0)
 input_file = 'mzMATCHoutput.txt'
 make_msp(input_file,'output.msp')
@@ -105,6 +72,7 @@ write(paste('NIST matches for',input_file),final_file_name,append=F)
 write(paste('relation_id','name','formula','prob',sep='\t'),final_file_name,append=T)
 a = system('C:\\2013_06_04_MSPepSearch_x32\\MSPepSearch.exe  M /HITS 10 /PATH C:\\NIST14\\MSSEARCH /MAIN mainlib /INP output.MSP /OUT test.txt /COL pz,cf')
 b = readLines('test.txt')
+d = data.frame(groupid = numeric(0),formula = character(0),probability = numeric(0))
 for(i in 1:length(b)) {
     se = regexpr("relation id [0-9]*",b[i])
     if(se>-1) {
