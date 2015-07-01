@@ -177,7 +177,7 @@ class shape_cluster_gibbs_sparse(object):
                     # self.post_sim[pos[:,np.newaxis],pos] += 1
                     total_like -= self.out_like[pos[:,np.newaxis],pos].sum()
                     total_like += self.in_like[pos[:,np.newaxis],pos].sum()
-
+                    
                 self.all_K.append(self.K)
                 self.all_total_like.append(total_like)
                 if total_like > self.best_like:
