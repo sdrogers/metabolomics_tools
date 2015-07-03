@@ -7,6 +7,7 @@ import matplotlib.cm as cmx
 import matplotlib.colors as colors
 import numpy as np
 import pylab as plt
+import pandas as pd
 
 
 class DilutionPlotter(object):
@@ -102,6 +103,23 @@ class DilutionPlotter(object):
             plt.ylabel('molDB')
             plt.title("Detected peaks log intensities (" + self.transformations[t].name + ")")
             plt.show()
+            
+    def export_to_file(self, outfile):
+        results = []
+        for d in range(self.D):
+            compound = self.database[d]
+            for t in range(self.T):
+                adduct = self.transformations[t]
+                dilution_intensities = self.trans_results[t]
+                compound_intensities = dilution_intensities[d, :].tolist()
+                res = [compound.name, compound.formula, adduct.name]
+                res.extend(compound_intensities)
+                results.append(res)
+        df = pd.DataFrame(results)
+        df.columns = ['Name', 'Formula', 'Adduct', 'Dil_1_1', 'Dil_1_5', 'Dil_1_10', 'Dil_1_50', 'Dil_1_100', 'Dil_1_1000']
+        print df
+        df.to_csv(outfile)
+        print "File written to " + outfile
     
     def print_most_common(self):
         for (key, val) in self.trans_freq.most_common():
