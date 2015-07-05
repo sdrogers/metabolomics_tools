@@ -30,7 +30,7 @@ public class Group {
 	private Data data;
 	private Vector<Transformation> transformations;
 	private static final Double mass_tol = 5.0;
-	private static final Double rt_tol = 4.0;
+	private static final Double rt_tol = 10.0;
 	private int proton_pos;
 	private ArrayList<ArrayList<Possible>> possibles;
 	private ArrayList<Integer> needUpdates;
@@ -40,14 +40,23 @@ public class Group {
 	private Double[] clusterPriorMeanRT;
 	private Double[] clusterPriorMeanMass;
 	private Double clusterPriorPrecisionRT = 1.0;
-	private Double clusterPriorPrecisionMass = 1000.0;
+	private Double[] clusterPriorPrecisionMass;
 	private Double precisionRT = 1.0;
-	private Double precisionMass = 1000.0;
+	private Double[] precisionMass;
+	private Double ppm = 5.0;
 	private Double alpha = 1.0;
 	private Integer[] z;
 	private Integer[] tr;
 	private Double[] transformed_mass;
 	private Random r;
+	private int nSamples = 0;
+	private int nBurn = 100;
+	private int[] mapCluster;
+	private int[] mapClusterSizes;
+	private int[] mapTr;
+	private Double[] mapProb;
+	private MolDB molDB = new MolDB();
+	private ArrayList<ArrayList<Molecule>> clusterHits;
 	public Group() {
 		try {
 			result = PeakMLParser.parse(new FileInputStream(inFile),true);
@@ -83,7 +92,7 @@ public class Group {
 		initialiseClustering();
 
 		r = new Random();
-		doSample(100);
+		doSample(500);
 		checkStatus();
 		summarise();
 	}
@@ -136,9 +145,9 @@ public class Group {
 				like -= 0.5*pred_precision*Math.pow(mean - data.retentionTimes[0][peak],2.0);
 
 				// Mass likelihood
-				precision = clusterPriorPrecisionMass + precisionMass * clusterSizes[this_cluster];
-				mean = (1.0/precision)*(clusterPriorMeanMass[this_cluster]*clusterPriorPrecisionMass + precisionMass*clusterMassSums[this_cluster]);
-				pred_precision = 1.0/(1.0/precision + 1.0/precisionMass);
+				precision = clusterPriorPrecisionMass[this_cluster] + precisionMass[this_cluster] * clusterSizes[this_cluster];
+				mean = (1.0/precision)*(clusterPriorMeanMass[this_cluster]*clusterPriorPrecisionMass[this_cluster] + precisionMass[this_cluster]*clusterMassSums[this_cluster]);
+				pred_precision = 1.0/(1.0/precision + 1.0/precisionMass[this_cluster]);
 				like -= 0.5*Math.log(2.0*Math.PI) + 0.5*Math.log(pred_precision);
 				like -= 0.5*pred_precision*Math.pow(mean - p.get(i).mass,2.0);
 
@@ -167,40 +176,73 @@ public class Group {
 			tr[peak] = p.get(new_cluster).transformation;
 
 			transformed_mass[peak] = p.get(new_cluster).mass;
+			if(this.nSamples > this.nBurn)
+			{
+				p.get(new_cluster).count ++;
+			}
 			clusterSizes[z[peak]] ++;
 			clusterRTSums[z[peak]] += data.retentionTimes[0][peak];
 			clusterMassSums[z[peak]] += transformed_mass[peak];
 
 		}
+		this.nSamples++;
 	}
 	private void summarise() {
 		// Displaying clusters with >5 members
 		ArrayList<Integer> big = new ArrayList<Integer>();
 		ArrayList<Integer> empty = new ArrayList<Integer>();
 		HashMap<Integer,Integer> histogram = new HashMap<Integer,Integer>();
+		mapCluster = new int[data.numPeaksets];
+		mapClusterSizes = new int[data.numPeaksets];
+		mapTr = new int[data.numPeaksets];
+		mapProb = new Double[data.numPeaksets];
+		for(int i=0;i<data.numPeaksets;i++) {
+			int nPossible = possibles.get(i).size();
+			if(nPossible == 1) {
+				possibles.get(i).get(0).count = this.nSamples;
+				possibles.get(i).get(0).posteriorProb = 1.0;
+				mapCluster[i] = possibles.get(i).get(0).cluster;
+				mapTr[i] = possibles.get(i).get(0).transformation;
+				mapProb[i] = 1.0;
+			}else {
+				Double maxPost = 0.0;
+				mapCluster[i] = -1;
+				for(Possible p: possibles.get(i)) {
+					p.posteriorProb = (1.0*p.count)/(1.0*(this.nSamples-this.nBurn));
+					if(p.posteriorProb >= maxPost) {
+						maxPost = p.posteriorProb;
+						mapCluster[i] = p.cluster;
+						mapTr[i] = p.transformation;
+						mapProb[i] = p.posteriorProb;
+					}
+				}
+			}
+			System.out.println(mapCluster[i]);
+			mapClusterSizes[mapCluster[i]] += 1;
+		}
 		Integer nClusters = data.numPeaksets;
 		Integer biggest = 0;
 		int biggest_pos = -1;
 		for(int i=0;i<nClusters;i++) {
-			if(clusterSizes[i]>=5) {
+			if(mapClusterSizes[i]>=4) {
 				big.add(i);
 			}
-			if(clusterSizes[i]==0) {
+			if(mapClusterSizes[i]==0) {
 				empty.add(i);
 			}
-			Integer count = histogram.get((Integer)clusterSizes[i]);
+			Integer count = histogram.get((Integer)mapClusterSizes[i]);
 			if(count == null) {
-				histogram.put((Integer)clusterSizes[i],1);
+				histogram.put((Integer)mapClusterSizes[i],1);
 			}else {
-				histogram.put((Integer)clusterSizes[i],count+1);
+				histogram.put((Integer)mapClusterSizes[i],count+1);
 			}
-			if(clusterSizes[i]>biggest) {
-				biggest = clusterSizes[i];
+			if(mapClusterSizes[i]>biggest) {
+				biggest = mapClusterSizes[i];
 				biggest_pos = i;
 			}
 		}
 		System.out.println("" + empty.size() + " empty clusters");
-		System.out.println("" + big.size() + " clusters with >= 5");
+		System.out.println("" + big.size() + " clusters with >= 4");
 		System.out.println("Histogram");
 		for(int i=0;i<=biggest;i++) {
 			Integer count = histogram.get((Integer) i);
@@ -213,6 +255,11 @@ public class Group {
 		
 		for(int j=0;j<big.size();j++)
 		{
+			summariseCluster(big.get(j));
+		}
+
+	}
+	private void summariseCluster(int clustNo) {
 			Double mh = 0.0;
 			Double mh13 = 0.0;
 			Double mk = 0.0;
@@ -222,15 +269,20 @@ public class Group {
 			ArrayList<Integer> peaksInBiggest = new ArrayList<Integer>();
 			System.out.println();
 			System.out.println();
-			System.out.println("Cluster " + big.get(j));
+			System.out.println("Cluster " + clustNo);
+			System.out.println("Hits: ");
+			for(Molecule m: clusterHits.get(clustNo)) {
+				System.out.print(m);
+				System.out.println(" Cratio: " + m.cRatio());
+			}
 			for(int i=0;i<data.numPeaksets;i++){
-				if(z[i].equals(big.get(j))) {
+				if(mapCluster[i] == clustNo) {
 					peaksInBiggest.add(i);
 				}
 			}
 			for(int i=0;i<peaksInBiggest.size();i++) {
 				int peak = peaksInBiggest.get(i);
-				System.out.println("Mass: " + data.masses[0][peak] + " RT: " + data.retentionTimes[0][peak] + " Transformation: " + transformations.get(tr[peak]).getName() + " transformed mass: " + transformed_mass[peak]);
+				System.out.println("Peak: " + peak + " Mass: " + data.masses[0][peak] + " RT: " + data.retentionTimes[0][peak] + " Intensity: " + data.intensities[0][peak] + " Transformation: " + transformations.get(mapTr[peak]).getName() + " transformed mass: " + transformations.get(mapTr[peak]).transformMass(data.masses[0][peak]) + " Probability: " + mapProb[peak]);
 				if(transformations.get(tr[peak]).getName().equals("M+H")) {
 					mh = (Double)data.intensities[0][peak];
 				}
@@ -257,19 +309,21 @@ public class Group {
 			System.out.println("M+H isotope ratio: " + hrat + "(" + mh + "/" + mh13 + ")");
 			System.out.println("M+K isotope ratio: " + krat + "(" + mk + "/" + mk13 + ")");
 			System.out.println("M+Na isotope ratio: " + nrat + "(" + mn + "/" + mn13 + ")");
-		}
-
 	}
 	private void initialiseClustering() {
+		this.nSamples = 0;
 		Integer nClusters = data.numPeaksets;
 		clusterSizes = new Integer[nClusters];
 		clusterMassSums = new Double[nClusters];
 		clusterRTSums = new Double[nClusters];
 		clusterPriorMeanMass = new Double[nClusters];
 		clusterPriorMeanRT = new Double[nClusters];
+		clusterPriorPrecisionMass = new Double[nClusters];
+		precisionMass = new Double[nClusters];
 		z = new Integer[nClusters];
 		tr = new Integer[nClusters];
 		transformed_mass = new Double[nClusters];
+		clusterHits = new ArrayList<ArrayList<Molecule>>();
 		for(int i=0;i<nClusters;i++) {
 			clusterSizes[i] = 1;
 			clusterRTSums[i] = data.retentionTimes[0][i];
@@ -278,10 +332,17 @@ public class Group {
 			z[i] = i;
 			tr[i] = proton_pos;
 			for(int j=0;j<a.size();j++) {
+				a.get(j).count = 0;
 				if(a.get(j).cluster == i) {
 					clusterMassSums[i] = a.get(j).mass;
 					clusterPriorMeanMass[i] = a.get(j).mass;
 					transformed_mass[i] = a.get(j).mass;
+					clusterPriorPrecisionMass[i] = compPrecision(ppm,transformed_mass[i]);
+					precisionMass[i] = compPrecision(ppm,transformed_mass[i]);
+					if(molDB != null) {
+						// Could do this afterwards with the posterior mass value?
+						clusterHits.add(molDB.getHits(transformed_mass[i],mass_tol));
+					}
 				}
 			}
 		}
@@ -298,10 +359,12 @@ public class Group {
 			// System.out.println(" Precursor mass = " + mh_mass);
 			for(int j=0;j<data.numPeaksets;j++) {
 				if(check(data.retentionTimes[0][i],data.retentionTimes[0][j])) {
-					for(int k=0;k<transformations.size();k++) {
-						Double t_mass = transformations.get(k).transformMass(data.masses[0][j]);
-						if(check(mh_mass,t_mass,data.retentionTimes[0][i],data.retentionTimes[0][j])){
-							possibles.get(j).add(new Possible(i,t_mass,k));
+					if(data.intensities[0][j]<=data.intensities[0][i]) {
+						for(int k=0;k<transformations.size();k++) {
+							Double t_mass = transformations.get(k).transformMass(data.masses[0][j]);
+							if(check(mh_mass,t_mass,data.retentionTimes[0][i],data.retentionTimes[0][j])){
+								possibles.get(j).add(new Possible(i,t_mass,k));
+							}
 						}
 					}
 				}
@@ -349,33 +412,54 @@ public class Group {
 		public Integer cluster;
 		public Double mass;
 		public Integer transformation;
+		public Integer count;
+		public Double posteriorProb;
 		public Possible(Integer cluster,Double mass,Integer transformation) {
 			this.cluster = cluster;
 			this.mass = mass;
 			this.transformation = transformation;
+			this.count = 0;
+			this.posteriorProb = 0.0;
 		}
 		public String toString() {
-			return "" + cluster + ", " + mass + ", " + transformations.get(transformation).getName();
+			return "" + cluster + ", " + mass + ", " + transformations.get(transformation).getName() + ", " + this.count + ", " + this.posteriorProb;
 		}
  	}
+
+ 	public static Double compPrecision(double ppm,double mass) {
+ 		// Set 3 standard dev = ppm value
+ 		Double di = ppm*mass/1e6;
+ 		Double sd = di/3.0;
+ 		return 1.0/(sd*sd);
+ 	}
+
+ 	public static Double cRatios() {
+ 		Double p12 = 0.9893;
+ 		Double p13 = 0.0107;
+ 		Double pr = 1.0;
+ 		for(int i=1;i<20;i++) {
+ 			// n choose 1 is n
+ 			Double prob12 = pr*p12;
+ 			Double prob13 = pr*p13*i;
+ 			pr*=p12;
+ 			System.out.println("C = " + i + " rat = " + prob12/prob13);
+ 		}
+ 		return 1.0;
+ 	}
+ 	public static int factorial(int x) {
+ 		if(x==0) {
+ 			return 1;
+ 		}else {
+ 			return x*factorial(x-1);
+ 		}
+ 	}
+
+ 	public static int choose(int n,int k) {
+ 		return factorial(n)/(factorial(k)*factorial(n-k));
+ 	}
+
 	public static void main(String[] args) {
 		new Group();
 	}
 }
 
-// public class playing {
-// 	public static void main(String[] args) throws Exception{
-// 		String infile = "/Users/simon/Dropbox/BioResearch/Meta_clustering/JoeDataProcessing/Standards/std1 pos/std1-file1.peakml"; 
-// 		// File input = new File(infile);
-// 		ParseResult result = PeakMLParser.parse(new FileInputStream(infile), true);
-// 		IPeakSet<IPeak> peaks = (IPeakSet<IPeak>) result.measurement;
-// 		for(IPeak ps : peaks) {
-// 			System.out.println("" + ps.getMass() + "," + ps.getRetentionTime());
-// 		}
-// 		// Data myData = new Data(result.header,peaks);
-// 		// for(int i=0;i<myData.numReplicates;i++) {
-// 		// 	System.out.println(myData.masses[i][0]);
-// 		// }
-
-// 	}
-// }
