@@ -24,8 +24,13 @@ import mzmatch.util.*;
 
 import mzmatch.ipeak.sort.Data;
 
+import java.util.zip.GZIPOutputStream;
+
+
 public class Group {
-	private String inFile = "/Users/simon/Dropbox/BioResearch/Meta_clustering/JoeDataProcessing/Standards/std1 pos/std1-file1.peakml"; 
+	private String inFile = "std1-file1.peakml";
+	// private String inFile = "test.peakml";
+	// private String inFile = "test2.peakml";
 	private ParseResult result;
 	private Data data;
 	private Vector<Transformation> transformations;
@@ -50,7 +55,7 @@ public class Group {
 	private Double[] transformed_mass;
 	private Random r;
 	private int nSamples = 0;
-	private int nBurn = 100;
+	private int nBurn = 50;
 	private int[] mapCluster;
 	private int[] mapClusterSizes;
 	private int[] mapTr;
@@ -92,9 +97,30 @@ public class Group {
 		initialiseClustering();
 
 		r = new Random();
-		doSample(500);
+		doSample(100);
 		checkStatus();
 		summarise();
+		int i=0;
+		Vector<IPeakSet<IPeak>> l = new Vector<IPeakSet<IPeak>>();
+		for(IPeak p: (IPeakSet<IPeak>)result.measurement) {
+			System.out.println("" + p.getMass() + ": " + data.masses[0][i] + " " + mapCluster[i] + " " + transformations.get(mapTr[i]).getName());
+			IPeakSet<IPeak> q = new IPeakSet<IPeak>(p);
+			q.addAnnotation(Annotation.relationship,transformations.get(mapTr[i]).getName());
+			q.addAnnotation(Annotation.relationid,mapCluster[i]);
+
+			i++;
+			l.add(q);
+		}
+		IPeakSet<IPeakSet<IPeak>> peaks = new IPeakSet<IPeakSet<IPeak>>(l);
+
+		try {
+		PeakMLWriter.write(
+					result.header, peaks.getPeaks(), null,
+					new GZIPOutputStream(new FileOutputStream("test.peakml")), null
+				);
+		}catch(IOException e) {
+			System.out.println(e);
+		}
 	}
 
 	private void doSample(int n_samples) {
