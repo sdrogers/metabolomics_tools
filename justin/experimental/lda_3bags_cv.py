@@ -2,20 +2,21 @@
 Cross-validation for LDA
 """
 
+from collections import namedtuple
 import multiprocessing
 import os
 import sys
 
 from joblib import Parallel, delayed  
+from scipy.misc import logsumexp
 
-from lda_is import ldae_is_variants
-from lda_cgs import CollapseGibbsLda
-from lda_for_fragments import Ms2Lda
-from lda_generate_data import LdaDataGenerator
-import lda_utils as utils
+from lda_3bags_cgs import CollapseGibbs_3bags_Lda
+from lda_3bags_for_fragments import ThreeBags_Ms2Lda
+from lda_3bags_is import ldae_is_variants
+import justin.lda_utils as utils
 import numpy as np
 import pylab as plt
-from collections import namedtuple
+
 
 Cv_Results = namedtuple('Cv_Results', 'marg perp')
 class CrossValidatorLda:
@@ -54,7 +55,7 @@ class CrossValidatorLda:
                         training_df = training_df.append(folds[j])
 
             print "Run training gibbs " + str(training_df.shape)
-            training_gibbs = CollapseGibbsLda(training_df, self.vocab, self.K, self.alpha, self.beta)
+            training_gibbs = CollapseGibbs_3bags_Lda(training_df, self.vocab, self.K, self.alpha, self.beta)
             training_gibbs.run(n_burn, n_samples, n_thin, use_native=True)
             
             print "Run testing importance sampling " + str(testing_df.shape)
@@ -74,7 +75,7 @@ class CrossValidatorLda:
             for d in range(testing_df.shape[0]):
                 document = self.df.iloc[[d]]
                 words = utils.word_indices(document)
-                doc_marg = ldae_is_variants(words, topics, topic_prior, 
+                doc_marg = ldae_is_variants(words, self.vocab, topics, topic_prior, 
                                          num_samples=is_num_samples, variant=3, variant_iters=is_iters)
                 print "\td = " + str(d) + " doc_marg=" + str(doc_marg)
                 sys.stdout.flush()                
@@ -110,53 +111,6 @@ def run_cv(df, vocab, k, alpha, beta):
     res = Cv_Results(cv.mean_margs, cv.mean_perplexities)
     return res
 
-def run_synthetic(parallel=True):
-
-    K = 50
-    print "Cross-validation for K=" + str(K)
-    alpha = 0.1
-    beta = 0.01    
-    n_docs = 200
-    vocab_size = 500
-    document_length = 50
-    gen = LdaDataGenerator(alpha)
-    df, vocab = gen.generate_input_df(K, vocab_size, document_length, n_docs)
-    
-    ks = range(10, 101, 10)
-    if parallel:
-        num_cores = multiprocessing.cpu_count()
-        res = Parallel(n_jobs=num_cores)(delayed(run_cv)(df, vocab, k, alpha, beta) for k in ks)      
-        mean_margs = []
-        mean_perplexities = []
-        for r in res:
-            mean_margs.append(r.marg)
-            mean_perplexities.append(r.perp)
-    else:
-        mean_margs = []
-        mean_perplexities = []
-        for k in ks:
-            mean_marg, mean_perplexity = run_cv(df, vocab, k, alpha, beta)
-            mean_margs.append(mean_marg)
-            mean_perplexities.append(mean_perplexity)
-        
-    plt.figure()
-
-    plt.subplot(1, 2, 1)
-    plt.plot(np.array(ks), np.array(mean_margs))
-    plt.grid()
-    plt.xlabel('K')
-    plt.ylabel('Log evidence')
-    plt.title('CV results -- log evidence for varying K')
-
-    plt.subplot(1, 2, 2)
-    plt.plot(np.array(ks), np.array(mean_perplexities))
-    plt.grid()
-    plt.xlabel('K')
-    plt.ylabel('Perplexity')
-    plt.title('CV results -- perplexity for varying K')
-
-    plt.show()
-
 def run_beer3():
 
     if len(sys.argv)>1:
@@ -178,12 +132,12 @@ def run_beer3():
     is_iters = 1000
      
     relative_intensity = True
-    fragment_filename = current_path + '/input/relative_intensities/Beer_3_T10_POS_fragments_rel.csv'
-    neutral_loss_filename = current_path + '/input/relative_intensities/Beer_3_T10_POS_losses_rel.csv'
+    fragment_filename = current_path + '/../input/relative_intensities/Beer_3_T10_POS_fragments_rel.csv'
+    neutral_loss_filename = current_path + '/../input/relative_intensities/Beer_3_T10_POS_losses_rel.csv'
     mzdiff_filename = None
-    ms1_filename = current_path + '/input/relative_intensities/Beer_3_T10_POS_ms1_rel.csv'
-    ms2_filename = current_path + '/input/relative_intensities/Beer_3_T10_POS_ms2_rel.csv'
-    ms2lda = Ms2Lda(fragment_filename, neutral_loss_filename, mzdiff_filename,
+    ms1_filename = current_path + '/../input/relative_intensities/Beer_3_T10_POS_ms1_rel.csv'
+    ms2_filename = current_path + '/../input/relative_intensities/Beer_3_T10_POS_ms2_rel.csv'
+    ms2lda = ThreeBags_Ms2Lda(fragment_filename, neutral_loss_filename, mzdiff_filename,
                 ms1_filename, ms2_filename, relative_intensity)
      
     df, vocab = ms2lda.preprocess()
@@ -212,12 +166,12 @@ def run_urine37():
     is_iters = 1000
      
     relative_intensity = True
-    fragment_filename = current_path + '/input/relative_intensities/Urine_37_Top10_POS_fragments_rel.csv'
-    neutral_loss_filename = current_path + '/input/relative_intensities/Urine_37_Top10_POS_losses_rel.csv'
+    fragment_filename = current_path + '/../input/relative_intensities/Urine_37_Top10_POS_fragments_rel.csv'
+    neutral_loss_filename = current_path + '/../input/relative_intensities/Urine_37_Top10_POS_losses_rel.csv'
     mzdiff_filename = None
-    ms1_filename = current_path + '/input/relative_intensities/Urine_37_Top10_POS_ms1_rel.csv'
-    ms2_filename = current_path + '/input/relative_intensities/Urine_37_Top10_POS_ms2_rel.csv'
-    ms2lda = Ms2Lda(fragment_filename, neutral_loss_filename, mzdiff_filename,
+    ms1_filename = current_path + '/../input/relative_intensities/Urine_37_Top10_POS_ms1_rel.csv'
+    ms2_filename = current_path + '/../input/relative_intensities/Urine_37_Top10_POS_ms2_rel.csv'
+    ms2lda = ThreeBags_Ms2Lda(fragment_filename, neutral_loss_filename, mzdiff_filename,
                 ms1_filename, ms2_filename, relative_intensity)
      
     df, vocab = ms2lda.preprocess()
@@ -237,9 +191,6 @@ def main():
     elif data == 'URINE37POS':
         print "Data = Urine37 Positive"
         run_urine37()
-    else:
-        print "Data = Synthetic"
-        run_synthetic(parallel=False)        
 
 if __name__ == "__main__":
     main()
