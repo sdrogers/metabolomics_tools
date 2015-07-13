@@ -3,7 +3,7 @@ import re
 
 class Formula(object):
 	def __init__(self,formula):
-		self.atom_names = ['C','H','N','O','P','S','Cl','I','Br','Si','F']
+		self.atom_names = ['C','H','N','O','P','S','Cl','I','Br','Si','F','D']
 		self.formula = formula
 		self.atoms = {}
 		for atom in self.atom_names:

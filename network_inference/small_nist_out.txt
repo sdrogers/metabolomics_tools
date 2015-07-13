@@ -1,0 +1,11 @@
+> MSPepSearch ver. 0.91 build Jun  3 2013 19:11:06. Command line:
+> C:\2013_0~1\MSPEPS~1.EXE  M /HITS 3 /PATH C:\NIST14\MSSEARCH /MAIN mainlib /INP output.MSP /OUT nist_out.txt /COL pz,cf
+>
+Unknown: relation id 0                                               Compound in Library Factor = N/A
+Hit 1  : <<Benzoic acid, 2-[4-(diethylamino)-2-hydroxybenzoyl]->> (0.00); <<C18H19NO4>>; MF: 355; RMF: 825; Prob: 12.72; CAS: 5809-23-4; Mw: 313; Lib: <<mainlib>>; Id: 224592.
+Hit 2  : <<Cephalotaxine, 4-methyl 2-hydroxy-2-(4-hydroxy-4-methylpentyl)butanedioate (ester), [3(R)]->> (0.00); <<C17H20NO9>>; MF: 338; RMF: 859; Prob: 6.94; CAS:26833-87-4; Mw: 545; Lib: <<mainlib>>; Id: 224580.
+Unknown: relation id 1                                               Compound in Library Factor = N/A
+Hit 1  : <<Zinc, di-2-propenyl->> (0.00); <<C6H12O6>>; MF: 409; RMF: 940; Prob: 20.53; CAS: 1802-55-7; Mw: 146; Lib: <<mainlib>>; Id: 2170.
+Unknown: relation id 2                                               Compound in Library Factor = N/A
+Hit 1  : <<2-Trimethylsilyloxyheptanoic acid, trimethylsilyl ester>> (0.00); <<C6H14O7Si2>>; MF: 370; RMF: 825; Prob: 26.61; CAS:0-00-0; Mw: 290; Lib: <<mainlib>>; Id: 161195.
+Hit 2  : <<à-Hydroxyisobutyric acid, 2TBDMS derivative>> (0.00); <<C16H14O3Si2>>; MF: 322; RMF: 760; Prob: 5.51; CAS:0-00-0; Mw: 332; Lib: <<mainlib>>; Id: 134933.
