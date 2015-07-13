@@ -1,0 +1,11 @@
+NIST matches for mzMATCHoutput.txt
+relation_id,name,formula,prob
+0,<<Benzoic acid, 2-[4-(diethylamino)-2-hydroxybenzoyl]->>,<<C18H19NO4>>,11.81
+0,<<Cephalotaxine, 4-methyl 2-hydroxy-2-(4-hydroxy-4-methylpentyl)butanedioate (ester), [3(R)]->>,<<C29H39NO9>>,7.16
+0,<<Alpha-acetoxyacetophenone 2,4-dinitrophenylhydrazone>>,<<C16H14N4O6>>,5.34
+1,<<Zinc, di-2-propenyl->>,<<C6H10Zn>>,20.24
+1,<<Butylamine, bis(2-phosphinoethyl)->>,<<C8H21NP2>>,15.10
+1,<<Imidazo[1,2-a]pyridine, 2-(3-nitrobenzoylamino)methyl->>,<<C15H12N4O3>>,13.92
+2,<<2-Trimethylsilyloxyheptanoic acid, trimethylsilyl ester>>,<<C13H30O3Si2>>,26.62
+2,<<à-Hydroxyisobutyric acid, 2TBDMS derivative>>,<<C16H36O3Si2>>,5.51
+2,<<Etaconazole à>>,<<C14H15Cl2N3O2>>,5.30

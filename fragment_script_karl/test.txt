@@ -1,0 +1,38 @@
+> MSPepSearch ver. 0.91 build Jun  3 2013 19:11:06. Command line:
+> C:\2013_0~1\MSPEPS~1.EXE  M /HITS 10 /PATH C:\NIST14\MSSEARCH /MAIN mainlib /INP output.MSP /OUT test.txt /COL pz,cf
+>
+Unknown: relation id 0                                               Compound in Library Factor = N/A
+Hit 1  : <<Benzoic acid, 2-[4-(diethylamino)-2-hydroxybenzoyl]->> (0.00); <<C18H19NO4>>; MF: 363; RMF: 823; Prob: 11.81; CAS: 5809-23-4; Mw: 313; Lib: <<mainlib>>; Id: 224592.
+Hit 2  : <<Cephalotaxine, 4-methyl 2-hydroxy-2-(4-hydroxy-4-methylpentyl)butanedioate (ester), [3(R)]->> (0.00); <<C29H39NO9>>; MF: 348; RMF: 854; Prob: 7.16; CAS:26833-87-4; Mw: 545; Lib: <<mainlib>>; Id: 224580.
+Hit 3  : <<Alpha-acetoxyacetophenone 2,4-dinitrophenylhydrazone>> (0.00); <<C16H14N4O6>>; MF: 340; RMF: 774; Prob: 5.34; CAS:15212-17-6; Mw: 358; Lib: <<mainlib>>; Id: 76553.
+Hit 4  : <<2-Amino-4-nitrophenol, 2TMS derivative>> (0.00); <<C12H22N2O3Si2>>; MF: 337; RMF: 721; Prob: 4.72; CAS:0-00-0; Mw: 298; Lib: <<mainlib>>; Id: 43847.
+Hit 5  : <<Cyclohex-2-enone, 3-(4-methoxyphenylamino)-5,5-dimethyl-2-(3-phenylacryloyl)->> (0.00); <<C24H25NO3>>; MF: 326; RMF: 814; Prob: 3.23; CAS:0-00-0; Mw: 375; Lib: <<mainlib>>; Id: 224560.
+Hit 6  : <<3,7-Dichloroquinoline-8-carboxylic acid, trimethylsilyl ester>> (0.00); <<C13H13Cl2NO2Si>>; MF: 320; RMF: 811; Prob: 2.54; CAS:0-00-0; Mw: 313; Lib: <<mainlib>>; Id: 224585.
+Hit 7  : <<Cephalotaxine, 4-methyl 2,3-dihydroxy-2-(3-methylbutyl)butanedioate (ester), [3(2R,3S)]->> (0.00); <<C28H37NO9>>; MF: 318; RMF: 869; Prob: 2.34; CAS:26833-86-3; Mw: 531; Lib: <<mainlib>>; Id: 224557.
+Hit 8  : <<Tubocurarine chloride>> (0.00); <<C37H42Cl2N2O6>>; MF: 318; RMF: 832; Prob: 2.34; CAS:   57-94-3; Mw: 680; Lib: <<mainlib>>; Id: 224623.
+Hit 9  : <<Benzoic acid, 4-(1,2,3,4-tetrahydro-6,7-dimethoxy-2-isoquinolinyl)->> (0.00); <<C18H19NO4>>; MF: 309; RMF: 702; Prob: 1.70; CAS:0-00-0; Mw: 313; Lib: <<mainlib>>; Id: 179371.
+Hit 10 : <<trans-3',4'-Dimethoxy-4-(methylthio)chalcone>> (0.00); <<C18H18O3S>>; MF: 307; RMF: 704; Prob: 1.57; CAS:131316-20-6; Mw: 314; Lib: <<mainlib>>; Id: 227993.
+Unknown: relation id 1                                               Compound in Library Factor = N/A
+Hit 1  : <<Zinc, di-2-propenyl->> (0.00); <<C6H10Zn>>; MF: 407; RMF: 934; Prob: 20.24; CAS: 1802-55-7; Mw: 146; Lib: <<mainlib>>; Id: 2170.
+Hit 2  : <<Butylamine, bis(2-phosphinoethyl)->> (0.00); <<C8H21NP2>>; MF: 399; RMF: 988; Prob: 15.10; CAS:207689-13-2; Mw: 193; Lib: <<mainlib>>; Id: 134142.
+Hit 3  : <<Imidazo[1,2-a]pyridine, 2-(3-nitrobenzoylamino)methyl->> (0.00); <<C15H12N4O3>>; MF: 397; RMF: 997; Prob: 13.92; CAS:298190-39-3; Mw: 296; Lib: <<mainlib>>; Id: 134730.
+Hit 4  : <<(3-Carboxy-2,2,3,3-tetrafluoropropionamido)sulfur pentafluoride>> (0.00); <<C4H2F9NO3S>>; MF: 397; RMF: 949; Prob: 13.92; CAS:0-00-0; Mw: 315; Lib: <<mainlib>>; Id: 111719.
+Hit 5  : <<Benzene, 1,4-dichloro->> (0.00); <<C6H4Cl2>>; MF: 382; RMF: 988; Prob: 8.44; CAS:  106-46-7; Mw: 146; Lib: <<mainlib>>; Id: 134516.
+Hit 6  : <<Benzene, 1,2-dichloro->> (0.00); <<C6H4Cl2>>; MF: 378; RMF: 987; Prob: 7.13; CAS:   95-50-1; Mw: 146; Lib: <<mainlib>>; Id: 134514.
+Hit 7  : <<Benzene, 1,3-dichloro->> (0.00); <<C6H4Cl2>>; MF: 378; RMF: 987; Prob: 7.13; CAS:  541-73-1; Mw: 146; Lib: <<mainlib>>; Id: 134515.
+Hit 8  : <<Ethanone, 2-(5-amino-1,3,4-thiadiazol-2-yl)thio-1-(3-nitrophenyl)->> (0.00); <<C10H8N4O3S2>>; MF: 368; RMF: 834; Prob: 5.03; CAS:329921-46-2; Mw: 296; Lib: <<mainlib>>; Id: 31068.
+Hit 9  : <<Benzimidazole-2-ethanol, 1-methyl-à-(4-dimethylaminophenyl)->> (0.00); <<C18H21N3O>>; MF: 351; RMF: 927; Prob: 2.74; CAS:309724-80-9; Mw: 295; Lib: <<mainlib>>; Id: 134522.
+Hit 10 : <<Benzoic acid, 4-(2-tert-butylphenoxycarbonylamino)-, ethyl ester>> (0.00); <<C20H23NO4>>; MF: 335; RMF: 900; Prob: 1.58; CAS:0-00-0; Mw: 341; Lib: <<mainlib>>; Id: 120762.
+Unknown: relation id 2                                               Compound in Library Factor = N/A
+Hit 1  : <<2-Trimethylsilyloxyheptanoic acid, trimethylsilyl ester>> (0.00); <<C13H30O3Si2>>; MF: 370; RMF: 825; Prob: 26.62; CAS:0-00-0; Mw: 290; Lib: <<mainlib>>; Id: 161195.
+Hit 2  : <<à-Hydroxyisobutyric acid, 2TBDMS derivative>> (0.00); <<C16H36O3Si2>>; MF: 322; RMF: 761; Prob: 5.51; CAS:0-00-0; Mw: 332; Lib: <<mainlib>>; Id: 134933.
+Hit 3  : <<Etaconazole à>> (0.00); <<C14H15Cl2N3O2>>; MF: 321; RMF: 797; Prob: 5.30; CAS:0-00-0; Mw: 327; Lib: <<mainlib>>; Id: 207706.
+Hit 4  : <<Etaconazole á>> (0.00); <<C14H15Cl2N3O2>>; MF: 318; RMF: 808; Prob: 4.68; CAS:0-00-0; Mw: 327; Lib: <<mainlib>>; Id: 162467.
+Hit 5  : <<(2,2-Dimethyl-propionyl)-tris(trimethylsilyl)silane>> (0.00); <<C14H36OSi4>>; MF: 306; RMF: 723; Prob: 3.12; CAS:69397-47-3; Mw: 332; Lib: <<mainlib>>; Id: 42987.
+Hit 6  : <<Pindolol, 2TBDMS derivative>> (0.00); <<C26H48N2O2Si2>>; MF: 301; RMF: 772; Prob: 2.51; CAS:0-00-0; Mw: 476; Lib: <<mainlib>>; Id: 208564.
+Hit 7  : <<Silane, methylvinyl(2,4-dimethylpent-3-yloxy)(methylvinyl(2,4-dimethylpent-3-yloxy)silyloxy)->> (0.00); <<C20H42O3Si2>>; MF: 299; RMF: 722; Prob: 2.32; CAS:0-00-0; Mw: 386; Lib: <<mainlib>>; Id: 161128.
+Hit 8  : <<2-Chloro-7-nitroxanthen-9-one>> (0.00); <<C13H6ClNO4>>; MF: 298; RMF: 788; Prob: 2.23; CAS:20061-60-3; Mw: 275; Lib: <<mainlib>>; Id: 218403.
+Hit 9  : <<N-Acetyl-D-galactosamine, (isomer 1), 4TMS derivative>> (0.00); <<C20H47NO6Si4>>; MF: 291; RMF: 746; Prob: 1.70; CAS:0-00-0; Mw: 509; Lib: <<mainlib>>; Id: 161188.
+Hit 10 : <<Etaconazole>> (0.00); <<C14H15Cl2N3O2>>; MF: 290; RMF: 752; Prob: 1.64; CAS:60207-93-4; Mw: 327; Lib: <<mainlib>>; Id: 21670.
+>
+> Completed. 3 spectra in 0.148 sec, process time = 0.151 sec (read 0.001s print 0.008s init pio 0.000s aux 0.000s sp 0.000s, search only: 0.039s+0.101s=0.139s, 21.57 spec/s) 20.20 spec/s Compared 6280 spec, No spectra compared 0, peaks/spec 31.33

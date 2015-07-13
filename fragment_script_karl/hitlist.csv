@@ -1,0 +1,32 @@
+NIST matches for mzMATCHoutput.txt
+relation_id	name	formula	prob
+0	<<Benzoic acid, 2-[4-(diethylamino)-2-hydroxybenzoyl]->>	<<C18H19NO4>>	11.81
+0	<<Cephalotaxine, 4-methyl 2-hydroxy-2-(4-hydroxy-4-methylpentyl)butanedioate (ester), [3(R)]->>	<<C29H39NO9>>	7.16
+0	<<Alpha-acetoxyacetophenone 2,4-dinitrophenylhydrazone>>	<<C16H14N4O6>>	5.34
+0	<<2-Amino-4-nitrophenol, 2TMS derivative>>	<<C12H22N2O3Si2>>	4.72
+0	<<Cyclohex-2-enone, 3-(4-methoxyphenylamino)-5,5-dimethyl-2-(3-phenylacryloyl)->>	<<C24H25NO3>>	3.23
+0	<<3,7-Dichloroquinoline-8-carboxylic acid, trimethylsilyl ester>>	<<C13H13Cl2NO2Si>>	2.54
+0	<<Cephalotaxine, 4-methyl 2,3-dihydroxy-2-(3-methylbutyl)butanedioate (ester), [3(2R,3S)]->>	<<C28H37NO9>>	2.34
+0	<<Tubocurarine chloride>>	<<C37H42Cl2N2O6>>	2.34
+0	<<Benzoic acid, 4-(1,2,3,4-tetrahydro-6,7-dimethoxy-2-isoquinolinyl)->>	<<C18H19NO4>>	1.70
+0	<<trans-3',4'-Dimethoxy-4-(methylthio)chalcone>>	<<C18H18O3S>>	1.57
+1	<<Zinc, di-2-propenyl->>	<<C6H10Zn>>	20.24
+1	<<Butylamine, bis(2-phosphinoethyl)->>	<<C8H21NP2>>	15.10
+1	<<Imidazo[1,2-a]pyridine, 2-(3-nitrobenzoylamino)methyl->>	<<C15H12N4O3>>	13.92
+1	<<(3-Carboxy-2,2,3,3-tetrafluoropropionamido)sulfur pentafluoride>>	<<C4H2F9NO3S>>	13.92
+1	<<Benzene, 1,4-dichloro->>	<<C6H4Cl2>>	8.44
+1	<<Benzene, 1,2-dichloro->>	<<C6H4Cl2>>	7.13
+1	<<Benzene, 1,3-dichloro->>	<<C6H4Cl2>>	7.13
+1	<<Ethanone, 2-(5-amino-1,3,4-thiadiazol-2-yl)thio-1-(3-nitrophenyl)->>	<<C10H8N4O3S2>>	5.03
+1	<<Benzimidazole-2-ethanol, 1-methyl-à-(4-dimethylaminophenyl)->>	<<C18H21N3O>>	2.74
+1	<<Benzoic acid, 4-(2-tert-butylphenoxycarbonylamino)-, ethyl ester>>	<<C20H23NO4>>	1.58
+2	<<2-Trimethylsilyloxyheptanoic acid, trimethylsilyl ester>>	<<C13H30O3Si2>>	26.62
+2	<<à-Hydroxyisobutyric acid, 2TBDMS derivative>>	<<C16H36O3Si2>>	5.51
+2	<<Etaconazole à>>	<<C14H15Cl2N3O2>>	5.30
+2	<<Etaconazole á>>	<<C14H15Cl2N3O2>>	4.68
+2	<<(2,2-Dimethyl-propionyl)-tris(trimethylsilyl)silane>>	<<C14H36OSi4>>	3.12
+2	<<Pindolol, 2TBDMS derivative>>	<<C26H48N2O2Si2>>	2.51
+2	<<Silane, methylvinyl(2,4-dimethylpent-3-yloxy)(methylvinyl(2,4-dimethylpent-3-yloxy)silyloxy)->>	<<C20H42O3Si2>>	2.32
+2	<<2-Chloro-7-nitroxanthen-9-one>>	<<C13H6ClNO4>>	2.23
+2	<<N-Acetyl-D-galactosamine, (isomer 1), 4TMS derivative>>	<<C20H47NO6Si4>>	1.70
+2	<<Etaconazole>>	<<C14H15Cl2N3O2>>	1.64

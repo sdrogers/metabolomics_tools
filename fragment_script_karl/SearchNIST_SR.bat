@@ -1,0 +1,1 @@
+C:\2013_06_04_MSPepSearch_x32\MSPepSearch.exe  M /HITS 10 /PATH C:\NIST14\MSSEARCH /MAIN mainlib /INP output.MSP /OUT test.csv /COL pz,cf

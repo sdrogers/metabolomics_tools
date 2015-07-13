@@ -30,14 +30,12 @@ make_msp <- function(input_file,output_file_name) {
     # Work out which columns have data in
     final_data = which(colnames(output_data)=="relation.id")-1
     data_columns = 3:final_data
-    average_spectrum = rowMeans(subset(output_data,select=final_data))
+    average_spectrum = rowMeans(subset(output_data,select=data_columns))
     output_data$peak.mean = average_spectrum
     
     
-    
     # Select relation.id according to which cluster we want
-    # for(relation_id in 0:max(output_data$relation.id)) {
-    for(relation_id in 0:2) {
+    for(relation_id in 0:max(output_data$relation.id)) {
         if(relation_id%%100 == 0) {
             print(paste('Exporting relation',relation_id))
         }
@@ -53,48 +51,64 @@ make_msp <- function(input_file,output_file_name) {
         write(paste('DB#:',relation_id),output_file_name,append=T)
         write('Comments: nothing',output_file_name,append=T)
         write(paste('Num Peaks:',nrow(sub_output_data),sep=' '),output_file_name,append=T)
-        # for (i in 1:nrow(sub_output_data)) {
-        #     line = paste(sub_output_data$X[i],output_data$peak.mean.normalised[i],sep=" ")
-        #     write(line,output_file_name,append=T)
-        #     }
         B = matrix(c(sub_output_data$X,sub_output_data$peak.mean.normalised),nrow=nrow(sub_output_data),ncol=2)
         write.table(B,output_file_name,row.names=F,col.names=F,append=T)
         }
     }
 
-args <- commandArgs(trailingOnly = TRUE)
-print(args)
-# make_mgf('mzMATCHoutput.txt',0)
-input_file = 'mzMATCHoutput.txt'
-make_msp(input_file,'output.msp')
-final_file_name = 'hitlist.tsv'
-write(paste('NIST matches for',input_file),final_file_name,append=F)
-write(paste('relation_id','name','formula','prob',sep='\t'),final_file_name,append=T)
-a = system('C:\\2013_06_04_MSPepSearch_x32\\MSPepSearch.exe  M /HITS 10 /PATH C:\\NIST14\\MSSEARCH /MAIN mainlib /INP output.MSP /OUT test.txt /COL pz,cf')
-b = readLines('test.txt')
-d = data.frame(groupid = numeric(0),formula = character(0),probability = numeric(0))
-for(i in 1:length(b)) {
-    se = regexpr("relation id [0-9]*",b[i])
-    if(se>-1) {
-        se2 = regmatches(b[i],se)
-        se2.split = strsplit(se2, ' ')[[1]]
-        current_relation = se2.split[3]
-        print(paste("Current relation: ",current_relation))
+write_output <- function(nist_name,out_name,input_file) {
+    # Write the heading to the output file
+    write(paste('NIST matches for',input_file),final_file_name,append=F)
+    write(paste('relation_id','name','formula','prob',sep=','),final_file_name,append=T)
+    # Load the NIST output
+    b = readLines('nist_out.txt')
+    d = data.frame(groupid = numeric(0),formula = character(0),probability = numeric(0))
+    for(i in 1:length(b)) {
+        se = regexpr("relation id [0-9]*",b[i])
+        if(se>-1) {
+            se2 = regmatches(b[i],se)
+            se2.split = strsplit(se2, ' ')[[1]]
+            current_relation = se2.split[3]
+            print(paste("Current relation: ",current_relation))
+        }
+        se = regexpr("Hit [0-9]*",b[i])
+        if(se>-1) {
+            name.start = regexpr("<<",b[i])
+            name.end = regexpr(">>",b[i])+1
+            name = substr(b[i],name.start,name.end) 
+            remainder = substr(b[i],name.end+2,10000L)
+            formula.start = regexpr("<<",remainder)
+            formula.end = regexpr(">>",remainder) + 1
+            formula = substr(remainder,formula.start,formula.end)
+            pro = regexpr("Prob: [-+]?([0-9]*\\.[0-9]+|[0-9]+)",b[i])
+            pro2 = strsplit(regmatches(b[i],pro),' ')[[1]]
+            write(paste(current_relation,name,formula,pro2[2],sep=','),final_file_name,append=T)
+            # dq = regexpr("<<(.*?)>>",b[i])
+            # dq2 = regmatches(b[i],dq)
+            # print(dq)
+        }
     }
-    se = regexpr("Hit [0-9]*",b[i])
-    if(se>-1) {
-        name.start = regexpr("<<",b[i])
-        name.end = regexpr(">>",b[i])+1
-        name = substr(b[i],name.start,name.end) 
-        remainder = substr(b[i],name.end+2,10000L)
-        formula.start = regexpr("<<",remainder)
-        formula.end = regexpr(">>",remainder) + 1
-        formula = substr(remainder,formula.start,formula.end)
-        pro = regexpr("Prob: [-+]?([0-9]*\\.[0-9]+|[0-9]+)",b[i])
-        pro2 = strsplit(regmatches(b[i],pro),' ')[[1]]
-        write(paste(current_relation,name,formula,pro2[2],sep='\t'),final_file_name,append=T)
-        # dq = regexpr("<<(.*?)>>",b[i])
-        # dq2 = regmatches(b[i],dq)
-        # print(dq)
-    }
+
 }
+
+
+# ACTUAL SCRIPT STARTS HERE
+
+# Get command line args
+args <- commandArgs(trailingOnly = TRUE)
+input_file = args[1]
+# input_file = 'mzMATCHoutput.txt'
+# Creates a msp file to pass to NIST
+make_msp(input_file,'output.msp')
+final_file_name = args[2]
+
+# run NIST
+a = system('C:\\2013_06_04_MSPepSearch_x32\\MSPepSearch.exe  M /HITS 3 /PATH C:\\NIST14\\MSSEARCH /MAIN mainlib /INP output.MSP /OUT nist_out.txt /COL pz,cf')
+
+# write the output file
+write_output('nist_out.txt',final_file_name,input_file)
+
+
+
+
+
