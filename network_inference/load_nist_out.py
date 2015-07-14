@@ -1,6 +1,7 @@
 from chemical_formula import Formula
 import random
 import re
+import jsonpickle
 class NistOutput(object):
 	def __init__(self,filename):
 		self.filename = filename
@@ -194,7 +195,7 @@ class NistOutput(object):
 						# Check for this molecule before
 						previous_pos = [i for i,l in enumerate(self.annotations) if l.name==name_form[0]]
 						if len(previous_pos) == 0:
-							self.annotations.append(Annotation(name_form[1],name_form[0],prob))
+							self.annotations.append(Annotation(name_form[1],name_form[0]))
 							newmeasurement.annotations[self.annotations[-1]] = prob
 						else:
 							newmeasurement.annotations[self.annotations[previous_pos[0]]] = prob
@@ -208,10 +209,12 @@ class Measurement(object):
 
 
 class Annotation(object):
-	def __init__(self,formula,name,probability):
+	def __init__(self,formula,name):
 		self.formula = Formula(formula)
 		self.name = name
-		self.probability = probability
 
 if __name__ == '__main__':
 	a = NistOutput('nist_out.txt')
+	test = jsonpickle.encode(a)
+	f = open('picklemodel.txt','w')
+	f.write(test)
