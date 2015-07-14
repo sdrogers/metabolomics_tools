@@ -9,19 +9,31 @@ class NistOutput(object):
 		self.load_output()
 		transformations = []
 		self.delta = 1.00
+		transformations = self.load_transformations('all_transformations_masses.txt')
 		# transformations.append(Formula('C5H4N5'))
 		# transformations.append(Formula('C2H2O'))
-		transformations.append(Formula('H2O'))
+		# transformations.append(Formula('H2O'))
 		# transformations.append(Formula('C5H7NO3'))
 		# transformations.append(Formula('C12H5'))
 		self.adjacency = {}
 		self.create_adjacency(transformations)
 
-		self.initialise_sampler()
-		for i in range(1000):
-			self.network_sample()
+		# self.initialise_sampler()
+		# for i in range(1000):
+		# 	self.network_sample()
 
-		self.summarise_posterior()
+		# self.summarise_posterior()
+
+
+	def load_transformations(self,filename):
+		transformations = []
+		with open(filename) as infile:
+			for line in infile:
+				line = line.rstrip('\r\n')
+				splitline = line.split('\t')
+				transformations.append(Formula(splitline[1]))
+		return transformations
+
 
 	def summarise_posterior(self):
 		print
@@ -150,11 +162,10 @@ class NistOutput(object):
 			poshit = 1
 			neghit = 1
 			for a in t.atoms:
-				if t.atoms[a]>0:
-					if a1.formula.atoms[a] - a2.formula.atoms[a] != t.atoms[a]:
-						poshit = 0
-					if a2.formula.atoms[a] - a1.formula.atoms[a] != t.atoms[a]:
-						neghit = 0
+				if a1.formula.atoms[a] - a2.formula.atoms[a] != t.atoms[a]:
+					poshit = 0
+				if a2.formula.atoms[a] - a1.formula.atoms[a] != t.atoms[a]:
+					neghit = 0
 				if poshit == 0 and neghit == 0:
 					break
 			if poshit == 1 or neghit == 1:
@@ -203,4 +214,4 @@ class Annotation(object):
 		self.probability = probability
 
 if __name__ == '__main__':
-	a = NistOutput('small_nist_out.txt')
+	a = NistOutput('nist_out.txt')
