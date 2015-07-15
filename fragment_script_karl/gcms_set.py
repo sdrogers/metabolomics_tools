@@ -1,5 +1,7 @@
 import numpy as np
 from peak_objects import *
+
+import re
 class GCMSSet(object):
 	def __init__(self):
 		self.measurements = []
@@ -44,7 +46,49 @@ class GCMSSet(object):
 				outfile.write(nl)
 
 	def query_nist(self):
-		pass
+		# a = system('C:\\2013_06_04_MSPepSearch_x32\\MSPepSearch.exe  M /HITS 3 /PATH C:\\NIST14\\MSSEARCH /MAIN mainlib /INP output.MSP /OUT nist_out.txt /COL pz,cf')
+		from subprocess import call
+		print "Querying Nist"
+		print "\tMaking temporary msp file"
+		self.make_msp('temp.MSP')
+		st = "C:\\2013_06_04_MSPepSearch_x32\\MSPepSearch.exe  M /HITS 3 /PATH C:\\NIST14\\MSSEARCH /MAIN mainlib /INP temp.MSP /OUT temp_nist.txt /COL pz,cf"
+		
+		print "\tCalling NIST"
+		call(st)
+
+		# Load the annotations
+		print "\tParsing NIST output"
+		# Create a list of IDs for easy access
+		mids = [m.id for m in self.measurements]
+		current_id = -1
+		current_pos = -1
+
+		self.annotations = []
+
+		with open('temp_nist.txt','r') as infile:
+			for line in infile:
+				m_find = re.search('relation id',line)
+				if m_find != None:
+					current_id = int(re.findall('relation id (\d*)',line)[0])
+					current_pos = [i for i,m in enumerate(mids) if m == current_id]
+					current_pos = current_pos[0]
+
+				m_find = re.search('Hit \d*',line)
+				if m_find != None:
+					name_form = re.findall('<<(.*?)>>',line)
+					prob = float(re.findall('Prob: ([0-9]*\.[0-9]*)',line)[0])
+
+					previous_pos = [i for i,l in enumerate(self.annotations) if l.name==name_form[0]]
+
+
+					if len(previous_pos) == 0:
+						self.annotations.append(Annotation(name_form[1],name_form[0]))
+						self.measurements[current_pos].annotations[self.annotations[-1]] = prob
+					else:
+						self.measurements[current_pos].annotations[self.annotations[previous_pos[0]]] = prob
+
+			print "\tLoaded " + str(len(self.annotations)) + " unique annotations"
+		
 			
 
 
@@ -52,6 +96,6 @@ class GCMSSet(object):
 if __name__ == '__main__':
 	a = GCMSSet()
 	a.load_from_file('mzMATCHoutput.txt')
-	a.make_msp('gcms.msp',nl = '\r\n')
+	a.query_nist()
 
 	
