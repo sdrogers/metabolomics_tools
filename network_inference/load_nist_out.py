@@ -77,6 +77,10 @@ class NistOutput(object):
 			if verbose:
 				print "Measurement: " + str(m.id) + " assigned to " + str(choose.formula) + "(" + str(self.posterior_counts[m][choose]) + ")"
 
+	def multiple_network_sample(self,n_its,record=True,verbose=False):
+		for i in range(n_its):
+			self.network_sample(record,verbose)
+
 	def network_sample(self,record = True,verbose = False):
 		self.n_samples += 1
 		for m in self.measurements:
@@ -85,6 +89,7 @@ class NistOutput(object):
 
 			for a in self.adjacency[self.assignment[m]]:
 				self.in_degree[a] -= 1
+
 
 			for k in m.annotations:
 				tempprobs[k] = m.annotations[k] * (self.delta + self.in_degree[k])
@@ -141,7 +146,8 @@ class NistOutput(object):
 				print "Measurement: " + str(m.id) + " assigned to " + str(choose.formula)
 
 
-	def create_adjacency(self,transformations):
+	def create_adjacency(self,transformations,verbose=False):
+		print "Creating adjacency structure. This might take some time..."
 		import itertools
 		total_found = 0
 		for a in self.annotations:
@@ -150,7 +156,8 @@ class NistOutput(object):
 		for a1,a2 in itertools.combinations(self.annotations,2):
 			match_t = self.can_transform(a1,a2,transformations)
 			if match_t!=None:
-				print "Found match: " + str(a1.formula) + " -> " + str(match_t.formula) + " -> " + str(a2.formula)
+				if verbose:
+					print "Found match: " + str(a1.formula) + " -> " + str(match_t.formula) + " -> " + str(a2.formula)
 				self.adjacency[a1].append(a2)
 				self.adjacency[a2].append(a1)
 				total_found += 2
@@ -175,14 +182,15 @@ class NistOutput(object):
 		if poshit == 0 and neghit == 0:
 			return None
 
-	def load_output(self):
+	def load_output(self,verbose=False):
 		print "loading"
 		newmeasurement = None
 		with open(self.filename) as file:
 			for line in file:
 				headline = re.search('relation id \d*',line)
 				if headline != None:
-					print headline.group(0)
+					if verbose:
+						print headline.group(0)
 					newid = re.findall('relation id (\d*)',headline.group(0))[0]
 					newmeasurement = Measurement(newid)					
 					self.measurements.append(newmeasurement)
@@ -215,6 +223,11 @@ class Annotation(object):
 
 if __name__ == '__main__':
 	a = NistOutput('nist_out.txt')
+	a.initialise_sampler()
+	a.network_sample(100)
 	test = jsonpickle.encode(a)
 	f = open('picklemodel.txt','w')
 	f.write(test)
+	# f = open('picklemodel.txt','r')
+	# a = jsonpickle.decode(f.read())
+	
