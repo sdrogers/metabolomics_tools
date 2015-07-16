@@ -2,7 +2,7 @@ import numpy as np
 from peak_objects import *
 
 import re
-class GCMSSet(object):
+class FragSet(object):
 	def __init__(self):
 		self.measurements = []
 		self.min_relation_size = 2
@@ -55,7 +55,10 @@ class GCMSSet(object):
 		
 		print "\tCalling NIST"
 		call(st)
+		self.load_annotations('temp_nist.txt')
 
+
+	def load_annotations(self,filename):
 		# Load the annotations
 		print "\tParsing NIST output"
 		# Create a list of IDs for easy access
@@ -63,9 +66,10 @@ class GCMSSet(object):
 		current_id = -1
 		current_pos = -1
 
+		
 		self.annotations = []
 
-		with open('temp_nist.txt','r') as infile:
+		with open(filename,'r') as infile:
 			for line in infile:
 				m_find = re.search('relation id',line)
 				if m_find != None:
@@ -94,7 +98,7 @@ class GCMSSet(object):
 
 
 if __name__ == '__main__':
-	a = GCMSSet()
+	a = FragSet()
 	a.load_from_file('mzMATCHoutput.txt')
 	a.query_nist()
 
