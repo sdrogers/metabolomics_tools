@@ -58,7 +58,7 @@ class FragSet(object):
 		self.load_annotations('temp_nist.txt')
 
 
-	def load_annotations(self,filename):
+	def load_annotations(self,filename,correct_gcms_derivatives = False):
 		# Load the annotations
 		print "\tParsing NIST output"
 		# Create a list of IDs for easy access
@@ -86,8 +86,20 @@ class FragSet(object):
 
 
 					if len(previous_pos) == 0:
-						self.annotations.append(Annotation(name_form[1],name_form[0]))
-						self.measurements[current_pos].annotations[self.annotations[-1]] = prob
+						# Create the new annotation
+						if correct_gcms_derivatives:
+							# Check for presence of silicon
+							newannotation = Annotation(name_form[1],name_form[0])
+							if newannotation.formula.atoms['Si'] == 0:
+								# Don't store this as it doesn't have any Silicon
+								pass
+							else:
+								newannotation.formula.correct_gcms_derivatives()
+								self.annotations.append(newannotation)
+								self.measurements[current_pos].annotations[self.annotations[-1]] = prob
+						else:
+							self.annotations.append(Annotation(name_form[1],name_form[0]))
+							self.measurements[current_pos].annotations[self.annotations[-1]] = prob
 					else:
 						self.measurements[current_pos].annotations[self.annotations[previous_pos[0]]] = prob
 
