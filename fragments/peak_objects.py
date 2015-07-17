@@ -53,19 +53,40 @@ class Formula(object):
 			self.atoms[atom] = self.get_atoms(atom)
 
 
+	def correct_gcms_derivatives(self):
+		n_silicons = self.atoms['Si']
+		self.atoms['Si'] = 0
+		self.atoms['C'] -= n_silicons
+		self.atoms['H'] -= 3*n_silicons
+		self.atoms['H'] += n_silicons
+		self.make_string()
+
+	def make_string(self):
+		self.formula = ""
+		for atom in self.atom_names:
+			atom_no = self.atoms[atom]
+			if atom_no == 1:
+				self.formula += atom
+			elif atom_no > 1:
+				self.formula += atom + str(atom_no)
+
+
 	def get_atoms(self,atom_name):
 		# Do some regex matching to find the numbers of the important atoms
-		ex = atom_name + '\d*'
+		ex = atom_name + '(?![a-z])' + '\d*'
 		m = re.search(ex,self.formula)
 		if m == None:
 			return 0
 		else:
-			ex = atom_name + "(\d*)"
-			m2 = re.findall(ex,m.group(0))[0]
-			if len(m2) == 0:
-				return 1
-			else:
-				return int(m2)
+			ex = atom_name + '(?![a-z])' + '(\d*)'
+			m2 = re.findall(ex,self.formula)
+			total = 0
+			for a in m2:
+				if len(a) == 0:
+					total += 1
+				else:
+					total += int(a)
+			return total
 
 	def __repr__(self):
 		return self.formula
