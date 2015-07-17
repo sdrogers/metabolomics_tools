@@ -1,169 +1,169 @@
 Measurement: 0
 	<<C10H18N2O3>>,<<2-Amino-4-nitrophenol, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 2
-	<<C11H26O3>>,<<2-Trimethylsilyloxyheptanoic acid, trimethylsilyl ester>>,Prior: 0.8285, Posterior 0.9250, Degree 3
-	<<C14H32O3>>,<<à-Hydroxyisobutyric acid, 2TBDMS derivative>>,Prior: 0.1715, Posterior 0.0750, Degree 1
+	<<C14H32O3>>,<<à-Hydroxyisobutyric acid, 2TBDMS derivative>>,Prior: 0.1715, Posterior 0.0778, Degree 1
+	<<C11H26O3>>,<<2-Trimethylsilyloxyheptanoic acid, trimethylsilyl ester>>,Prior: 0.8285, Posterior 0.9222, Degree 4
 Measurement: 4
-	<<C17H29NO3>>,<<Oxprenolol, TMS derivative>>,Prior: 0.1779, Posterior 0.3041, Degree 1
-	<<C14H26N2O3S>>,<<N-(4-{2-[(1-Methylethyl)amino]-1-[(trimethylsilyl)oxy]ethyl}phenyl)methanesulfonamide>>,Prior: 0.4552, Posterior 0.3874, Degree 0
-	<<C13H22NOCl>>,<<N-{2-(2-Chlorophenyl)-2-[(trimethylsilyl)oxy]ethyl}propan-2-amine>>,Prior: 0.3669, Posterior 0.3085, Degree 0
+	<<C17H29NO3>>,<<Oxprenolol, TMS derivative>>,Prior: 0.1779, Posterior 0.3049, Degree 1
+	<<C14H26N2O3S>>,<<N-(4-{2-[(1-Methylethyl)amino]-1-[(trimethylsilyl)oxy]ethyl}phenyl)methanesulfonamide>>,Prior: 0.4552, Posterior 0.3820, Degree 0
+	<<C13H22NOCl>>,<<N-{2-(2-Chlorophenyl)-2-[(trimethylsilyl)oxy]ethyl}propan-2-amine>>,Prior: 0.3669, Posterior 0.3131, Degree 0
 Measurement: 6
 	<<C18H49NO5>>,<<D-(+)-Glucosamine, 6TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 8
-	<<C10H23NO4>>,<<2-Aminoadipic acid, 2TMS derivative>>,Prior: 0.2271, Posterior 0.1231, Degree 0
-	<<C10H27N>>,<<Bis(tert-butyldimethylsilyl)amine>>,Prior: 0.4102, Posterior 0.6777, Degree 2
-	<<C12H30N2>>,<<N,N'-Bis(tert-butyldimethylsilyl)acetamidine>>,Prior: 0.3627, Posterior 0.1992, Degree 0
+	<<C10H27N>>,<<Bis(tert-butyldimethylsilyl)amine>>,Prior: 0.4102, Posterior 0.6693, Degree 2
+	<<C10H23NO4>>,<<2-Aminoadipic acid, 2TMS derivative>>,Prior: 0.2271, Posterior 0.1282, Degree 0
+	<<C12H30N2>>,<<N,N'-Bis(tert-butyldimethylsilyl)acetamidine>>,Prior: 0.3627, Posterior 0.2025, Degree 0
 Measurement: 10
 	<<C11H28N2O3>>,<<L-Glutamine, 3TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 11
-	<<C10H20O>>,<<Allyl(cyclohexyloxy)dimethylsilane>>,Prior: 0.6939, Posterior 0.8696, Degree 2
-	<<C24H48O2>>,<<3-Penten-2-one, 4-[(dimethyloctadecylsilyl)oxy]->>,Prior: 0.3061, Posterior 0.1304, Degree 0
+	<<C10H20O>>,<<Allyl(cyclohexyloxy)dimethylsilane>>,Prior: 0.6939, Posterior 0.8682, Degree 2
+	<<C24H48O2>>,<<3-Penten-2-one, 4-[(dimethyloctadecylsilyl)oxy]->>,Prior: 0.3061, Posterior 0.1318, Degree 0
 Measurement: 14
-	<<C14H23NO3>>,<<5-Hydroxy-5-methyl-2-phenyl-3-isoxazolidinone ditms pk1>>,Prior: 0.5661, Posterior 0.7504, Degree 1
-	<<C16H42O6>>,<<D-(+)-Talofuranose, pentakis(trimethylsilyl) ether (isomer 2)>>,Prior: 0.4339, Posterior 0.2496, Degree 0
+	<<C14H23NO3>>,<<5-Hydroxy-5-methyl-2-phenyl-3-isoxazolidinone ditms pk1>>,Prior: 0.5661, Posterior 0.7519, Degree 1
+	<<C16H42O6>>,<<D-(+)-Talofuranose, pentakis(trimethylsilyl) ether (isomer 2)>>,Prior: 0.4339, Posterior 0.2481, Degree 0
 Measurement: 15
-	<<C18H37N5O4>>,<<Adenosine, 4TMS derivative>>,Prior: 0.8786, Posterior 0.8775, Degree 0
-	<<C17H33N5O3S>>,<<5'-Methylthioadenosine, 3TMS derivative>>,Prior: 0.1214, Posterior 0.1225, Degree 0
+	<<C18H37N5O4>>,<<Adenosine, 4TMS derivative>>,Prior: 0.8786, Posterior 0.8823, Degree 0
+	<<C17H33N5O3S>>,<<5'-Methylthioadenosine, 3TMS derivative>>,Prior: 0.1214, Posterior 0.1177, Degree 0
 Measurement: 17
-	<<C9H17N5>>,<<Adenine, 2TMS derivative>>,Prior: 0.8767, Posterior 0.6242, Degree 0
-	<<C12H17NO3>>,<<1H-Indole-2,3-dione, 1-(trimethylsilyl)-6-[(trimethylsilyl)oxy]->>,Prior: 0.1233, Posterior 0.3758, Degree 3
+	<<C9H17N5>>,<<Adenine, 2TMS derivative>>,Prior: 0.8767, Posterior 0.6269, Degree 0
+	<<C12H17NO3>>,<<1H-Indole-2,3-dione, 1-(trimethylsilyl)-6-[(trimethylsilyl)oxy]->>,Prior: 0.1233, Posterior 0.3731, Degree 3
 Measurement: 22
-	<<C18H49NO5>>,<<D-(+)-Glucosamine, 6TMS derivative>>,Prior: 0.6151, Posterior 0.6907, Degree 4
-	<<C18H43NO6>>,<<Morpholine, 4-[2,3,4,6-tetrakis-O-(trimethylsilyl)-à-d-mannopyranosyl]->>,Prior: 0.3849, Posterior 0.3093, Degree 2
+	<<C18H49NO5>>,<<D-(+)-Glucosamine, 6TMS derivative>>,Prior: 0.6151, Posterior 0.7031, Degree 4
+	<<C18H43NO6>>,<<Morpholine, 4-[2,3,4,6-tetrakis-O-(trimethylsilyl)-à-d-mannopyranosyl]->>,Prior: 0.3849, Posterior 0.2969, Degree 3
 Measurement: 23
-	<<C16H39NO6>>,<<N-Acetyl-D-galactosamine, (isomer 1), 4TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 2
+	<<C16H39NO6>>,<<N-Acetyl-D-galactosamine, (isomer 1), 4TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 3
 Measurement: 24
-	<<C12H26O7>>,<<Citric acid, 3TMS derivative>>,Prior: 0.1396, Posterior 0.2891, Degree 2
-	<<C20H41N3>>,<<Nickel, [[bis(trimethylsilyl)methylene]-1,2-phenylene][N-[2-(dimethylamino)ethyl]-N,N',N'-trimethyl-1,2-ethanediamine-N,N',N'']>>,Prior: 0.6446, Posterior 0.5340, Degree 0
-	<<C15H22N2O>>,<<4-Methyl-1,3-dihydro-2H-1,5-benzodiazepin-2-one, TBDMS derivative>>,Prior: 0.2158, Posterior 0.1769, Degree 0
+	<<C20H41N3>>,<<Nickel, [[bis(trimethylsilyl)methylene]-1,2-phenylene][N-[2-(dimethylamino)ethyl]-N,N',N'-trimethyl-1,2-ethanediamine-N,N',N'']>>,Prior: 0.6446, Posterior 0.5233, Degree 0
+	<<C12H26O7>>,<<Citric acid, 3TMS derivative>>,Prior: 0.1396, Posterior 0.2897, Degree 2
+	<<C15H22N2O>>,<<4-Methyl-1,3-dihydro-2H-1,5-benzodiazepin-2-one, TBDMS derivative>>,Prior: 0.2158, Posterior 0.1870, Degree 0
 Measurement: 26
 	<<C22H37N3O4S>>,<<Ampicillin, N,N',O'-tris(trimethylsilyl)->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 28
-	<<C18H43NO6>>,<<Morpholine, 4-[2,3,4,6-tetrakis-O-(trimethylsilyl)-à-d-mannopyranosyl]->>,Prior: 1.0000, Posterior 1.0000, Degree 2
+	<<C18H43NO6>>,<<Morpholine, 4-[2,3,4,6-tetrakis-O-(trimethylsilyl)-à-d-mannopyranosyl]->>,Prior: 1.0000, Posterior 1.0000, Degree 3
 Measurement: 29
 	<<C4H14>>,<<1,3,5-Trisilacyclohexane, 1,1,3,3-tetramethyl->>,Prior: 1.0000, Posterior 1.0000, Degree 6
 Measurement: 32
-	<<C6H19NO>>,<<Ethanolamine, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 3
+	<<C6H19NO>>,<<Ethanolamine, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 33
-	<<C18H34O2>>,<<((2,5-Di-tert-butyl-1,4-phenylene)bis(oxy))bis(trimethylsilane)>>,Prior: 0.1187, Posterior 0.1080, Degree 0
-	<<C11H23N5O>>,<<N,9-bis(Trimethylsilyl)-6-[(trimethylsilyl)oxy]-9H-purin-2-amine>>,Prior: 0.7528, Posterior 0.6619, Degree 0
-	<<C20H39NO2>>,<<Etilefrin, O,O'-bis(tert-butyldimethylsilyl)->>,Prior: 0.1286, Posterior 0.2301, Degree 1
+	<<C11H23N5O>>,<<N,9-bis(Trimethylsilyl)-6-[(trimethylsilyl)oxy]-9H-purin-2-amine>>,Prior: 0.7528, Posterior 0.6737, Degree 0
+	<<C18H34O2>>,<<((2,5-Di-tert-butyl-1,4-phenylene)bis(oxy))bis(trimethylsilane)>>,Prior: 0.1187, Posterior 0.1035, Degree 0
+	<<C20H39NO2>>,<<Etilefrin, O,O'-bis(tert-butyldimethylsilyl)->>,Prior: 0.1286, Posterior 0.2228, Degree 1
 Measurement: 34
 	<<C10H19N3OS>>,<<6-tert-Butyl-3-methylsulfanyl-5-trimethylsilyloxy-1,2,4-triazine>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 35
 	<<C17H30N2OBr2>>,<<Ambroxol, N,O-bis(trimethylsilyl)->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 36
-	<<C14H20N2O2>>,<<N-Acetylserotonin, TMS derivative>>,Prior: 0.6486, Posterior 0.3602, Degree 0
-	<<C14H21NO3>>,<<5-Hydroxyindoleacetic acid, 2TMS derivative>>,Prior: 0.3514, Posterior 0.6398, Degree 2
+	<<C14H20N2O2>>,<<N-Acetylserotonin, TMS derivative>>,Prior: 0.6486, Posterior 0.3566, Degree 0
+	<<C14H21NO3>>,<<5-Hydroxyindoleacetic acid, 2TMS derivative>>,Prior: 0.3514, Posterior 0.6434, Degree 3
 Measurement: 38
-	<<C13H34O5>>,<<á-D-(-)-Ribopyranose, 4TMS derivative>>,Prior: 0.3111, Posterior 0.6716, Degree 4
-	<<C16H42O6>>,<<D-(+)-Talofuranose, pentakis(trimethylsilyl) ether (isomer 2)>>,Prior: 0.3512, Posterior 0.1693, Degree 0
-	<<C16H42O6>>,<<D-Allofuranose, pentakis(trimethylsilyl) ether>>,Prior: 0.3376, Posterior 0.1591, Degree 0
+	<<C16H42O6>>,<<D-(+)-Talofuranose, pentakis(trimethylsilyl) ether (isomer 2)>>,Prior: 0.3512, Posterior 0.1630, Degree 0
+	<<C16H42O6>>,<<D-Allofuranose, pentakis(trimethylsilyl) ether>>,Prior: 0.3376, Posterior 0.1631, Degree 0
+	<<C13H34O5>>,<<á-D-(-)-Ribopyranose, 4TMS derivative>>,Prior: 0.3111, Posterior 0.6739, Degree 3
 Measurement: 39
 	<<C9H16O3>>,<<Cyclopentene-3-carboxylic acid, 1-(trimethylsilyl)oxy-, methyl ester>>,Prior: 1.0000, Posterior 1.0000, Degree 2
 Measurement: 42
-	<<C21H37NO8>>,<<á-D-Glucopyranosiduronic acid, 4-(acetylamino)phenyl 2,3,4-tris-O-(trimethylsilyl)-, methyl ester>>,Prior: 0.3091, Posterior 0.2468, Degree 1
-	<<C26H50N2O10>>,<<D-Glucopyranosiduronic acid, 3-(5-ethylhexahydro-1,3-dimethyl-2,4,6-trioxo-5-pyrimidinyl)-1-methylbutyl 2,3,4-tris-O-(trimethylsilyl)-, methyl ester>>,Prior: 0.3933, Posterior 0.2750, Degree 1
-	<<C24H46N2O10>>,<<à-D-Glucopyranosiduronic acid, 3-(5-ethylhexahydro-2,4,6-trioxo-5-pyrimidinyl)-1,1-dimethylpropyl 2,3,4-tris-O-(trimethylsilyl)-, methyl ester>>,Prior: 0.2976, Posterior 0.4782, Degree 2
+	<<C26H50N2O10>>,<<D-Glucopyranosiduronic acid, 3-(5-ethylhexahydro-1,3-dimethyl-2,4,6-trioxo-5-pyrimidinyl)-1-methylbutyl 2,3,4-tris-O-(trimethylsilyl)-, methyl ester>>,Prior: 0.3933, Posterior 0.2802, Degree 1
+	<<C24H46N2O10>>,<<à-D-Glucopyranosiduronic acid, 3-(5-ethylhexahydro-2,4,6-trioxo-5-pyrimidinyl)-1,1-dimethylpropyl 2,3,4-tris-O-(trimethylsilyl)-, methyl ester>>,Prior: 0.2976, Posterior 0.4667, Degree 1
+	<<C21H37NO8>>,<<á-D-Glucopyranosiduronic acid, 4-(acetylamino)phenyl 2,3,4-tris-O-(trimethylsilyl)-, methyl ester>>,Prior: 0.3091, Posterior 0.2531, Degree 0
 Measurement: 43
-	<<C13H34O5>>,<<D-(-)-Ribofuranose, tetrakis(trimethylsilyl) ether (isomer 2)>>,Prior: 0.3997, Posterior 0.7593, Degree 4
-	<<C16H42O6>>,<<D-(+)-Talofuranose, pentakis(trimethylsilyl) ether (isomer 2)>>,Prior: 0.3060, Posterior 0.1217, Degree 0
-	<<C16H42O6>>,<<D-Psicofuranose, pentakis(trimethylsilyl) ether (isomer 1)>>,Prior: 0.2943, Posterior 0.1190, Degree 0
+	<<C16H42O6>>,<<D-(+)-Talofuranose, pentakis(trimethylsilyl) ether (isomer 2)>>,Prior: 0.3060, Posterior 0.1232, Degree 0
+	<<C13H34O5>>,<<D-(-)-Ribofuranose, tetrakis(trimethylsilyl) ether (isomer 2)>>,Prior: 0.3997, Posterior 0.7505, Degree 3
+	<<C16H42O6>>,<<D-Psicofuranose, pentakis(trimethylsilyl) ether (isomer 1)>>,Prior: 0.2943, Posterior 0.1263, Degree 0
 Measurement: 44
-	<<C4H15N>>,<<Hexamethyldisilazane>>,Prior: 1.0000, Posterior 1.0000, Degree 3
+	<<C4H15N>>,<<Hexamethyldisilazane>>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 45
-	<<C14H34O6>>,<<Gluconolactone (3R,4S,5R,6R)-, 4TMS derivative>>,Prior: 0.3944, Posterior 0.3623, Degree 2
-	<<C18H49NO6>>,<<D-(+)-Mannose, oxime (isomer 2), 6TMS derivative>>,Prior: 0.3028, Posterior 0.5421, Degree 5
-	<<C22H37N3O4S>>,<<Ampicillin, N,N',O'-tris(trimethylsilyl)->>,Prior: 0.3028, Posterior 0.0956, Degree 0
+	<<C18H49NO6>>,<<D-(+)-Mannose, oxime (isomer 2), 6TMS derivative>>,Prior: 0.3028, Posterior 0.5427, Degree 5
+	<<C14H34O6>>,<<Gluconolactone (3R,4S,5R,6R)-, 4TMS derivative>>,Prior: 0.3944, Posterior 0.3655, Degree 3
+	<<C22H37N3O4S>>,<<Ampicillin, N,N',O'-tris(trimethylsilyl)->>,Prior: 0.3028, Posterior 0.0918, Degree 0
 Measurement: 48
-	<<C24H44N2O2>>,<<Pindolol, 2TBDMS derivative>>,Prior: 0.8142, Posterior 0.8134, Degree 0
-	<<C12H16O2Cl2>>,<<tert-Butyldimethylsilyl 2,5-dichlorobenzoate>>,Prior: 0.1858, Posterior 0.1866, Degree 0
+	<<C12H16O2Cl2>>,<<tert-Butyldimethylsilyl 2,5-dichlorobenzoate>>,Prior: 0.1858, Posterior 0.1877, Degree 0
+	<<C24H44N2O2>>,<<Pindolol, 2TBDMS derivative>>,Prior: 0.8142, Posterior 0.8123, Degree 0
 Measurement: 53
-	<<C21H36N2O3>>,<<L-5-Hydroxytryptophan, 2TBDMS derivative>>,Prior: 0.5000, Posterior 0.3262, Degree 1
-	<<C14H21NO3>>,<<5-Hydroxyindoleacetic acid, 2TMS derivative>>,Prior: 0.5000, Posterior 0.6738, Degree 2
+	<<C21H36N2O3>>,<<L-5-Hydroxytryptophan, 2TBDMS derivative>>,Prior: 0.5000, Posterior 0.3245, Degree 1
+	<<C14H21NO3>>,<<5-Hydroxyindoleacetic acid, 2TMS derivative>>,Prior: 0.5000, Posterior 0.6755, Degree 3
 Measurement: 54
-	<<C3H15N3>>,<<2,2,4,4,6,6-Hexamethylcyclotrisilazane>>,Prior: 0.7498, Posterior 0.3875, Degree 0
-	<<C18H32N2O2>>,<<N-(1-Methylethyl)-3-{[1-(trimethylsilyl)-1H-indol-4-yl]oxy}-2-[(trimethylsilyl)oxy]propan-1-amine>>,Prior: 0.2502, Posterior 0.6125, Degree 5
+	<<C3H15N3>>,<<2,2,4,4,6,6-Hexamethylcyclotrisilazane>>,Prior: 0.7498, Posterior 0.3885, Degree 0
+	<<C18H32N2O2>>,<<N-(1-Methylethyl)-3-{[1-(trimethylsilyl)-1H-indol-4-yl]oxy}-2-[(trimethylsilyl)oxy]propan-1-amine>>,Prior: 0.2502, Posterior 0.6115, Degree 4
 Measurement: 55
-	<<C10H22O5>>,<<2-Hydroxybut-2-enedioic acid, O-trimethylsilyl-, bis(trimethylsilyl) ester>>,Prior: 0.2367, Posterior 0.3763, Degree 1
-	<<C20H41N3>>,<<Nickel, [[bis(trimethylsilyl)methylene]-1,2-phenylene][N-[2-(dimethylamino)ethyl]-N,N',N'-trimethyl-1,2-ethanediamine-N,N',N'']>>,Prior: 0.6483, Posterior 0.4133, Degree 0
-	<<C14H34O6>>,<<Bis(trimethylsilyl)-2-Methyl-2,4-bis(trimethylsilyloxy)glutarate>>,Prior: 0.1149, Posterior 0.2104, Degree 2
+	<<C20H41N3>>,<<Nickel, [[bis(trimethylsilyl)methylene]-1,2-phenylene][N-[2-(dimethylamino)ethyl]-N,N',N'-trimethyl-1,2-ethanediamine-N,N',N'']>>,Prior: 0.6483, Posterior 0.4245, Degree 0
+	<<C10H22O5>>,<<2-Hydroxybut-2-enedioic acid, O-trimethylsilyl-, bis(trimethylsilyl) ester>>,Prior: 0.2367, Posterior 0.3650, Degree 1
+	<<C14H34O6>>,<<Bis(trimethylsilyl)-2-Methyl-2,4-bis(trimethylsilyloxy)glutarate>>,Prior: 0.1149, Posterior 0.2105, Degree 3
 Measurement: 56
 	<<C7H16O2>>,<<1,1-Diethoxy-1-silacyclopentane>>,Prior: 1.0000, Posterior 1.0000, Degree 2
 Measurement: 57
-	<<C18H50NO8P>>,<<D-Glucose, 2-deoxy-3,4,5-tris-O-(trimethylsilyl)-2-[(trimethylsilyl)amino]-, 6-[bis(trimethylsilyl) phosphate]>>,Prior: 0.3808, Posterior 0.7423, Degree 4
-	<<C16H28N4>>,<<5-Phenyl-2,4-pyrimidinediamine, 3TMS derivative>>,Prior: 0.2384, Posterior 0.1003, Degree 0
-	<<C20H55O9P>>,<<Myo-Inositol, 1,3,4,5,6-pentakis-O-(trimethylsilyl)-, bis(trimethylsilyl) phosphate>>,Prior: 0.3808, Posterior 0.1574, Degree 0
+	<<C16H28N4>>,<<5-Phenyl-2,4-pyrimidinediamine, 3TMS derivative>>,Prior: 0.2384, Posterior 0.0986, Degree 0
+	<<C18H50NO8P>>,<<D-Glucose, 2-deoxy-3,4,5-tris-O-(trimethylsilyl)-2-[(trimethylsilyl)amino]-, 6-[bis(trimethylsilyl) phosphate]>>,Prior: 0.3808, Posterior 0.7398, Degree 4
+	<<C20H55O9P>>,<<Myo-Inositol, 1,3,4,5,6-pentakis-O-(trimethylsilyl)-, bis(trimethylsilyl) phosphate>>,Prior: 0.3808, Posterior 0.1616, Degree 0
 Measurement: 59
-	<<C13H11NO4F6>>,<<4-Aminobenzoic acid, N,N-bis(-trifluoroacetyl)-, trimethylsilyl ester>>,Prior: 0.6732, Posterior 0.6736, Degree 0
-	<<C16H17NO4F6>>,<<4-Aminobenzoic acid, N,N-bis(trifluoroacetyl)-, tert.-butyldimethylsilyl ester>>,Prior: 0.3268, Posterior 0.3264, Degree 0
+	<<C13H11NO4F6>>,<<4-Aminobenzoic acid, N,N-bis(-trifluoroacetyl)-, trimethylsilyl ester>>,Prior: 0.6732, Posterior 0.6745, Degree 0
+	<<C16H17NO4F6>>,<<4-Aminobenzoic acid, N,N-bis(trifluoroacetyl)-, tert.-butyldimethylsilyl ester>>,Prior: 0.3268, Posterior 0.3255, Degree 0
 Measurement: 60
-	<<C15H24N2O3>>,<<L-5-Hydroxytryptophan, 2TMS derivative>>,Prior: 0.1856, Posterior 0.3086, Degree 1
-	<<C22H25NO3>>,<<Naptalam, 2TMS derivative>>,Prior: 0.8144, Posterior 0.6914, Degree 0
+	<<C22H25NO3>>,<<Naptalam, 2TMS derivative>>,Prior: 0.8144, Posterior 0.6836, Degree 0
+	<<C15H24N2O3>>,<<L-5-Hydroxytryptophan, 2TMS derivative>>,Prior: 0.1856, Posterior 0.3164, Degree 1
 Measurement: 62
 	<<C20H30O2>>,<<3,5,3',5'-Tetramethyl-4,4'-bis(trimethylsiloxy)biphenyl>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 63
-	<<C12H11F>>,<<Fluoromethyldiphenylsilane>>,Prior: 0.3924, Posterior 0.3938, Degree 0
-	<<C18H16O>>,<<1-Hydroxypyrene, TMS derivative>>,Prior: 0.6076, Posterior 0.6062, Degree 0
+	<<C18H16O>>,<<1-Hydroxypyrene, TMS derivative>>,Prior: 0.6076, Posterior 0.5994, Degree 0
+	<<C12H11F>>,<<Fluoromethyldiphenylsilane>>,Prior: 0.3924, Posterior 0.4006, Degree 0
 Measurement: 66
-	<<C17H38O>>,<<2-Ethyl-1-dimethyl(octyl)silyloxyhexane>>,Prior: 0.5660, Posterior 0.5564, Degree 4
-	<<C17H38O>>,<<2-Dimethyl(octyl)silyloxyoctane>>,Prior: 0.4340, Posterior 0.4436, Degree 4
+	<<C17H38O>>,<<2-Ethyl-1-dimethyl(octyl)silyloxyhexane>>,Prior: 0.5660, Posterior 0.5714, Degree 4
+	<<C17H38O>>,<<2-Dimethyl(octyl)silyloxyoctane>>,Prior: 0.4340, Posterior 0.4286, Degree 4
 Measurement: 70
-	<<C18H50NO8P>>,<<D-Glucose, 2-deoxy-3,4,5-tris-O-(trimethylsilyl)-2-[(trimethylsilyl)amino]-, 6-[bis(trimethylsilyl) phosphate]>>,Prior: 0.6824, Posterior 0.9101, Degree 4
-	<<C18H49O9P>>,<<D-Galactofuranose, 1,2,3,5-tetrakis-O-(trimethylsilyl)-, bis(trimethylsilyl) phosphate>>,Prior: 0.1488, Posterior 0.0401, Degree 0
-	<<C20H55O9P>>,<<Myo-Inositol, 1,3,4,5,6-pentakis-O-(trimethylsilyl)-, bis(trimethylsilyl) phosphate>>,Prior: 0.1688, Posterior 0.0498, Degree 0
+	<<C18H49O9P>>,<<D-Galactofuranose, 1,2,3,5-tetrakis-O-(trimethylsilyl)-, bis(trimethylsilyl) phosphate>>,Prior: 0.1488, Posterior 0.0437, Degree 0
+	<<C18H50NO8P>>,<<D-Glucose, 2-deoxy-3,4,5-tris-O-(trimethylsilyl)-2-[(trimethylsilyl)amino]-, 6-[bis(trimethylsilyl) phosphate]>>,Prior: 0.6824, Posterior 0.9075, Degree 4
+	<<C20H55O9P>>,<<Myo-Inositol, 1,3,4,5,6-pentakis-O-(trimethylsilyl)-, bis(trimethylsilyl) phosphate>>,Prior: 0.1688, Posterior 0.0488, Degree 0
 Measurement: 73
-	<<C13H30O>>,<<6-Undecanol, TMS derivative>>,Prior: 0.2582, Posterior 0.1863, Degree 4
-	<<C11H24O2>>,<<4-Methylvaleric acid, TBDMS derivative>>,Prior: 0.4621, Posterior 0.5033, Degree 7
-	<<C11H24O2>>,<<Hexanoic acid, TBDMS derivative>>,Prior: 0.2797, Posterior 0.3104, Degree 7
+	<<C11H24O2>>,<<4-Methylvaleric acid, TBDMS derivative>>,Prior: 0.4621, Posterior 0.5222, Degree 7
+	<<C13H30O>>,<<6-Undecanol, TMS derivative>>,Prior: 0.2582, Posterior 0.1754, Degree 5
+	<<C11H24O2>>,<<Hexanoic acid, TBDMS derivative>>,Prior: 0.2797, Posterior 0.3024, Degree 7
 Measurement: 74
 	<<C8H17N3O>>,<<4-Pyrimidinamine, N-(trimethylsilyl)-2-[(trimethylsilyl)oxy]->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 76
-	<<C18H32N2O2>>,<<N-(1-Methylethyl)-3-{[1-(trimethylsilyl)-1H-indol-4-yl]oxy}-2-[(trimethylsilyl)oxy]propan-1-amine>>,Prior: 0.2779, Posterior 0.6347, Degree 5
-	<<C24H44N2O2>>,<<Pindolol, 2TBDMS derivative>>,Prior: 0.3683, Posterior 0.1841, Degree 0
-	<<C17H34N2>>,<<Nickel, [[bis(trimethylsilyl)methylene]-1,2-phenylene](N,N,N',N'-tetramethyl-1,2-ethanediamine-N,N')-, (sp-4-3)->>,Prior: 0.3538, Posterior 0.1812, Degree 0
+	<<C18H32N2O2>>,<<N-(1-Methylethyl)-3-{[1-(trimethylsilyl)-1H-indol-4-yl]oxy}-2-[(trimethylsilyl)oxy]propan-1-amine>>,Prior: 0.2779, Posterior 0.6387, Degree 4
+	<<C24H44N2O2>>,<<Pindolol, 2TBDMS derivative>>,Prior: 0.3683, Posterior 0.1831, Degree 0
+	<<C17H34N2>>,<<Nickel, [[bis(trimethylsilyl)methylene]-1,2-phenylene](N,N,N',N'-tetramethyl-1,2-ethanediamine-N,N')-, (sp-4-3)->>,Prior: 0.3538, Posterior 0.1782, Degree 0
 Measurement: 77
-	<<C14H23N3O>>,<<2-Amino-5-{2-[(1-methylethyl)amino]-1-[(trimethylsilyl)oxy]ethyl}benzonitrile>>,Prior: 0.8472, Posterior 0.8215, Degree 0
-	<<C21H36O8>>,<<cis-Coutaric acid, 4TMS>>,Prior: 0.1528, Posterior 0.1785, Degree 0
+	<<C21H36O8>>,<<cis-Coutaric acid, 4TMS>>,Prior: 0.1528, Posterior 0.1782, Degree 0
+	<<C14H23N3O>>,<<2-Amino-5-{2-[(1-methylethyl)amino]-1-[(trimethylsilyl)oxy]ethyl}benzonitrile>>,Prior: 0.8472, Posterior 0.8218, Degree 0
 Measurement: 79
 	<<C16H30N4O6>>,<<Uracil, 5,6-dihydro-1,3-dimethyl-5-(trimethylsilyl)oxy-6,6'-bis->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 82
-	<<C13H11NO4F6>>,<<4-Aminobenzoic acid, N,N-bis(-trifluoroacetyl)-, trimethylsilyl ester>>,Prior: 0.4371, Posterior 0.4297, Degree 0
-	<<C21H28NO5Cl>>,<<Diethyl 4-(2-chloro-4-((trimethylsilyl)oxy)phenyl)-2,6-dimethyl-1,4-dihydro-3,5-pyridinedicarboxylate>>,Prior: 0.2368, Posterior 0.2429, Degree 0
-	<<C16H17NO4F6>>,<<4-Aminobenzoic acid, N,N-bis(trifluoroacetyl)-, tert.-butyldimethylsilyl ester>>,Prior: 0.3260, Posterior 0.3274, Degree 0
+	<<C21H28NO5Cl>>,<<Diethyl 4-(2-chloro-4-((trimethylsilyl)oxy)phenyl)-2,6-dimethyl-1,4-dihydro-3,5-pyridinedicarboxylate>>,Prior: 0.2368, Posterior 0.2375, Degree 0
+	<<C13H11NO4F6>>,<<4-Aminobenzoic acid, N,N-bis(-trifluoroacetyl)-, trimethylsilyl ester>>,Prior: 0.4371, Posterior 0.4345, Degree 0
+	<<C16H17NO4F6>>,<<4-Aminobenzoic acid, N,N-bis(trifluoroacetyl)-, tert.-butyldimethylsilyl ester>>,Prior: 0.3260, Posterior 0.3280, Degree 0
 Measurement: 86
 	<<C18H49NO5>>,<<D-(+)-Glucosamine, 6TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 89
-	<<C22H33N3O2>>,<<2-(2,2-Dimethylpropanoyl)-N,N-diphenylhydrazinecarboxamide ditms>>,Prior: 0.6598, Posterior 0.7864, Degree 1
-	<<C26H36O5>>,<<Biochanin A, O,O'-bis(tert.-butyldimethylsilyl)->>,Prior: 0.3402, Posterior 0.2136, Degree 0
+	<<C22H33N3O2>>,<<2-(2,2-Dimethylpropanoyl)-N,N-diphenylhydrazinecarboxamide ditms>>,Prior: 0.6598, Posterior 0.7986, Degree 1
+	<<C26H36O5>>,<<Biochanin A, O,O'-bis(tert.-butyldimethylsilyl)->>,Prior: 0.3402, Posterior 0.2014, Degree 0
 Measurement: 90
-	<<C16H20O3>>,<<Naproxen, TMS derivative>>,Prior: 0.3562, Posterior 0.0837, Degree 0
-	<<C12H26O3>>,<<Oct-2-enoic acid, 2-(trimethylsilyl)oxy-, trimethylsilyl ester>>,Prior: 0.6438, Posterior 0.9163, Degree 5
+	<<C12H26O3>>,<<Oct-2-enoic acid, 2-(trimethylsilyl)oxy-, trimethylsilyl ester>>,Prior: 0.6438, Posterior 0.9113, Degree 5
+	<<C16H20O3>>,<<Naproxen, TMS derivative>>,Prior: 0.3562, Posterior 0.0887, Degree 0
 Measurement: 91
 	<<C6H14O4>>,<<Oxalic acid, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 93
 	<<C20H30O2>>,<<3,5,3',5'-Tetramethyl-4,4'-bis(trimethylsiloxy)biphenyl>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 94
-	<<C9H23NO>>,<<N,N-Dimethyl-2-aminoethanol, tert-butyldimethylsilyl ether>>,Prior: 0.7345, Posterior 0.8873, Degree 7
-	<<C15H36N2O4>>,<<N-Acetylglutamine,N,N',O,O'- tetrakis(trimethylsilyl)->>,Prior: 0.2655, Posterior 0.1127, Degree 2
+	<<C9H23NO>>,<<N,N-Dimethyl-2-aminoethanol, tert-butyldimethylsilyl ether>>,Prior: 0.7345, Posterior 0.8835, Degree 8
+	<<C15H36N2O4>>,<<N-Acetylglutamine,N,N',O,O'- tetrakis(trimethylsilyl)->>,Prior: 0.2655, Posterior 0.1165, Degree 2
 Measurement: 96
-	<<C11H22O6>>,<<1-Cyclopentene-3,5-dione, 4-hydroxy-1,2,4-tris(trimethylsilyloxy)->>,Prior: 1.0000, Posterior 1.0000, Degree 1
+	<<C11H22O6>>,<<1-Cyclopentene-3,5-dione, 4-hydroxy-1,2,4-tris(trimethylsilyloxy)->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 97
 	<<C19H31NO3>>,<<4-Heptenamide, 6-(benzyloxymethoxy)-N,N-dimethyl-3-trimethylsilyl->>,Prior: 1.0000, Posterior 1.0000, Degree 2
 Measurement: 99
 	<<C20H30O2>>,<<3,5,3',5'-Tetramethyl-4,4'-bis(trimethylsiloxy)biphenyl>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 100
-	<<C19H33NO>>,<<Indole-3-carbinol, N-(tert-butyldimethylsilyl)-, tert-butyldimethylsilyl ether>>,Prior: 0.2020, Posterior 0.2593, Degree 1
-	<<C21H36N2O3>>,<<L-5-Hydroxytryptophan, 2TBDMS derivative>>,Prior: 0.4467, Posterior 0.5153, Degree 1
-	<<C4H20N4>>,<<Cyclotetrasilazane, 2,2,4,4,6,6,8,8-octamethyl->>,Prior: 0.3512, Posterior 0.2254, Degree 0
+	<<C19H33NO>>,<<Indole-3-carbinol, N-(tert-butyldimethylsilyl)-, tert-butyldimethylsilyl ether>>,Prior: 0.2020, Posterior 0.2619, Degree 1
+	<<C21H36N2O3>>,<<L-5-Hydroxytryptophan, 2TBDMS derivative>>,Prior: 0.4467, Posterior 0.5087, Degree 1
+	<<C4H20N4>>,<<Cyclotetrasilazane, 2,2,4,4,6,6,8,8-octamethyl->>,Prior: 0.3512, Posterior 0.2294, Degree 0
 Measurement: 103
 	<<C14H18NO3F3>>,<<3-(Trifluoroacetylamino)benzoic acid, TBDMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 104
 	<<C21H37N3O5S>>,<<Meropenem, O,O'-bis(trimethylsilyl)->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 107
-	<<C14H34O6>>,<<Gluconolactone, 4TMS derivative>>,Prior: 0.7230, Posterior 0.8072, Degree 2
-	<<C16H18NO3F>>,<<Trimethylsilyl 9-fluoro-5-methyl-1-oxo-6,7-dihydro-1H,5H-pyrido[3,2,1-ij]quinoline-2-carboxylate>>,Prior: 0.1013, Posterior 0.0437, Degree 0
-	<<C18H40N2O8>>,<<Edetic Acid, 4TMS derivative>>,Prior: 0.1758, Posterior 0.1491, Degree 2
+	<<C16H18NO3F>>,<<Trimethylsilyl 9-fluoro-5-methyl-1-oxo-6,7-dihydro-1H,5H-pyrido[3,2,1-ij]quinoline-2-carboxylate>>,Prior: 0.1013, Posterior 0.0449, Degree 0
+	<<C14H34O6>>,<<Gluconolactone, 4TMS derivative>>,Prior: 0.7230, Posterior 0.7928, Degree 3
+	<<C18H40N2O8>>,<<Edetic Acid, 4TMS derivative>>,Prior: 0.1758, Posterior 0.1623, Degree 1
 Measurement: 108
 	<<C30H42>>,<<Titanium, bis(ü-5-pentamethylcyclopentadienyl)(ü-2:1,2-phenyltrimethylsilylacetylene)>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 113
@@ -171,36 +171,36 @@ Measurement: 113
 Measurement: 115
 	<<C16H18O2SCl4>>,<<{Sulfanediylbis[(4,6-dichlorobenzene-2,1-diyl)oxy]}bis(trimethylsilane)>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 116
-	<<C15H23NO2>>,<<1H-Indole-3-acetic acid, 5-methyl-1-(trimethylsilyl)-, trimethylsilyl ester>>,Prior: 1.0000, Posterior 1.0000, Degree 2
+	<<C15H23NO2>>,<<1H-Indole-3-acetic acid, 5-methyl-1-(trimethylsilyl)-, trimethylsilyl ester>>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 125
-	<<C12H26O3>>,<<Methyl 3-hydroxy-4-methylpentanoate, TBDMS derivative>>,Prior: 0.6246, Posterior 0.8244, Degree 5
-	<<C11H22O4>>,<<Monomethyl glutarate, TBDMS derivative>>,Prior: 0.3754, Posterior 0.1756, Degree 1
+	<<C11H22O4>>,<<Monomethyl glutarate, TBDMS derivative>>,Prior: 0.3754, Posterior 0.1679, Degree 1
+	<<C12H26O3>>,<<Methyl 3-hydroxy-4-methylpentanoate, TBDMS derivative>>,Prior: 0.6246, Posterior 0.8321, Degree 5
 Measurement: 126
 	<<C21H36N2O3>>,<<L-5-Hydroxytryptophan, 2TBDMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 128
 	<<C9H18O4>>,<<2-Pentenedioic acid, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 2
 Measurement: 132
-	<<C9H13NO>>,<<Benzamide, TMS derivative>>,Prior: 0.1071, Posterior 0.1855, Degree 2
-	<<C20H29N3O4S>>,<<Cefalexin, N-trimethylsilyl-, trimethylsilyl ester>>,Prior: 0.4841, Posterior 0.5099, Degree 0
-	<<C22H35NO3>>,<<Isoxsuprine, 2TMS derivative>>,Prior: 0.4089, Posterior 0.3046, Degree 0
+	<<C20H29N3O4S>>,<<Cefalexin, N-trimethylsilyl-, trimethylsilyl ester>>,Prior: 0.4841, Posterior 0.4979, Degree 0
+	<<C9H13NO>>,<<Benzamide, TMS derivative>>,Prior: 0.1071, Posterior 0.1897, Degree 2
+	<<C22H35NO3>>,<<Isoxsuprine, 2TMS derivative>>,Prior: 0.4089, Posterior 0.3124, Degree 0
 Measurement: 133
-	<<C12H26O2>>,<<Silane, methylvinyl(oct-4-yloxy)ethoxy->>,Prior: 0.4881, Posterior 0.4800, Degree 7
-	<<C12H26O2>>,<<Silane, methylvinyl(4-methylpent-2-yloxy)isobutoxy->>,Prior: 0.2458, Posterior 0.2481, Degree 7
-	<<C12H26O2>>,<<Silane, methylvinyl(4-methylpent-2-yloxy)butoxy->>,Prior: 0.2662, Posterior 0.2719, Degree 7
+	<<C12H26O2>>,<<Silane, methylvinyl(oct-4-yloxy)ethoxy->>,Prior: 0.4881, Posterior 0.4819, Degree 8
+	<<C12H26O2>>,<<Silane, methylvinyl(4-methylpent-2-yloxy)isobutoxy->>,Prior: 0.2458, Posterior 0.2488, Degree 8
+	<<C12H26O2>>,<<Silane, methylvinyl(4-methylpent-2-yloxy)butoxy->>,Prior: 0.2662, Posterior 0.2693, Degree 8
 Measurement: 136
-	<<C11H26N2O4>>,<<Alanylthreonine, 2TMS derivative>>,Prior: 0.5537, Posterior 0.7031, Degree 3
-	<<C15H36N2O4>>,<<N-Acetylglutamine,N,N',O,O'- tetrakis(trimethylsilyl)->>,Prior: 0.4463, Posterior 0.2969, Degree 2
+	<<C11H26N2O4>>,<<Alanylthreonine, 2TMS derivative>>,Prior: 0.5537, Posterior 0.6979, Degree 4
+	<<C15H36N2O4>>,<<N-Acetylglutamine,N,N',O,O'- tetrakis(trimethylsilyl)->>,Prior: 0.4463, Posterior 0.3021, Degree 2
 Measurement: 140
 	<<C17H38O>>,<<1-Tripropylsilyloxynonane>>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 145
-	<<C18H47NO6>>,<<L-(+)-Gulose, pentakis(trimethylsilyl) ether, ethyloxime (isomer 2)>>,Prior: 0.3379, Posterior 0.3352, Degree 0
-	<<C18H47NO6>>,<<D-(+)-Galactose, pentakis(trimethylsilyl) ether, ethyloxime (isomer 2)>>,Prior: 0.3241, Posterior 0.3259, Degree 0
-	<<C18H47NO6>>,<<D-(+)-Talose, pentakis(trimethylsilyl) ether, ethyloxime (isomer 2)>>,Prior: 0.3379, Posterior 0.3389, Degree 0
+	<<C18H47NO6>>,<<L-(+)-Gulose, pentakis(trimethylsilyl) ether, ethyloxime (isomer 2)>>,Prior: 0.3379, Posterior 0.3367, Degree 1
+	<<C18H47NO6>>,<<D-(+)-Galactose, pentakis(trimethylsilyl) ether, ethyloxime (isomer 2)>>,Prior: 0.3241, Posterior 0.3280, Degree 1
+	<<C18H47NO6>>,<<D-(+)-Talose, pentakis(trimethylsilyl) ether, ethyloxime (isomer 2)>>,Prior: 0.3379, Posterior 0.3353, Degree 1
 Measurement: 146
-	<<C19H24N3OCl>>,<<2-{3-tert-Butyl-5-methyl-2-[(trimethylsilyl)oxy]phenyl}-5-chloro-2H-benzotriazole>>,Prior: 0.7663, Posterior 0.7621, Degree 0
-	<<C16H34NO3F3>>,<<2-Amino-2-methyl-1,3-propanediol, N-(trifluoroacetyl)-, bis(tert-butyldimethylsilyl) ether>>,Prior: 0.2337, Posterior 0.2379, Degree 0
+	<<C19H24N3OCl>>,<<2-{3-tert-Butyl-5-methyl-2-[(trimethylsilyl)oxy]phenyl}-5-chloro-2H-benzotriazole>>,Prior: 0.7663, Posterior 0.7620, Degree 0
+	<<C16H34NO3F3>>,<<2-Amino-2-methyl-1,3-propanediol, N-(trifluoroacetyl)-, bis(tert-butyldimethylsilyl) ether>>,Prior: 0.2337, Posterior 0.2380, Degree 0
 Measurement: 150
-	<<C11H27NO>>,<<N,N-Diethyl-2-aminoethanol, tert-butyldimethylsilyl ether>>,Prior: 1.0000, Posterior 1.0000, Degree 4
+	<<C11H27NO>>,<<N,N-Diethyl-2-aminoethanol, tert-butyldimethylsilyl ether>>,Prior: 1.0000, Posterior 1.0000, Degree 3
 Measurement: 153
 	<<C10H24O2>>,<<Silane, dimethyl(2-methylpent-3-yloxy)propoxy->>,Prior: 1.0000, Posterior 1.0000, Degree 7
 Measurement: 160
@@ -208,18 +208,18 @@ Measurement: 160
 Measurement: 163
 	<<C13H18N2O5Cl2>>,<<Chloramphenicol, [R-(R*,R*)]-, TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 175
-	<<C11H25NO2>>,<<L-Isoleucine, TBDMS derivative>>,Prior: 0.6720, Posterior 0.9357, Degree 6
-	<<C10H25N3O>>,<<1-Methyl-N,N-bis(trimethylsilyl)-4-[(trimethylsilyl)oxy]-1H-imidazol-2-amine>>,Prior: 0.3280, Posterior 0.0643, Degree 0
+	<<C11H25NO2>>,<<L-Isoleucine, TBDMS derivative>>,Prior: 0.6720, Posterior 0.9345, Degree 6
+	<<C10H25N3O>>,<<1-Methyl-N,N-bis(trimethylsilyl)-4-[(trimethylsilyl)oxy]-1H-imidazol-2-amine>>,Prior: 0.3280, Posterior 0.0655, Degree 0
 Measurement: 176
-	<<C18H40O2>>,<<Silane, dimethyl(2-ethylbutoxy)undecyloxy->>,Prior: 0.2455, Posterior 0.2182, Degree 3
-	<<C19H42O2>>,<<Silane, diethyldecyloxy(3-methylpentyloxy)->>,Prior: 0.4882, Posterior 0.5442, Degree 2
-	<<C18H40O2>>,<<Silane, dimethylisohexyloxyundecyloxy->>,Prior: 0.2662, Posterior 0.2376, Degree 3
+	<<C19H42O2>>,<<Silane, diethyldecyloxy(3-methylpentyloxy)->>,Prior: 0.4882, Posterior 0.5351, Degree 1
+	<<C18H40O2>>,<<Silane, dimethyl(2-ethylbutoxy)undecyloxy->>,Prior: 0.2455, Posterior 0.2210, Degree 3
+	<<C18H40O2>>,<<Silane, dimethylisohexyloxyundecyloxy->>,Prior: 0.2662, Posterior 0.2439, Degree 3
 Measurement: 177
-	<<C16H40N2O6>>,<<Ribo-hexos-3-ulose, 2,4,5,6-tetrakis-O-(trimethylsilyl)-, bis(O-methyloxime)>>,Prior: 0.7181, Posterior 0.6845, Degree 2
-	<<C17H30N2O2>>,<<L-Tryptophan, 3TMS derivative>>,Prior: 0.2819, Posterior 0.3155, Degree 3
+	<<C16H40N2O6>>,<<Ribo-hexos-3-ulose, 2,4,5,6-tetrakis-O-(trimethylsilyl)-, bis(O-methyloxime)>>,Prior: 0.7181, Posterior 0.6863, Degree 2
+	<<C17H30N2O2>>,<<L-Tryptophan, 3TMS derivative>>,Prior: 0.2819, Posterior 0.3137, Degree 4
 Measurement: 179
-	<<C11H24N2O3>>,<<6-Hydroxy-5-methyl-2,4(1H,3H)-pyrimidinedione tritms>>,Prior: 0.5794, Posterior 0.5969, Degree 2
-	<<C21H46O2>>,<<Silane, diethylpentyloxytridecyloxy->>,Prior: 0.4206, Posterior 0.4031, Degree 2
+	<<C11H24N2O3>>,<<6-Hydroxy-5-methyl-2,4(1H,3H)-pyrimidinedione tritms>>,Prior: 0.5794, Posterior 0.5833, Degree 2
+	<<C21H46O2>>,<<Silane, diethylpentyloxytridecyloxy->>,Prior: 0.4206, Posterior 0.4167, Degree 2
 Measurement: 181
 	<<C13H17NO2>>,<<1H-Indole-2-carboxylic acid, 5-ethyl-, trimethylsilyl ester>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 188
@@ -233,20 +233,20 @@ Measurement: 201
 Measurement: 224
 	<<C8H16N2O4>>,<<1-Formyl-5-hydroxyhydantoin, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 228
-	<<C9H23NO>>,<<N,N-Dimethyl-2-aminoethanol, tert-butyldimethylsilyl ether>>,Prior: 0.4138, Posterior 0.4782, Degree 7
-	<<C6H17NO>>,<<2-(Dimethylamino)ethanol, TMS derivative>>,Prior: 0.5862, Posterior 0.5218, Degree 5
+	<<C6H17NO>>,<<2-(Dimethylamino)ethanol, TMS derivative>>,Prior: 0.5862, Posterior 0.5138, Degree 5
+	<<C9H23NO>>,<<N,N-Dimethyl-2-aminoethanol, tert-butyldimethylsilyl ether>>,Prior: 0.4138, Posterior 0.4862, Degree 8
 Measurement: 234
 	<<C13H12N2O>>,<<11-Oxo-5,5-dimethyl-5-sila-11H-5,10-dihydrobenzo[b]pyrido[4,3-e]azepine>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 239
-	<<C21H35N3O3>>,<<Leu-Trp, N-trimethylsilyl-, trimethylsilyl ester>>,Prior: 0.6002, Posterior 0.7564, Degree 1
-	<<C17H36O4>>,<<Heptanedioic acid, 2TBDMS derivative>>,Prior: 0.3998, Posterior 0.2436, Degree 0
+	<<C21H35N3O3>>,<<Leu-Trp, N-trimethylsilyl-, trimethylsilyl ester>>,Prior: 0.6002, Posterior 0.7471, Degree 1
+	<<C17H36O4>>,<<Heptanedioic acid, 2TBDMS derivative>>,Prior: 0.3998, Posterior 0.2529, Degree 0
 Measurement: 240
 	<<C15H34O2>>,<<Silane, diethyldi(3-methylpent-2-yloxy)->>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 246
 	<<C6H17NO>>,<<Ethanimidic acid, N-(trimethylsilyl)-, trimethylsilyl ester>>,Prior: 1.0000, Posterior 1.0000, Degree 5
 Measurement: 247
-	<<C6H14O4>>,<<Oxalic acid, 2TMS derivative>>,Prior: 0.6628, Posterior 0.4621, Degree 0
-	<<C9H22O3>>,<<2-Hydroxy-3-methylbutyric acid, 2TMS derivative>>,Prior: 0.3372, Posterior 0.5379, Degree 2
+	<<C6H14O4>>,<<Oxalic acid, 2TMS derivative>>,Prior: 0.6628, Posterior 0.4694, Degree 0
+	<<C9H22O3>>,<<2-Hydroxy-3-methylbutyric acid, 2TMS derivative>>,Prior: 0.3372, Posterior 0.5306, Degree 0
 Measurement: 248
 	<<C18H49NO5>>,<<D-(+)-Glucosamine, 6TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 250
@@ -260,33 +260,33 @@ Measurement: 273
 Measurement: 295
 	<<C11H18N2O>>,<<1-Trimethylsilyl-3-(trimethylsiloxy)indazole>>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 299
-	<<C22H31N3O>>,<<2-{5-(1,1,3,3-Tetramethylbutyl)-2-[(trimethylsilyl)oxy]phenyl}-2H-benzotriazole>>,Prior: 1.0000, Posterior 1.0000, Degree 0
+	<<C22H31N3O>>,<<2-{5-(1,1,3,3-Tetramethylbutyl)-2-[(trimethylsilyl)oxy]phenyl}-2H-benzotriazole>>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 307
-	<<C18H34N2O3>>,<<Practolol, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 2
+	<<C18H34N2O3>>,<<Practolol, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 3
 Measurement: 308
-	<<C13H20>>,<<Silane, 1H-inden-1-ylidenebis[trimethyl->>,Prior: 0.3875, Posterior 0.2922, Degree 2
-	<<C10H23NO2>>,<<Pipecolic acid, 2TMS derivative>>,Prior: 0.6125, Posterior 0.7078, Degree 4
+	<<C10H23NO2>>,<<Pipecolic acid, 2TMS derivative>>,Prior: 0.6125, Posterior 0.7125, Degree 3
+	<<C13H20>>,<<Silane, 1H-inden-1-ylidenebis[trimethyl->>,Prior: 0.3875, Posterior 0.2875, Degree 2
 Measurement: 316
-	<<C15H29NO3>>,<<3-(Pyrrol[3-(heptyloxy)-1,1,3,3-tetramethyldisiloxanyl]oxymorphomethyl)pyridine>>,Prior: 1.0000, Posterior 1.0000, Degree 0
+	<<C15H29NO3>>,<<3-(Pyrrol[3-(heptyloxy)-1,1,3,3-tetramethyldisiloxanyl]oxymorphomethyl)pyridine>>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 318
 	<<C10H26O4S>>,<<Sulfuric acid, 2TBDMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 323
 	<<C4H14>>,<<Disilane, hexamethyl->>,Prior: 1.0000, Posterior 1.0000, Degree 6
 Measurement: 327
-	<<C20H29N3O5S>>,<<Cefadroxil, O,O'-bis(trimethylsilyl)->>,Prior: 0.5709, Posterior 0.4598, Degree 0
-	<<C12H26O6>>,<<D-Glucurono-ç-lactone (isomer 1), 3TMS derivative>>,Prior: 0.2430, Posterior 0.3060, Degree 1
-	<<C12H26O6>>,<<D-Glucurono-ç-lactone (isomer 2), 3TMS derivative>>,Prior: 0.1860, Posterior 0.2342, Degree 1
+	<<C12H26O6>>,<<D-Glucurono-ç-lactone (isomer 1), 3TMS derivative>>,Prior: 0.2430, Posterior 0.3086, Degree 1
+	<<C20H29N3O5S>>,<<Cefadroxil, O,O'-bis(trimethylsilyl)->>,Prior: 0.5709, Posterior 0.4566, Degree 1
+	<<C12H26O6>>,<<D-Glucurono-ç-lactone (isomer 2), 3TMS derivative>>,Prior: 0.1860, Posterior 0.2348, Degree 1
 Measurement: 334
 	<<C6H21NO3S>>,<<Sulfamic acid, 3TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 338
-	<<C18H50NO8P>>,<<D-Glucose, 2-deoxy-3,4,5-tris-O-(trimethylsilyl)-2-[(trimethylsilyl)amino]-, 6-[bis(trimethylsilyl) phosphate]>>,Prior: 0.5599, Posterior 0.8035, Degree 4
-	<<C20H30O2>>,<<3,5,3',5'-Tetramethyl-4,4'-bis(trimethylsiloxy)biphenyl>>,Prior: 0.4401, Posterior 0.1965, Degree 0
+	<<C20H30O2>>,<<3,5,3',5'-Tetramethyl-4,4'-bis(trimethylsiloxy)biphenyl>>,Prior: 0.4401, Posterior 0.1985, Degree 0
+	<<C18H50NO8P>>,<<D-Glucose, 2-deoxy-3,4,5-tris-O-(trimethylsilyl)-2-[(trimethylsilyl)amino]-, 6-[bis(trimethylsilyl) phosphate]>>,Prior: 0.5599, Posterior 0.8015, Degree 4
 Measurement: 351
 	<<C15H34O5>>,<<Shikimic acid (4TMS)>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 363
-	<<C6H16O>>,<<1-Pentamethyldisilyloxyprop-2-ene>>,Prior: 1.0000, Posterior 1.0000, Degree 8
+	<<C6H16O>>,<<1-Pentamethyldisilyloxyprop-2-ene>>,Prior: 1.0000, Posterior 1.0000, Degree 10
 Measurement: 366
-	<<C13H30O>>,<<1-Diisopropylsilyloxyoctane>>,Prior: 1.0000, Posterior 1.0000, Degree 4
+	<<C13H30O>>,<<1-Diisopropylsilyloxyoctane>>,Prior: 1.0000, Posterior 1.0000, Degree 5
 Measurement: 371
 	<<C15H24N2O5Cl2>>,<<Chloramphenicol di(trimethylsilyl) derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 381
@@ -294,35 +294,35 @@ Measurement: 381
 Measurement: 387
 	<<C15H29N>>,<<1-Adamantylamine, N-tert-butyldimethylsilyl->>,Prior: 1.0000, Posterior 1.0000, Degree 2
 Measurement: 391
-	<<C17H38O2>>,<<Silane, diethylbutoxydecyloxy->>,Prior: 0.5792, Posterior 0.5740, Degree 5
-	<<C17H38O2>>,<<Silane, diethyldiheptyloxy->>,Prior: 0.4208, Posterior 0.4260, Degree 5
+	<<C17H38O2>>,<<Silane, diethylbutoxydecyloxy->>,Prior: 0.5792, Posterior 0.5781, Degree 5
+	<<C17H38O2>>,<<Silane, diethyldiheptyloxy->>,Prior: 0.4208, Posterior 0.4219, Degree 5
 Measurement: 399
-	<<C14H24O5>>,<<Mandelic acid, 4-hydroxy-3-methoxy-, methyl ester, 2TMS derivative>>,Prior: 0.1744, Posterior 0.2886, Degree 2
-	<<C6H21NO3S>>,<<Sulfamic acid, 3TMS derivative>>,Prior: 0.5918, Posterior 0.3291, Degree 0
-	<<C14H24O5>>,<<Acetic acid, [4-methoxy-3-(trimethylsiloxy)phenyl](trimethylsiloxy)-, methyl ester>>,Prior: 0.2339, Posterior 0.3823, Degree 2
+	<<C6H21NO3S>>,<<Sulfamic acid, 3TMS derivative>>,Prior: 0.5918, Posterior 0.3242, Degree 0
+	<<C14H24O5>>,<<Mandelic acid, 4-hydroxy-3-methoxy-, methyl ester, 2TMS derivative>>,Prior: 0.1744, Posterior 0.2928, Degree 2
+	<<C14H24O5>>,<<Acetic acid, [4-methoxy-3-(trimethylsiloxy)phenyl](trimethylsiloxy)-, methyl ester>>,Prior: 0.2339, Posterior 0.3830, Degree 2
 Measurement: 414
 	<<C19H27NO>>,<<2-(N-Ethyl-N-m-tolyl)aminoethanol, benzyldimethylsilyl ether>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 420
-	<<C19H42O>>,<<1-Heptadecanol, TMS derivative>>,Prior: 0.5637, Posterior 0.5736, Degree 3
-	<<C18H38O2>>,<<Palmitic Acid, TMS derivative>>,Prior: 0.4363, Posterior 0.4264, Degree 2
+	<<C19H42O>>,<<1-Heptadecanol, TMS derivative>>,Prior: 0.5637, Posterior 0.5640, Degree 3
+	<<C18H38O2>>,<<Palmitic Acid, TMS derivative>>,Prior: 0.4363, Posterior 0.4360, Degree 2
 Measurement: 423
 	<<C18H50NO8P>>,<<D-Glucose, 2-deoxy-3,4,5-tris-O-(trimethylsilyl)-2-[(trimethylsilyl)amino]-, 6-[bis(trimethylsilyl) phosphate]>>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 447
-	<<C18H32O4>>,<<2-Hydroxy-5-methoxybenzoic acid, tert-butyldimethylsilyl ether, tert-butyldimethylsilyl ester>>,Prior: 0.3559, Posterior 0.3323, Degree 0
-	<<C20H30>>,<<Heptalene, 7,7'-dihydro-6,6'-bis(trimethylsilyl)methyl->>,Prior: 0.3021, Posterior 0.3505, Degree 0
-	<<C18H32O4>>,<<3-Methoxysalicylic acid, 2TBDMS derivative>>,Prior: 0.3420, Posterior 0.3172, Degree 0
+	<<C18H32O4>>,<<2-Hydroxy-5-methoxybenzoic acid, tert-butyldimethylsilyl ether, tert-butyldimethylsilyl ester>>,Prior: 0.3559, Posterior 0.3369, Degree 0
+	<<C20H30>>,<<Heptalene, 7,7'-dihydro-6,6'-bis(trimethylsilyl)methyl->>,Prior: 0.3021, Posterior 0.3422, Degree 0
+	<<C18H32O4>>,<<3-Methoxysalicylic acid, 2TBDMS derivative>>,Prior: 0.3420, Posterior 0.3209, Degree 0
 Measurement: 460
-	<<C12H11F>>,<<Fluoromethyldiphenylsilane>>,Prior: 0.2674, Posterior 0.1578, Degree 0
-	<<C9H19NO3>>,<<2-Keto-3-methylvaleric acid mo-tms pk2>>,Prior: 0.7326, Posterior 0.8422, Degree 1
+	<<C9H19NO3>>,<<2-Keto-3-methylvaleric acid mo-tms pk2>>,Prior: 0.7326, Posterior 0.8449, Degree 1
+	<<C12H11F>>,<<Fluoromethyldiphenylsilane>>,Prior: 0.2674, Posterior 0.1551, Degree 0
 Measurement: 469
 	<<C10H32N2>>,<<N1,N1,N2,N2-Tetrakis(trimethylsilyl)ethane-1,2-diamine>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 487
-	<<C14H30O>>,<<1-Ethyl-1-nonyloxy-1-silacylopentane>>,Prior: 1.0000, Posterior 1.0000, Degree 3
+	<<C14H30O>>,<<1-Ethyl-1-nonyloxy-1-silacylopentane>>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 495
 	<<C14H30O2>>,<<Silane, methylvinyl(pentyloxy)heptyloxy->>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 502
-	<<C16H31N5O4>>,<<3'-Deoxyguanosine, tris(trimethylsilyl) deriv.>>,Prior: 0.4274, Posterior 0.1629, Degree 0
-	<<C16H31NO3>>,<<3-[((3-[(1-Ethylhexyl)oxy]-1,1,3,3-tetramethyldisiloxanyl)oxy)methyl]pyridine>>,Prior: 0.5726, Posterior 0.8371, Degree 2
+	<<C16H31NO3>>,<<3-[((3-[(1-Ethylhexyl)oxy]-1,1,3,3-tetramethyldisiloxanyl)oxy)methyl]pyridine>>,Prior: 0.5726, Posterior 0.8324, Degree 3
+	<<C16H31N5O4>>,<<3'-Deoxyguanosine, tris(trimethylsilyl) deriv.>>,Prior: 0.4274, Posterior 0.1676, Degree 0
 Measurement: 505
 	<<C8H21NO2>>,<<N-Methylalanine, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 6
 Measurement: 508
@@ -332,8 +332,8 @@ Measurement: 509
 Measurement: 519
 	<<C10H18O3>>,<<Phloroglucinol, O,O'-bis(trimethylsilyl)->>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 521
-	<<C8H21N>>,<<Silanamine, N-[bis(trimethylsilyl)ethenylidene]-1,1,1-trimethyl->>,Prior: 0.6680, Posterior 0.7039, Degree 1
-	<<C14H17NO>>,<<3-Hydroxydiphenylamine, O-trimethylsilyl ether>>,Prior: 0.3320, Posterior 0.2961, Degree 0
+	<<C8H21N>>,<<Silanamine, N-[bis(trimethylsilyl)ethenylidene]-1,1,1-trimethyl->>,Prior: 0.6680, Posterior 0.6981, Degree 1
+	<<C14H17NO>>,<<3-Hydroxydiphenylamine, O-trimethylsilyl ether>>,Prior: 0.3320, Posterior 0.3019, Degree 0
 Measurement: 567
 	<<C7H17NS2>>,<<Diethyldithione, TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 568
@@ -341,48 +341,48 @@ Measurement: 568
 Measurement: 570
 	<<C21H47N>>,<<Hexadecylamine, N-tert-butyldimethylsilyl->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 578
-	<<C19H28O2>>,<<Bisphenol A, 2TMS derivative>>,Prior: 0.1755, Posterior 0.4660, Degree 3
-	<<C12H11O3SF5>>,<<Benzoic acid, 3-(pentafluoropropionylthio)-, TMS derivative>>,Prior: 0.8245, Posterior 0.5340, Degree 0
+	<<C12H11O3SF5>>,<<Benzoic acid, 3-(pentafluoropropionylthio)-, TMS derivative>>,Prior: 0.8245, Posterior 0.5242, Degree 0
+	<<C19H28O2>>,<<Bisphenol A, 2TMS derivative>>,Prior: 0.1755, Posterior 0.4758, Degree 4
 Measurement: 585
-	<<C26H54O3>>,<<Silane, methylvinyl(isobutoxy)(methylvinyloctadecyloxysilyloxy)->>,Prior: 0.7327, Posterior 0.7179, Degree 2
-	<<C25H38N2O2>>,<<4'-(Salicylideneamino)acetanilide, 2TBDMS derivative>>,Prior: 0.2673, Posterior 0.2821, Degree 1
+	<<C26H54O3>>,<<Silane, methylvinyl(isobutoxy)(methylvinyloctadecyloxysilyloxy)->>,Prior: 0.7327, Posterior 0.7175, Degree 1
+	<<C25H38N2O2>>,<<4'-(Salicylideneamino)acetanilide, 2TBDMS derivative>>,Prior: 0.2673, Posterior 0.2825, Degree 1
 Measurement: 596
-	<<C11H28N2O3S>>,<<Cys-Gly, N,S-bis(trimethylsilyl)-, trimethylsilyl ester>>,Prior: 0.1582, Posterior 0.0786, Degree 0
-	<<C13H19N2F>>,<<1H-Indole-3-methanamine, N,N-dimethyl-5-fluoro-1-trimethylsilyl->>,Prior: 0.6701, Posterior 0.3448, Degree 0
-	<<C8H21NO2>>,<<3-Aminoisobutyric acid, 2TMS derivative>>,Prior: 0.1717, Posterior 0.5766, Degree 6
+	<<C11H28N2O3S>>,<<Cys-Gly, N,S-bis(trimethylsilyl)-, trimethylsilyl ester>>,Prior: 0.1582, Posterior 0.0797, Degree 0
+	<<C13H19N2F>>,<<1H-Indole-3-methanamine, N,N-dimethyl-5-fluoro-1-trimethylsilyl->>,Prior: 0.6701, Posterior 0.3490, Degree 0
+	<<C8H21NO2>>,<<3-Aminoisobutyric acid, 2TMS derivative>>,Prior: 0.1717, Posterior 0.5713, Degree 6
 Measurement: 620
 	<<C22H22>>,<<Silane, (1-pentenyl)triphenyl->>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 636
-	<<C23H34O>>,<<1-Diphenylmethylsilyloxyundecane>>,Prior: 0.7018, Posterior 0.7035, Degree 0
-	<<C19H32O4>>,<<tert-Butyldimethylsilyl 5-acetyl-2-(tert-butyldimethylsilyloxy)benzoate>>,Prior: 0.2982, Posterior 0.2965, Degree 0
+	<<C23H34O>>,<<1-Diphenylmethylsilyloxyundecane>>,Prior: 0.7018, Posterior 0.6971, Degree 0
+	<<C19H32O4>>,<<tert-Butyldimethylsilyl 5-acetyl-2-(tert-butyldimethylsilyloxy)benzoate>>,Prior: 0.2982, Posterior 0.3029, Degree 0
 Measurement: 641
 	<<C11H26O2>>,<<Silane, dimethyl(3-heptyloxy)propoxy->>,Prior: 1.0000, Posterior 1.0000, Degree 5
 Measurement: 645
-	<<C13H14O3>>,<<Chromium, tricarbonyl-(3-trimethylsilyl-ü-6-benzocyclobutene)>>,Prior: 0.3466, Posterior 0.3399, Degree 0
-	<<C21H19NO2>>,<<3-((2-Amino-1-naphthyl)methylene)-2-benzofuran-1(3H)-one, TMS derivative, peak 2>>,Prior: 0.3330, Posterior 0.3285, Degree 0
-	<<C21H19NO2>>,<<3-((2-Amino-1-naphthyl)methylene)-2-benzofuran-1(3H)-one, TMS derivative, peak 1>>,Prior: 0.3204, Posterior 0.3316, Degree 0
+	<<C21H19NO2>>,<<3-((2-Amino-1-naphthyl)methylene)-2-benzofuran-1(3H)-one, TMS derivative, peak 2>>,Prior: 0.3330, Posterior 0.3254, Degree 0
+	<<C13H14O3>>,<<Chromium, tricarbonyl-(3-trimethylsilyl-ü-6-benzocyclobutene)>>,Prior: 0.3466, Posterior 0.3512, Degree 0
+	<<C21H19NO2>>,<<3-((2-Amino-1-naphthyl)methylene)-2-benzofuran-1(3H)-one, TMS derivative, peak 1>>,Prior: 0.3204, Posterior 0.3234, Degree 0
 Measurement: 647
-	<<C29H61NO3>>,<<(-)-Epinephrine, 4TBDMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 1
+	<<C29H61NO3>>,<<(-)-Epinephrine, 4TBDMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 652
-	<<C11H26O2>>,<<Silane, dimethyl(2-octyloxy)ethoxy->>,Prior: 0.8464, Posterior 0.8578, Degree 5
-	<<C7H16O3>>,<<2-Propenoic acid, 2-[(trimethylsilyl)oxy]-, trimethylsilyl ester>>,Prior: 0.1536, Posterior 0.1422, Degree 5
+	<<C11H26O2>>,<<Silane, dimethyl(2-octyloxy)ethoxy->>,Prior: 0.8464, Posterior 0.8595, Degree 5
+	<<C7H16O3>>,<<2-Propenoic acid, 2-[(trimethylsilyl)oxy]-, trimethylsilyl ester>>,Prior: 0.1536, Posterior 0.1405, Degree 5
 Measurement: 656
 	<<C12H32N2O3>>,<<Glycylglycine, 4TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 682
-	<<C13H23NO>>,<<Methylephedrine, trimethylsilyl ether>>,Prior: 0.1755, Posterior 0.2213, Degree 4
-	<<C12H21NO>>,<<R,R(-)-Pseudoephedrine, trimethylsilyl ether>>,Prior: 0.8245, Posterior 0.7787, Degree 3
+	<<C12H21NO>>,<<R,R(-)-Pseudoephedrine, trimethylsilyl ether>>,Prior: 0.8245, Posterior 0.7747, Degree 4
+	<<C13H23NO>>,<<Methylephedrine, trimethylsilyl ether>>,Prior: 0.1755, Posterior 0.2253, Degree 6
 Measurement: 683
 	<<C6H16O6>>,<<trans-1,2-Bis(trimethoxysilyl)ethylene>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 693
-	<<C11H27NO4>>,<<L-Glutamic acid, 3TMS derivative>>,Prior: 0.5729, Posterior 0.2790, Degree 0
-	<<C12H31NO3>>,<<N,O,O'-Tris-(trimethylsilyl)-6-hydroxy-2-aminohexanoic acid>>,Prior: 0.4271, Posterior 0.7210, Degree 2
+	<<C11H27NO4>>,<<L-Glutamic acid, 3TMS derivative>>,Prior: 0.5729, Posterior 0.2887, Degree 0
+	<<C12H31NO3>>,<<N,O,O'-Tris-(trimethylsilyl)-6-hydroxy-2-aminohexanoic acid>>,Prior: 0.4271, Posterior 0.7113, Degree 2
 Measurement: 696
 	<<C22H35N3O5S>>,<<Cefadroxil, N,O,O'-tri(trimethylsilyl)->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 698
 	<<C7H17OCl>>,<<2-Dimethyl(chloromethyl)silyloxypentane>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 703
-	<<C22H24N2O2F4>>,<<Tetrafluoro-1,4-bis(3-aminophenoxy)benzene, 2TMS derivative>>,Prior: 0.7859, Posterior 0.7876, Degree 0
-	<<C19H30NO3F3>>,<<3-(Trifluoroacetylamino)benzoic acid, 2TBDMS derivative>>,Prior: 0.2141, Posterior 0.2124, Degree 0
+	<<C19H30NO3F3>>,<<3-(Trifluoroacetylamino)benzoic acid, 2TBDMS derivative>>,Prior: 0.2141, Posterior 0.2143, Degree 0
+	<<C22H24N2O2F4>>,<<Tetrafluoro-1,4-bis(3-aminophenoxy)benzene, 2TMS derivative>>,Prior: 0.7859, Posterior 0.7857, Degree 0
 Measurement: 711
 	<<C15H34O>>,<<4-Tridecanol, TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 7
 Measurement: 718
@@ -392,25 +392,25 @@ Measurement: 724
 Measurement: 742
 	<<C12H24>>,<<Spiro[2.4]hept-5-ene, 5-trimethylsilylmethyl-1-trimethylsilyl->>,Prior: 1.0000, Posterior 1.0000, Degree 2
 Measurement: 745
-	<<C22H48O2>>,<<Silane, dimethyl(2-pentyloxy)hexadecyloxy->>,Prior: 1.0000, Posterior 1.0000, Degree 1
+	<<C22H48O2>>,<<Silane, dimethyl(2-pentyloxy)hexadecyloxy->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 805
 	<<C19H26O4>>,<<Silane, dimethyldi(4-isopropoxyphenoxy)->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 813
-	<<C7H21N>>,<<Propylamine, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 4
+	<<C7H21N>>,<<Propylamine, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 3
 Measurement: 829
 	<<C15H16N2O4>>,<<Thalidomide, TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 831
-	<<C15H32O>>,<<Tributylsilyloxycyclobutane>>,Prior: 1.0000, Posterior 1.0000, Degree 7
+	<<C15H32O>>,<<Tributylsilyloxycyclobutane>>,Prior: 1.0000, Posterior 1.0000, Degree 6
 Measurement: 838
-	<<C17H29NO3>>,<<4-Nitro-1-tributylsilyloxybenzene>>,Prior: 0.6026, Posterior 0.6003, Degree 1
-	<<C17H29NO3>>,<<4-Nitro-1-triisobutylsilyloxybenzene>>,Prior: 0.3974, Posterior 0.3997, Degree 1
+	<<C17H29NO3>>,<<4-Nitro-1-triisobutylsilyloxybenzene>>,Prior: 0.3974, Posterior 0.3946, Degree 1
+	<<C17H29NO3>>,<<4-Nitro-1-tributylsilyloxybenzene>>,Prior: 0.6026, Posterior 0.6054, Degree 1
 Measurement: 855
 	<<C11H16OF2>>,<<1,3-Difluoro-5-butyldimethylsilyloxybenzene>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 862
 	<<C12H26O>>,<<3-Dimethyl(octyl)silyloxy-1-propene>>,Prior: 1.0000, Posterior 1.0000, Degree 6
 Measurement: 871
-	<<C19H34N2O3>>,<<Atenolol, TBDMS derivative>>,Prior: 0.4799, Posterior 0.8413, Degree 4
-	<<C16H28N2O>>,<<Lidocaine, TMS derivative>>,Prior: 0.5201, Posterior 0.1587, Degree 0
+	<<C16H28N2O>>,<<Lidocaine, TMS derivative>>,Prior: 0.5201, Posterior 0.1581, Degree 0
+	<<C19H34N2O3>>,<<Atenolol, TBDMS derivative>>,Prior: 0.4799, Posterior 0.8419, Degree 4
 Measurement: 923
 	<<C11H26>>,<<1,1,1,7,7,7-Hexamethyl-4,4-divinyltrisilethylene>>,Prior: 1.0000, Posterior 1.0000, Degree 3
 Measurement: 957
@@ -424,13 +424,13 @@ Measurement: 972
 Measurement: 1001
 	<<C10H24>>,<<Trimethyl(n-octyl)silane>>,Prior: 1.0000, Posterior 1.0000, Degree 4
 Measurement: 1030
-	<<C12H12N2F4>>,<<Hydrazine, 1,1-bis(difluorophenylsilyl)-2,2-dimethyl->>,Prior: 0.6597, Posterior 0.6625, Degree 0
-	<<C17H28O2F2>>,<<Silane, dimethyl(3,5-difluorophenoxy)decyloxy->>,Prior: 0.3403, Posterior 0.3375, Degree 0
+	<<C17H28O2F2>>,<<Silane, dimethyl(3,5-difluorophenoxy)decyloxy->>,Prior: 0.3403, Posterior 0.3382, Degree 0
+	<<C12H12N2F4>>,<<Hydrazine, 1,1-bis(difluorophenylsilyl)-2,2-dimethyl->>,Prior: 0.6597, Posterior 0.6618, Degree 0
 Measurement: 1087
 	<<C24H34O6>>,<<Matairesinol, (3R-E)-, 2TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 1112
-	<<C21H32O3>>,<<12á-Hydroxyandrost-4-ene-3,17-dione, TMS derivative>>,Prior: 0.5539, Posterior 0.7156, Degree 1
-	<<C26H42O5>>,<<Lovastatin, trimethylsilyl deriv.>>,Prior: 0.4461, Posterior 0.2844, Degree 0
+	<<C26H42O5>>,<<Lovastatin, trimethylsilyl deriv.>>,Prior: 0.4461, Posterior 0.2818, Degree 0
+	<<C21H32O3>>,<<12á-Hydroxyandrost-4-ene-3,17-dione, TMS derivative>>,Prior: 0.5539, Posterior 0.7182, Degree 1
 Measurement: 1145
 	<<C18H32O4>>,<<2-Hydroxy-5-methoxybenzoic acid, tert-butyldimethylsilyl ether, tert-butyldimethylsilyl ester>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 1146
@@ -438,13 +438,13 @@ Measurement: 1146
 Measurement: 1184
 	<<C12H28N4O3>>,<<1,2,5-Oxadiazole-3,4-dicarboxamide, 4TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 1201
-	<<C17H38O>>,<<1-Dodecanol, TBDMS derivative>>,Prior: 0.3960, Posterior 0.4480, Degree 4
-	<<C14H32O>>,<<1-Dodecanol, TMS derivative>>,Prior: 0.3344, Posterior 0.3873, Degree 5
-	<<C25H54O>>,<<1-(Dimethyldodecylsilyloxy)dodecane>>,Prior: 0.2696, Posterior 0.1647, Degree 2
+	<<C14H32O>>,<<1-Dodecanol, TMS derivative>>,Prior: 0.3344, Posterior 0.3872, Degree 4
+	<<C17H38O>>,<<1-Dodecanol, TBDMS derivative>>,Prior: 0.3960, Posterior 0.4502, Degree 4
+	<<C25H54O>>,<<1-(Dimethyldodecylsilyloxy)dodecane>>,Prior: 0.2696, Posterior 0.1626, Degree 2
 Measurement: 1208
-	<<C15H23O3I3>>,<<Trimethylsilyl 2-{2,4,6-triiodo-3-[(trimethylsilyl)oxy]benzyl}butanoate>>,Prior: 0.1389, Posterior 0.1393, Degree 0
-	<<C12H38O7>>,<<3,5-Diisopropoxy-1,1,1,7,7,7-hexamethyl-3,5-bis(trimethylsiloxy)tetrasiloxane>>,Prior: 0.5917, Posterior 0.5919, Degree 0
-	<<C29H50O4>>,<<tert-Butyldimethylsilyl hexadecyl phthalate>>,Prior: 0.2694, Posterior 0.2688, Degree 0
+	<<C12H38O7>>,<<3,5-Diisopropoxy-1,1,1,7,7,7-hexamethyl-3,5-bis(trimethylsiloxy)tetrasiloxane>>,Prior: 0.5917, Posterior 0.6014, Degree 0
+	<<C15H23O3I3>>,<<Trimethylsilyl 2-{2,4,6-triiodo-3-[(trimethylsilyl)oxy]benzyl}butanoate>>,Prior: 0.1389, Posterior 0.1395, Degree 0
+	<<C29H50O4>>,<<tert-Butyldimethylsilyl hexadecyl phthalate>>,Prior: 0.2694, Posterior 0.2591, Degree 0
 Measurement: 1218
 	<<C8H14O>>,<<Cyclopropane, 1-methylene-2-(1-trimethylsilyloxyvinyl)->>,Prior: 1.0000, Posterior 1.0000, Degree 1
 Measurement: 1233
@@ -454,7 +454,7 @@ Measurement: 1271
 Measurement: 1284
 	<<C24H40N2O3>>,<<N-Ethyl-4,4,6,6-tetramethyl-N,10-bis(3-methylphenyl)-3,5,7-trioxa-10-aza-4,6-disiladodecan-1-amine>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 1315
-	<<C10H22O>>,<<trans-3-Hydroxy-3-methyl-1-(triethylsilyl)but-1-ene>>,Prior: 1.0000, Posterior 1.0000, Degree 4
+	<<C10H22O>>,<<trans-3-Hydroxy-3-methyl-1-(triethylsilyl)but-1-ene>>,Prior: 1.0000, Posterior 1.0000, Degree 5
 Measurement: 1344
 	<<C13H10N2O3>>,<<5-Nitro-10,10-dimethyl-9,10-dihydro-10-sila-2-azaanthrone>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 1407
@@ -466,14 +466,14 @@ Measurement: 1448
 Measurement: 1451
 	<<C7H10O2S>>,<<5-(Trimethylsilyl)thiophene-2-carboxylic acid>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 1510
-	<<C10H20>>,<<3,6-Bis(trimethylsilyl)-1,4-cyclohexadiene>>,Prior: 0.5099, Posterior 0.8611, Degree 4
-	<<C3H7N3O3S2>>,<<1,3,2,4,6-Dithia(3-SIV)triazine, 5-[(trimethylsilyl)oxy]-, 1,1-dioxide>>,Prior: 0.4901, Posterior 0.1389, Degree 0
+	<<C3H7N3O3S2>>,<<1,3,2,4,6-Dithia(3-SIV)triazine, 5-[(trimethylsilyl)oxy]-, 1,1-dioxide>>,Prior: 0.4901, Posterior 0.1396, Degree 0
+	<<C10H20>>,<<3,6-Bis(trimethylsilyl)-1,4-cyclohexadiene>>,Prior: 0.5099, Posterior 0.8604, Degree 5
 Measurement: 1514
 	<<C9H11F>>,<<1-Methyl-1-(p-fluorophenyl)-1-silacyclobutane>>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 1562
-	<<C23H42O2>>,<<Silane, (5à-androst-2-en-11á,17-ylenedioxy)bis[trimethyl->>,Prior: 0.3161, Posterior 0.3158, Degree 0
-	<<C23H42O2>>,<<Androst-5-ene-3,17-diol, (3á,17à)-, 2TMS derivative>>,Prior: 0.3923, Posterior 0.4001, Degree 0
-	<<C23H42O2>>,<<Cetadiol, 2TMS derivative>>,Prior: 0.2916, Posterior 0.2841, Degree 0
+	<<C23H42O2>>,<<Androst-5-ene-3,17-diol, (3á,17à)-, 2TMS derivative>>,Prior: 0.3923, Posterior 0.3917, Degree 0
+	<<C23H42O2>>,<<Silane, (5à-androst-2-en-11á,17-ylenedioxy)bis[trimethyl->>,Prior: 0.3161, Posterior 0.3102, Degree 0
+	<<C23H42O2>>,<<Cetadiol, 2TMS derivative>>,Prior: 0.2916, Posterior 0.2981, Degree 0
 Measurement: 1585
 	<<C14H24O5>>,<<3,4-Dimethoxymandelic acid, di-TMS>>,Prior: 1.0000, Posterior 1.0000, Degree 2
 Measurement: 1597
@@ -481,7 +481,7 @@ Measurement: 1597
 Measurement: 1810
 	<<C11H18NF>>,<<4-Fluoroaniline, N-tert-butyldimethylsilyl->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 1811
-	<<C12H24O3>>,<<Pyrogallol, 3TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 5
+	<<C12H24O3>>,<<Pyrogallol, 3TMS derivative>>,Prior: 1.0000, Posterior 1.0000, Degree 6
 Measurement: 1834
 	<<C3H9OI>>,<<Silane, (iodomethoxy)trimethyl->>,Prior: 1.0000, Posterior 1.0000, Degree 0
 Measurement: 2191
