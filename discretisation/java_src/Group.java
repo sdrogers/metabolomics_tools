@@ -28,7 +28,8 @@ import java.util.zip.GZIPOutputStream;
 
 
 public class Group {
-	private String inFile = "std1-file1.peakml";
+	private String inFile;
+	private String outFile;
 	// private String inFile = "test.peakml";
 	// private String inFile = "test2.peakml";
 	private ParseResult result;
@@ -62,7 +63,9 @@ public class Group {
 	private Double[] mapProb;
 	private MolDB molDB = new MolDB();
 	private ArrayList<ArrayList<Molecule>> clusterHits;
-	public Group() {
+	public Group(String infile,String outfile) {
+		this.inFile = infile;
+		this.outFile = outfile;
 		try {
 			result = PeakMLParser.parse(new FileInputStream(inFile),true);
 			data = new Data(result.header,(IPeakSet<IPeak>) result.measurement);
@@ -97,7 +100,7 @@ public class Group {
 		initialiseClustering();
 
 		r = new Random();
-		doSample(100);
+		doSample(1000);
 		checkStatus();
 		summarise();
 		int i=0;
@@ -116,7 +119,7 @@ public class Group {
 		try {
 		PeakMLWriter.write(
 					result.header, peaks.getPeaks(), null,
-					new GZIPOutputStream(new FileOutputStream("test.peakml")), null
+					new GZIPOutputStream(new FileOutputStream(this.outFile)), null
 				);
 		}catch(IOException e) {
 			System.out.println(e);
@@ -485,7 +488,7 @@ public class Group {
  	}
 
 	public static void main(String[] args) {
-		new Group();
+		new Group(args[0],args[1]);
 	}
 }
 
