@@ -140,6 +140,21 @@ class NetworkSampler(object):
 				if verbose:
 					print "Measurement: " + str(m.id) + " assigned to " + str(choose.formula)
 
+	def compute_posteriors(self):
+		self.peakset.posterior_probability = {}
+		self.peakset.prior_probability = {}
+		for m in self.peakset.measurements:
+			total_count = 0
+			total_prob = 0.0
+			self.peakset.posterior_probability[m] = {}
+			self.peakset.prior_probability[m] = {}
+
+			for a in m.annotations:
+				total_count += self.peakset.posterior_counts[m][a]
+				total_prob += m.annotations[a]
+			for a in m.annotations:
+				self.peakset.posterior_probability[m][a] = 1.0*self.peakset.posterior_counts[m][a]/(1.0*total_count)
+				self.peakset.prior_probability[m][a] = m.annotations[a]/(total_prob)
 
 
 	def create_adjacency(self,verbose=False):
