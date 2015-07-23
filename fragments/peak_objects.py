@@ -88,6 +88,13 @@ class Formula(object):
 					total += int(a)
 			return total
 
+	def compute_exact_mass(self):
+		masses = {'C':12.00000000000,'H':1.00782503214,'O':15.99491462210,'N':14.00307400524,'P':30.97376151200,'S':31.97207069000,'Cl':34.96885271000,'I':126.904468,'Br':78.9183376,'Si':27.9769265327,'F':18.99840320500,'D':2.01410177800}
+		exact_mass = 0.0
+		for a in self.atoms:
+			exact_mass += masses[a]*self.atoms[a]
+		return exact_mass
+
 	def __repr__(self):
 		return self.formula
 

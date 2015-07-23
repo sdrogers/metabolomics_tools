@@ -41,7 +41,7 @@ class NetworkSampler(object):
 		for m in self.peakset.measurements:
 			if m.annotations != {}:
 				tempprobs = {}
-				totalprob = 0
+				totalprob = 0.0
 
 				for a in self.adjacency[self.assignment[m]]:
 					self.in_degree[a] -= 1
@@ -77,7 +77,7 @@ class NetworkSampler(object):
 		for m in self.peakset.measurements:
 			if m.annotations != {}:
 				tempprobs = {}
-				totalprob = 0
+				totalprob = 0.0
 
 				for a in self.adjacency[self.assignment[m]]:
 					self.in_degree[a] -= 1
@@ -88,7 +88,7 @@ class NetworkSampler(object):
 					totalprob+=tempprobs[k]
 
 				u = random.random()*totalprob
-				cumprob = 0
+				cumprob = 0.0
 				choosepos = -1
 				for k in m.annotations:
 					cumprob += m.annotations[k] * (self.delta + self.in_degree[k])
@@ -118,13 +118,13 @@ class NetworkSampler(object):
 			if m.annotations != {}:
 				self.peakset.posterior_counts[m] = {}
 				tempprobs = {}
-				totalprob = 0
+				totalprob = 0.0
 				for k in m.annotations:
 					self.peakset.posterior_counts[m][k] = 0
 					tempprobs[k] = m.annotations[k]
 					totalprob+=tempprobs[k]
 				u = random.random()*totalprob
-				cumprob = 0
+				cumprob = 0.0
 				choosepos = -1
 				for k in m.annotations:
 					cumprob += m.annotations[k]
