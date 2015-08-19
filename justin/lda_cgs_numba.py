@@ -59,7 +59,7 @@ def sample_numba(random_state, n_burn, n_samples, n_thin,
     for samp in range(n_samples):
     
         s = samp+1        
-        if s >= n_burn:
+        if s > n_burn:
             print("Sample " + str(s) + " "),
         else:
             print("Burn-in " + str(s) + " "),
@@ -71,20 +71,16 @@ def sample_numba(random_state, n_burn, n_samples, n_thin,
                           N_beta, K_alpha,                      
                           post, cumsum,
                           ckn, ck, previous_ckn, previous_ck)
+        all_lls.append(ll)      
+        print(" Log likelihood = %.3f " % ll)
             
         if s > n_burn:
             thin += 1
             if thin%n_thin==0:    
-                all_lls.append(ll)      
-                print(" Log likelihood = %.3f " % ll)  
                 cdk_copy = np.copy(cdk)
                 ckn_copy = np.copy(ckn)
                 to_store = Sample(cdk_copy, ckn_copy)
                 samples.append(to_store)                                      
-            else:                
-                print
-        else:
-            print
             
     all_lls = np.array(all_lls)            
     return all_lls, samples
@@ -229,8 +225,5 @@ def _nb_do_sampling(s, n_burn, total_words, all_d, all_pos, all_n, all_random, Z
                               ckn, ck, previous_ckn, previous_ck)
         Z_mat[d, pos] = k
 
-    ll = 0
-    if s > n_burn:    
-        ll = _nb_ll(D, N, K, alpha, beta, N_beta, K_alpha, cdk, cd, ckn, ck)                
-
+    ll = _nb_ll(D, N, K, alpha, beta, N_beta, K_alpha, cdk, cd, ckn, ck)
     return ll
