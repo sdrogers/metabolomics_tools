@@ -23,7 +23,7 @@
 #     and peaklist2.csv, respectively]. The fragmentation file has to be in 
 #     .mzML format.
 
-create_peak_method: 3 # this seems to work well enough
+create_peak_method: 1 # this seems to work well enough
 
 input_files:
 
@@ -38,7 +38,7 @@ input_files:
     # For runCreatePeakMethod1.R
     # --------------------------------------------------------------------------
     # Input mzXML file of fragmentation experiment
-    fragmentation_file_m1: xxxx.mzXML
+    fragmentation_file_m1: /home/joewandy/Dropbox/Project/justin_data/Test_multifile
 
     # --------------------------------------------------------------------------
     # Only applicable for create_peak_method = 2
