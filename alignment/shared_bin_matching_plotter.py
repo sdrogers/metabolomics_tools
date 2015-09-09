@@ -98,4 +98,4 @@ def plot_aligned_peaksets_probabilities(probs):
     plt.title("Aligned peaksets probabilities")
     plt.xlabel("Probabilities")
     plt.ylabel("Count")
-    plt.show(block=False)
+    plt.show()

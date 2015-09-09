@@ -161,6 +161,10 @@ class SharedBinMatching:
                 tran = tmap[trans_idx]
                 msg = "{:s}@{:3.5f}({:.2f})".format(tran.name, bb.mass, bin_prob)            
                 self.annotate(f, msg)   
+                bin_id = bb.bin_id
+                bin_origin = bb.origin
+                msg = "bin_{:d}_origin{:d}".format(bin_id, bin_origin)                            
+                self.annotate(f, msg)
             print
                 
         # plotter.plot_bin_vs_bin(file_bins, file_post_rts)
@@ -267,35 +271,46 @@ class SharedBinMatching:
                 results.append(tup)                        
         else:
             # need to match across the same bins
-            processed = set()
+#             processed = set()
+#             for bb1 in members:
+#                 features1 = bb1.features
+#                 for f1 in features1:
+#                     if f1 in processed:
+#                         continue
+#                     # find features in other bins that are the closest in mass to f1
+#                     temp = []
+#                     temp.append(f1)
+#                     processed.add(f1)
+#                     for bb2 in members:
+#                         if bb1.origin == bb2.origin:
+#                             continue
+#                         else:
+#                             features2 = bb2.features
+#                             closest = None
+#                             min_diff = float('inf')
+#                             for f2 in features2:
+#                                 if f2 in processed:
+#                                     continue
+#                                 diff = abs(f1.mass - f2.mass)
+#                                 if diff < min_diff:
+#                                     min_diff = diff
+#                                     closest = f2
+#                             if closest is not None:
+#                                 temp.append(closest)
+#                                 processed.add(closest)
+#                     tup = tuple(temp)
+#                     results.append(tup)  
             for bb1 in members:
-                features1 = bb1.features
-                for f1 in features1:
-                    if f1 in processed:
+                for bb2 in members:
+                    if bb1.origin == bb2.origin:
                         continue
-                    # find features in other bins that are the closest in mass to f1
-                    temp = []
-                    temp.append(f1)
-                    processed.add(f1)
-                    for bb2 in members:
-                        if bb1.origin == bb2.origin:
-                            continue
-                        else:
-                            features2 = bb2.features
-                            closest = None
-                            min_diff = float('inf')
-                            for f2 in features2:
-                                if f2 in processed:
-                                    continue
-                                diff = abs(f1.mass - f2.mass)
-                                if diff < min_diff:
-                                    min_diff = diff
-                                    closest = f2
-                            if closest is not None:
-                                temp.append(closest)
-                                processed.add(closest)
-                    tup = tuple(temp)
-                    results.append(tup)  
+                    features1 = bb1.features
+                    features2 = bb2.features
+                    for f1 in features1:
+                        for f2 in features2:
+                            tup = (f1, f2)
+                            results.append(tup)
+                        
         return results
     
     def evaluate_performance(self):

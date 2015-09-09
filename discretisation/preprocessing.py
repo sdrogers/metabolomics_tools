@@ -108,6 +108,8 @@ class Discretiser(object):
             top_bins.append(pc_bin)            
         print
         print "Total top bins=" + str(K) + " total features=" + str(N)
+        for tb in top_bins:
+            print "\t" + str(tb)
 
         # for each file, we want to instantiatie its concrete bins -- based on the top bins
         all_binning = []
@@ -144,6 +146,8 @@ class Discretiser(object):
             K = len(concrete_bins)
             print
             print "File " + str(j) + " has " + str(K) + " concrete bins instantiated"
+            for cb in concrete_bins:
+                print "\t" + str(cb)
             prior_masses = np.array([bb.mass for bb in concrete_bins])[:, None]                # K x 1                                
             prior_rts = np.array([bb.rt for bb in concrete_bins])[:, None]                     # K x 1
             prior_intensities = np.array([bb.intensity for bb in concrete_bins])[:, None]      # K x 1
@@ -153,6 +157,7 @@ class Discretiser(object):
             possible = sp.lil_matrix((N, K), dtype=np.int)      # N x K, transformation id+1 of f n in bin k
             transformed = sp.lil_matrix((N, K), dtype=np.float) # N x K, transformed masses of f n in bin k
             sys.stdout.write("Building matrices for file " + str(j) + " ")
+            sys.stdout.flush()
             for n in range(N):
                 
                 if n%200 == 0:
@@ -244,6 +249,7 @@ class FileLoader:
                 data = PeakData(features, database, transformations, corr_mat=corr_mat)
                 all_features.extend(features)
                 data_list.append(data)
+                sys.stdout.flush()
                 
             # bin the files if necessary
             if make_bins:
