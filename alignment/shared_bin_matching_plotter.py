@@ -94,8 +94,8 @@ def plot_ZZ_all(ZZ_all):
 
 def plot_aligned_peaksets_probabilities(probs):
     plt.figure()
-    plt.hist(probs, 10)
+    plt.hist(probs, 20)
     plt.title("Aligned peaksets probabilities")
     plt.xlabel("Probabilities")
     plt.ylabel("Count")
-    plt.show()                
+    plt.show(block=False)

@@ -1,24 +1,28 @@
 import numpy as np
 
 import sys
+import os
 import itertools
 from operator import attrgetter
 from operator import itemgetter
-import time
+from collections import namedtuple
+import csv
 
+sys.path.append('/home/joewandy/git/metabolomics_tools')
 from discretisation.models import HyperPars as DiscretisationHyperPars
 from discretisation.discrete_mass_clusterer import DiscreteVB
 from discretisation.plotting import ClusterPlotter
 from discretisation.preprocessing import FileLoader
-from discretisation import utils as DiscretisationUtils
+from ground_truth import GroundTruth
 
 import shared_bin_matching_plotter as plotter
-from models import HyperPars as AlignmentHyperPars
 from dp_rt_clusterer import DpMixtureGibbs
+
+AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 
 class SharedBinMatching:
     
-    def __init__(self, input_dir, database_file, transformation_file, hyperpars, synthetic=False, limit_n=-1):
+    def __init__(self, input_dir, database_file, transformation_file, hyperpars, synthetic=False, limit_n=-1, gt_file=None):
         ''' 
         Clusters bins by DP mixture model using variational inference
         '''
@@ -28,13 +32,16 @@ class SharedBinMatching:
         self.data_list = loader.load_model_input(input_dir, database_file, transformation_file, 
                                                  self.hp.binning_mass_tol, self.hp.binning_rt_tol, 
                                                  synthetic=synthetic, limit_n=limit_n)
+        sys.stdout.flush()
+        self.file_list = loader.file_list
         self.input_dir = input_dir
         self.database_file = database_file
         self.transformation_file = transformation_file
+        self.gt_file = gt_file
 
         self.annotations = {}
         
-    def run(self):
+    def run(self, show_singleton=False):
 
         print "Running first-stage clustering"
         all_bins, posterior_bin_rts = self.first_stage_clustering()
@@ -43,7 +50,47 @@ class SharedBinMatching:
         matching_results, samples_obtained = self.second_stage_clustering(all_bins, posterior_bin_rts)
 
         print "Constructing alignment of peak features"
-        self.construct_alignment(matching_results, samples_obtained)
+        alignment_results = self.construct_alignment(matching_results, samples_obtained, show_singleton=show_singleton)
+        self.alignment_results = alignment_results        
+        
+        if self.gt_file is not None:           
+            print "Evaluating performance"
+            self.evaluate_performance()
+        
+    def save_output(self, output_path):
+        
+        # if the directory doesn't exist, create it
+        if not os.path.exists(os.path.dirname(output_path)):
+            dir = os.path.dirname(output_path)
+            if len(dir)>0:
+                os.makedirs(dir)        
+        
+        # write the result out in sima format, separated by tab
+        # the columns are:
+        # 1. alignment group id, index starts from 0
+        # 2. originating file name
+        # 3. position of feature in data, index starts from 0
+        # 4. mass of feature
+        # 5. rt of feature
+        # 6. probability of alignment group (additional)
+        # 7. annotation (additional)
+        with open(output_path, 'wb') as f:
+            writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_NONE)            
+            row_id = 0
+            for row in self.alignment_results:
+                features = row.peakset
+                prob = row.prob
+                for f in features:
+                    msg = self.annotations[f]
+                    parent_filename = self.file_list[f.file_id]
+                    peak_id = f.feature_id-1
+                    mass = f.mass
+                    rt = f.rt
+                    out = [row_id, parent_filename, peak_id, mass, rt, prob, msg]
+                    writer.writerow(out)        
+                row_id += 1
+        
+        print 'Output written to', output_path
         
     def first_stage_clustering(self):
         
@@ -112,7 +159,7 @@ class SharedBinMatching:
                 bin_prob = discrete.Z[i, j]
                 trans_idx = discrete.possible[i, j]
                 tran = tmap[trans_idx]
-                msg = "{:s}@{:3.5f} prob={:.2f}".format(tran.name, bb.mass, bin_prob)            
+                msg = "{:s}@{:3.5f}({:.2f})".format(tran.name, bb.mass, bin_prob)            
                 self.annotate(f, msg)   
             print
                 
@@ -136,10 +183,10 @@ class SharedBinMatching:
         dp.burn_in = self.hp.rt_clustering_burnin
         dp.run() 
 
-        plotter.plot_ZZ_all(dp.ZZ_all)
+        # plotter.plot_ZZ_all(dp.ZZ_all)
         return dp.matching_results, dp.samples_obtained
 
-    def construct_alignment(self, matching_results, samples_obtained):
+    def construct_alignment(self, matching_results, samples_obtained, show_singleton=False):
         
         # count frequencies of aligned bins produced across the Gibbs samples
         print "Counting frequencies of aligned peaksets"
@@ -161,6 +208,7 @@ class SharedBinMatching:
             counter[key] = new_value       
             
         # print report of aligned peaksets in descending order of probabilities
+        alignment_results = []
         print 
         print "=========================================================================="
         print "REPORT"
@@ -170,12 +218,10 @@ class SharedBinMatching:
         i = 0
         for item in sorted_list:
             members = item[0]
-            if len(members)==1:
-                continue # skip all the singleton stuff
             prob = item[1]
             matched_list = self.match_features(members)
             for features in matched_list:
-                if len(features)==1:
+                if len(features)==1 and not show_singleton:
                     continue
                 mzs = np.array([f.mass for f in features])
                 rts = np.array([f.rt for f in features])
@@ -189,14 +235,17 @@ class SharedBinMatching:
                     print(output) 
                 probs.append(prob)
                 i += 1             
+                res = AlignmentResults(peakset=features, prob=prob)
+                alignment_results.append(res)
                 
         probs = np.array(probs) 
         plotter.plot_aligned_peaksets_probabilities(probs)
+        return alignment_results
                        
     def annotate(self, feature, msg):
         if feature in self.annotations:
             current_msg = self.annotations[feature]
-            self.annotations[feature] = current_msg + " " + msg
+            self.annotations[feature] = current_msg + ";" + msg
         else:
             self.annotations[feature] = msg
         
@@ -248,37 +297,7 @@ class SharedBinMatching:
                     tup = tuple(temp)
                     results.append(tup)  
         return results
-
-def main(argv):    
-
-    start = time.time()
-
-#     input_dir = './input/std1_csv_2'
-#     database_file = '../discretisation/database/std1_mols.csv'
-#     transformation_file = '../discretisation/mulsubs/mulsub2.txt'
-#     alignment_hp = AlignmentHyperPars()    
-
-    input_dir = './input/P1/100'
-    database_file = '../discretisation/database/std1_mols.csv'
-    transformation_file = '../discretisation/mulsubs/mulsub2.txt'
-    alignment_hp = AlignmentHyperPars()    
-    alignment_hp.binning_mass_tol = 300
-    alignment_hp.binning_rt_tol = 5.0
-    alignment_hp.within_file_rt_sd = 2.5
-    alignment_hp.across_file_rt_sd = 60
-    alignment_hp.alpha_mass = 100.0
-    alignment_hp.alpha_rt = 100.0
-    alignment_hp.t = 0.25
-    alignment_hp.mass_clustering_n_iterations = 20
-    alignment_hp.rt_clustering_nsamps = 20
-    alignment_hp.rt_clustering_burnin = 10
-        
-    sb = SharedBinMatching(input_dir, database_file, transformation_file, 
-                           alignment_hp, synthetic=True)
-    sb.run()
     
-    end = time.time()
-    DiscretisationUtils.timer("TOTAL ELAPSED TIME", start, end)    
-    
-if __name__ == "__main__":
-   main(sys.argv[1:])
+    def evaluate_performance(self):
+        gt = GroundTruth(self.gt_file, self.file_list, self.data_list)        
+        gt.evaluate_probabilistic_alignment(self.alignment_results)

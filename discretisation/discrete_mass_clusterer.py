@@ -187,7 +187,7 @@ class DiscreteVB:
         print str(todo.size) + " peaks to be re-sampled"
                     
         for it in range(self.n_iterations):
-            sys.stdout.write("Iteration " + str(it) + " ")                  
+            sys.stdout.write("Iteration " + str(it) + " ")  
             
             count_Z = np.array(self.Z.sum(0))
             
@@ -230,6 +230,7 @@ class DiscreteVB:
 
             QChange = ((oldQZ-self.Z).data**2).sum()
             print "Change in Z: " + str(QChange)
+            sys.stdout.flush()                            
                     
     def __repr__(self):
         return "Variational Bayes for discrete mass model\n" + self.hyperpars.__repr__() + \

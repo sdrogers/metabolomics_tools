@@ -221,10 +221,12 @@ class FileLoader:
             input_dir = input_file
             filelist = []
             types = ('*.csv', '*.txt')
+            starting_dir = os.getcwd() # save the initial dir to restore
             os.chdir(input_dir)
             for files in types:
                 filelist.extend(glob.glob(files))
             filelist = utils.natural_sort(filelist)
+            self.file_list = filelist
             
             # load the files
             file_id = 0
@@ -253,7 +255,8 @@ class FileLoader:
                     peak_data = data_list[j]
                     common = discrete_infos[j]
                     peak_data.set_discrete_info(common)
-                
+                            
+            os.chdir(starting_dir)    
             return data_list
                     
         else:   
