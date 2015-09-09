@@ -36,7 +36,7 @@ def as_scalar(s):
 def timer(msg, start, end):
     hours, rem = divmod(end-start, 3600)
     minutes, seconds = divmod(rem, 60)
-    print(msg + " {:0>2} hours {:0>2} minutes {:05.2f} seconds".format(int(hours),int(minutes),seconds))    
+    print(msg + " {:0>2} hours {:0>2} minutes {:05.6f} seconds".format(int(hours),int(minutes),seconds))    
 
 def mass_match(mass, other_masses, tol):
     return np.abs((mass-other_masses)/mass)<tol*1e-6

@@ -1,17 +1,25 @@
-from collections import Counter
-from collections import defaultdict
-from random import shuffle
 import sys
+from random import shuffle
 import time
-import math
 
+from collections import Counter
 import numpy as np
 import scipy.sparse as sp
+from numpy.random import RandomState
+from discretisation import utils as DiscretisationUtils
 
+try:
+    from dp_rt_sample_index_numba import get_new_k
+    print "Numba get_new_k used"
+except Exception:
+    from dp_rt_sample_index_numpy import get_new_k    
+    print "Numpy get_new_k used"
+# from dp_rt_sample_index_numpy import get_new_k    
 
 class DpMixtureGibbs:
     
-    def __init__(self, data, hyperpars):
+    def __init__(self, data, hyperpars, seed=-1):
+        
         ''' 
         Clusters bins by DP mixture model using Gibbs sampling
         '''
@@ -25,14 +33,18 @@ class DpMixtureGibbs:
         self.alpha = float(hyperpars.alpha)
         self.nsamps = 200
         self.burn_in = 100
+        if seed > 0:
+            self.random_state = RandomState(seed)
+        else:
+            self.random_state = RandomState()
         
         self.Z = None
         self.ZZ_all = sp.lil_matrix((self.N, self.N),dtype=np.float)
         self.cluster_rt_mean = None
         self.cluster_rt_prec = None
         self.matching_results = []
-        self.samples_obtained = 0
-
+        self.samples = []
+        self.verbose = False
                 
     def run(self):
         
@@ -50,97 +62,109 @@ class DpMixtureGibbs:
         for bb in self.bins:
             topids.append(bb.top_id)
             origins.append(bb.origin)
-        cluster_member_topids.append(topids)
-        cluster_member_origins.append(origins)
+        cluster_member_topids.append(topids[0])
+        cluster_member_origins.append(Counter())
+        cluster_member_origins[0].update(origins)
 
         # start sampling
-        self.samples_obtained = 0
         for s in range(self.nsamps):
             
             start_time = time.time()
             
             # loop through the objects in random order
             random_order = range(self.N)
-            shuffle(random_order)
+            self.random_state.shuffle(random_order)
             for n in random_order:
 
                 this_bin = self.bins[n]
                 current_data = self.rts[n]
                 k = current_ks[n] # the current cluster of this item
-                
+
+                start = time.time()
+        
                 # remove from model, detecting empty table if necessary
                 cluster_counts[k] = cluster_counts[k] - 1
                 cluster_sums[k] = cluster_sums[k] - current_data
-                cluster_member_topids[k].remove(this_bin.top_id)
-                cluster_member_origins[k].remove(this_bin.origin)
+                cluster_member_origins[k].subtract([this_bin.origin])
+
+                end = time.time()
+                if self.verbose:
+                    DiscretisationUtils.timer("Remove from model", start, end)    
                 
                 # if empty table, delete this cluster
                 if cluster_counts[k] == 0:
+                    start = time.time()
                     K = K - 1
-                    cluster_counts = np.delete(cluster_counts, k) # delete k-th entry
-                    cluster_sums = np.delete(cluster_sums, k) # delete k-th entry
-                    del cluster_member_topids[k] # delete k-th entry
-                    del cluster_member_origins[k] # delete k-th entry
+                    # remove k-th entry
+                    cluster_counts = np.delete(cluster_counts, k)
+                    cluster_sums = np.delete(cluster_sums, k)
+                    del cluster_member_topids[k]
+                    del cluster_member_origins[k]
                     current_ks = self.reindex(k, current_ks) # remember to reindex all the clusters
+                    end = time.time()
+                    if self.verbose:
+                        DiscretisationUtils.timer("Clear empty table", start, end)    
                     
-                # compute prior probability for K existing table and new table
-                prior = np.array(cluster_counts)
-                prior = np.append(prior, self.alpha)
-                prior = prior / prior.sum()
-                
-                # for current k
-                param_beta = self.rt_prior_prec + (self.rt_prec*cluster_counts)
-                temp = (self.rt_prior_prec*self.mu_zero) + (self.rt_prec*cluster_sums)
-                param_alpha = (1/param_beta)*temp
-                
-                # for new k
-                param_beta = np.append(param_beta, self.rt_prior_prec)
-                param_alpha = np.append(param_alpha, self.mu_zero)
-                
-                # pick new k
-                prec = 1/((1/param_beta)+(1/self.rt_prec))
-                log_likelihood = -0.5*np.log(2*np.pi)
-                log_likelihood = log_likelihood + 0.5*np.log(prec)
-                log_likelihood = log_likelihood - 0.5*np.multiply(prec, np.square(current_data-param_alpha))
-                
-                valid_clusters_check = np.zeros(K+1)
-                for k_idx in range(K):
-                    # this_bin cannot go into a cluster where the existing top_ids are not the same
-                    existing_topids = cluster_member_topids[k_idx]
+                # check the valid cluster this bin can go into
+                start = time.time()
+                valid_clusters_check = np.empty(K)
+                valid_clusters_check.fill(float('-inf'))
+                topids_arr = np.array(cluster_member_topids)
+                possible = np.where(topids_arr == this_bin.top_id)[0]
+                for k_idx in possible:
+                    # can only go into a cluster where there is no bin with the same origin file
                     existing_origins = cluster_member_origins[k_idx]
-                    if this_bin.top_id not in existing_topids:
-                        valid_clusters_check[k_idx] = float('-inf')
-                    elif this_bin.origin in existing_origins:
-                        # this_bin cannot go into a cluster where the origin file is the same
-                        valid_clusters_check[k_idx] = float('-inf')
-                log_likelihood = log_likelihood + valid_clusters_check                
-                
-                # sample from posterior
-                post = log_likelihood + np.log(prior)
-                post = np.exp(post - post.max())
-                post = post / post.sum()
-                random_number = np.random.rand()
-                cumsum = np.cumsum(post)
-                new_k = 0
-                for new_k in range(len(cumsum)):
-                    c = cumsum[new_k]
-                    if random_number <= c:
-                        break
-                    
+                    if existing_origins[this_bin.origin] == 0:
+                        valid_clusters_check[k_idx] = 0 # because log(1) = 0
+
+                # get the actual possible mask to use when sampling from the posterior
+                possible = np.where(valid_clusters_check == 0)[0]
+                        
+                end = time.time()
+                if self.verbose:                
+                    DiscretisationUtils.timer("Check valid cluster", start, end)    
+
+                start = time.time()                    
+                # if no possible current cluster, then immediately make a new cluster
+                if len(possible) == 0:
+                    new_k = K
+                else:                
+                    # otherwise resample the cluster index
+                    random_number = self.random_state.rand()
+                    cc = cluster_counts[possible]
+                    cs = cluster_sums[possible]
+                    # prior for K existing tables + new table
+                    prior = np.append(cluster_counts, self.alpha)
+                    prior = prior / prior.sum()       
+                    log_prior = np.log(prior)
+                    last_val = log_prior[-1]
+                    log_prior = log_prior[possible]
+                    log_prior = np.append(log_prior, last_val)
+                    new_k = get_new_k(self.alpha, self.rt_prior_prec, self.rt_prec, self.mu_zero, 
+                                      cc, cs, log_prior, current_data, possible, random_number, K)
+                end = time.time()
+                if self.verbose:                
+                    DiscretisationUtils.timer("Get new k", start, end)    
+
+                start = time.time()                                                            
                 # (new_k+1) because indexing starts from 0 here
                 if (new_k+1) > K:
                     # make new cluster and add to it
                     K = K + 1
                     cluster_counts = np.append(cluster_counts, 1)
                     cluster_sums = np.append(cluster_sums, current_data)
-                    cluster_member_topids.append([this_bin.top_id])
-                    cluster_member_origins.append([this_bin.origin])
+                    cluster_member_topids.append(this_bin.top_id)
+                    c = Counter([this_bin.origin])
+                    cluster_member_origins.append(c)
                 else:
                     # put into existing cluster
                     cluster_counts[new_k] = cluster_counts[new_k] + 1
                     cluster_sums[new_k] = cluster_sums[new_k] + current_data
-                    cluster_member_topids[new_k].append(this_bin.top_id)
-                    cluster_member_origins[new_k].append(this_bin.origin)
+                    assert cluster_member_topids[new_k] == this_bin.top_id
+                    cluster_member_origins[new_k].update([this_bin.origin])
+                end = time.time()
+                if self.verbose:
+                    DiscretisationUtils.timer("Assign to cluster", start, end)    
 
                 # assign object to the cluster new_k, regardless whether it's current or new
                 current_ks[n] = new_k 
@@ -149,17 +173,15 @@ class DpMixtureGibbs:
                 assert len(cluster_sums) == K, "len(cluster_sums)=%d != K=%d)" % (len(cluster_sums), K)                    
                 assert len(cluster_member_topids) == K, "len(cluster_member_topids)=%d != K=%d)" % (len(cluster_member_topids), K)                    
                 assert len(cluster_member_origins) == K, "len(cluster_member_origins)=%d != K=%d)" % (len(cluster_member_origins), K)
-                assert current_ks[n] < K, "current_ks[%d] = %d >= %d" % (n, current_ks[n])
+                assert current_ks[n] < K, "current_ks[%d]=%d but K=%d" % (n, current_ks[n], K)
         
             # end objects loop
             
             time_taken = time.time() - start_time
             if s >= self.burn_in:
-            
+                start = time.time()                                                                                        
                 print('\tSAMPLE\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))
-                self.Z = self.get_Z(self.N, K, current_ks)
-                self.ZZ_all = self.ZZ_all + self.get_ZZ(self.Z)
-                self.samples_obtained += 1
+                self.store_sample(K, current_ks)
             
                 # construct the actual alignment here
                 for k in range(K):
@@ -167,19 +189,35 @@ class DpMixtureGibbs:
                     members = [self.bins[a] for a in pos.tolist()]
                     memberstup = tuple(members)
                     self.matching_results.append(memberstup)
+                end = time.time()
+                if self.verbose:                
+                    DiscretisationUtils.timer("Store sample", start, end)    
             else:
                 print('\tBURN-IN\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))                
             sys.stdout.flush()
                         
         # end sample loop
         
+        self.samples_obtained = len(self.samples)
+        counter = 0
+        for samp in self.samples:
+            print('\tProcessing sample %d' % (counter))
+            K = samp[0]
+            current_ks = samp[1]
+            self.Z = self.get_Z(self.N, K, current_ks)
+            self.ZZ_all = self.ZZ_all + self.get_ZZ(self.Z)
+            counter += 1
         self.ZZ_all = self.ZZ_all / self.samples_obtained
         print "DONE!"
-        
+                
     def reindex(self, deleted_k, current_ks):
         pos = np.where(current_ks > deleted_k)
         current_ks[pos] = current_ks[pos] - 1
         return current_ks
+    
+    def store_sample(self, K, current_ks):
+        sample = (K, current_ks.copy())
+        self.samples.append(sample)
     
     def get_Z(self, N, K, current_ks):
         Z = sp.lil_matrix((N, K))
@@ -194,14 +232,3 @@ class DpMixtureGibbs:
     def __repr__(self):
         return "Gibbs sampling for DP mixture model\n" + self.hyperpars.__repr__() + \
         "\nn_samples = " + str(self.n_samples)
-        
-class DpMixtureVariational:
-    
-    def __init__(self, data, hyperpars):
-        ''' 
-        Clusters bins by DP mixture model using variational inference
-        '''
-        print 'DpMixtureVariational initialised'
-        
-    def run(self):
-        print "Hello"

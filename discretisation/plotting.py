@@ -56,7 +56,7 @@ class ClusterPlotter(object):
             x.append(v)       
         x = np.array(x) 
 #         x = x[~np.isnan(x)]    
-        plt.hist(x, 10)
+        plt.hist(x, 20)
         plt.title('Precursor mass clustering -- Z for file ' + str(file_idx))
         plt.xlabel('Probabilities')
         plt.ylabel('Count')
