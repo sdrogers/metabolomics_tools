@@ -9,8 +9,9 @@ from collections import namedtuple
 import csv
 
 sys.path.append('/home/joewandy/git/metabolomics_tools')
-from discretisation.models import HyperPars as DiscretisationHyperPars
+from discretisation.models import HyperPars
 from discretisation.discrete_mass_clusterer import DiscreteVB
+from discretisation.continuous_mass_clusterer import ContinuousVB
 from discretisation.plotting import ClusterPlotter
 from discretisation.preprocessing import FileLoader
 from ground_truth import GroundTruth
@@ -112,19 +113,20 @@ class SharedBinMatching:
             # plotter.plot_possible_hist(peak_data.possible, self.input_dir, self.hp.binning_mass_tol, self.hp.binning_rt_tol)
             
             print "Clustering file " + str(j) + " by precursor masses"
-            discHp = DiscretisationHyperPars()
-            discHp.rt_prec = 1.0/(self.hp.within_file_rt_sd*self.hp.within_file_rt_sd)
-            discHp.alpha = self.hp.alpha_mass
+            precursorHp = HyperPars()
+            precursorHp.rt_prec = 1.0/(self.hp.within_file_rt_sd*self.hp.within_file_rt_sd)
+            precursorHp.mass_prec = 1.0/(self.hp.mass_sd*self.hp.mass_sd)
+            precursorHp.alpha = self.hp.alpha_mass
             
-            discrete = DiscreteVB(peak_data, discHp)
-            # discrete = ContinuousVB(peak_data, hp)
+            precursor_clustering = DiscreteVB(peak_data, precursorHp)
+            # precursor_clustering = ContinuousVB(peak_data, precursorHp)
 
-            discrete.n_iterations = self.hp.mass_clustering_n_iterations
-            print discrete
-            discrete.run()
+            precursor_clustering.n_iterations = self.hp.mass_clustering_n_iterations
+            print precursor_clustering
+            precursor_clustering.run()
         
             # pick the non-empty bins for the second stage clustering
-            cluster_membership = (discrete.Z>self.hp.t)
+            cluster_membership = (precursor_clustering.Z>self.hp.t)
             s = cluster_membership.sum(0)
             nnz_idx = s.nonzero()[1]  
             nnz_idx = np.squeeze(np.asarray(nnz_idx)) # flatten the thing
@@ -135,14 +137,14 @@ class SharedBinMatching:
             file_bins.append(bins)
         
             # find the non-empty bins' posterior RT values
-            bin_rts = discrete.cluster_rt_mean[nnz_idx]
+            bin_rts = precursor_clustering.cluster_rt_mean[nnz_idx]
             # plotter.plot_bin_posterior_rt(bin_rts, j)
             bin_rts = bin_rts.ravel().tolist()
             posterior_bin_rts.extend(bin_rts)
             file_post_rts.append(bin_rts)
         
             # make some plots
-            cp = ClusterPlotter(peak_data, discrete)
+            cp = ClusterPlotter(peak_data, precursor_clustering)
             cp.summary(file_idx=j)
             # cp.plot_biggest(3)        
         
@@ -156,10 +158,10 @@ class SharedBinMatching:
                 bb = peak_data.bins[j] # copy of the common bin specific to file j
                 bb.add_feature(f)    
                 # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
-                bin_prob = discrete.Z[i, j]
-                trans_idx = discrete.possible[i, j]
+                bin_prob = precursor_clustering.Z[i, j]
+                trans_idx = precursor_clustering.possible[i, j]
                 tran = tmap[trans_idx]
-                msg = "{:s}@{:3.5f}({:.2f})".format(tran.name, bb.mass, bin_prob)            
+                msg = "{:s}@{:3.5f}({:.4f})".format(tran.name, bb.mass, bin_prob)            
                 self.annotate(f, msg)   
                 bin_id = bb.bin_id
                 bin_origin = bb.origin
@@ -177,7 +179,7 @@ class SharedBinMatching:
         assert N == len(posterior_bin_rts)
         
         # Here we cluster the 'concrete' common bins across files by their posterior RT values
-        hp = DiscretisationHyperPars()
+        hp = HyperPars()
         hp.rt_prec = 1.0/(self.hp.across_file_rt_sd*self.hp.across_file_rt_sd)
         hp.rt_prior_prec = 5E-3
         hp.alpha = self.hp.alpha_rt

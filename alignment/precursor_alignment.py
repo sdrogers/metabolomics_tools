@@ -82,6 +82,8 @@ def main(argv):
 
     alignment_hp.binning_mass_tol = options.binning_mass_tol
     alignment_hp.binning_rt_tol = options.binning_rt_tol
+    alignment_hp.across_file_mass_tol = options.binning_mass_tol * 2
+    alignment_hp.mass_sd = 1.0/10
     alignment_hp.within_file_rt_sd = options.within_file_rt_sd
     alignment_hp.across_file_rt_sd = options.across_file_rt_sd
     alignment_hp.alpha_mass = options.alpha_mass

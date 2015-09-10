@@ -18,6 +18,7 @@ class Discretiser(object):
 
         self.transformations = transformations
         self.mass_tol = mass_tol
+        self.across_file_mass_tol = mass_tol*4
         self.rt_tol = rt_tol
 
         self.adduct_name = np.array([t.name for t in self.transformations])[:,None]      # A x 1
@@ -72,44 +73,89 @@ class Discretiser(object):
 
     def run_multiple(self, data_list):
 
-        print "Discretising at mass_tol=" + str(self.mass_tol)
-        sys.stdout.write('Making top-level bins shared across files ')
+        print "Discretising at across_file_mass_tol=" + str(self.across_file_mass_tol) + " and within_file_mass_tol " + str(self.mass_tol)
         all_features = []
         for peak_data in data_list:
             all_features.extend(peak_data.features)    
         all_features = sorted(all_features, key = attrgetter('mass'))            
         N = len(all_features)        
+        print 'Making top-level bins shared across files '
                         
-        # define a set of top mass bins shared across files
-        top_bin_masses = []
-        for n in range(len(all_features)):
+#         # define a set of top mass bins shared across files
+#         top_bin_masses = []
+#         top_bin_features = {}
+#         k = 0
+#         for n in range(len(all_features)):
+# 
+#             if n%200 == 0:
+#                 sys.stdout.write('.')                             
+# 
+#             f = all_features[n]
+#             precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]        
+# 
+#             # check if any existing bin can fit this feature within some mass tolerance
+#             prior_masses = np.array(top_bin_masses)[:, None]
+#             mass_ok = utils.mass_match(precursor_mass, prior_masses, self.across_file_mass_tol)
+#                 
+#             # if no common bin fits this feature
+#             count = mass_ok.sum()
+#             if count==0:
+#                 # then make new bin from the feature
+#                 top_bin_masses.append(np.asscalar(precursor_mass))
+#                 top_bin_features[k] = [f]
+#                 k += 1
+#             else:
+#                 pos = np.nonzero(mass_ok)[0]
+#                 assert len(pos) == 1 # each feature goes into a top-level bin only
+#                 bin_idx = np.asscalar(pos)
+#                 top_bin_features[bin_idx].append(f)                
+# 
+#         K = len(top_bin_masses)
+#         top_bins = []
+#         for k in range(K):
+#             mass = top_bin_masses[k]
+#             pc_bin = self._make_precursor_bin(k, mass, 0, 0, self.across_file_mass_tol, 0)
+#             top_bins.append(pc_bin)            
+#         print
+#         print "Total top bins=" + str(K) + " total features=" + str(N)
+#         for tb in top_bins:
+#             print "\t" + str(tb)
+            
+        # create equally-spaced bins instead
+        feature_masses = np.array([f.mass for f in all_features])[:, None]              # N x 1
+        precursor_masses = (feature_masses - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]        
+        min_val = np.min(precursor_masses)
+        max_val = np.max(precursor_masses)
+        step = 1e-6 * self.across_file_mass_tol
+        start = min_val - step/2
+        end = max_val + step/2
+        all_bins = np.arange(start, end, step)
 
-            if n%200 == 0:
-                sys.stdout.write('.')                             
+        top_bin_features = {}   
+        top_bins = []     
+        k = 0
+        for i in range(len(all_bins)-1):
+            interval_from = all_bins[i]
+            interval_to = all_bins[i+1]
+            midpoint = interval_from + step/2
+            matching_idx = np.where((precursor_masses>interval_from) & (precursor_masses<interval_to))[0].tolist()
+            if len(matching_idx)>0:
+                # this candidate top-level bin is not empty, add all the features that fit coming across all files
+                fs = []
+                for pos in matching_idx:
+                    fs.append(all_features[pos])
+                top_bin_features[k] = fs
+                # create the new top-level bin too
+                tb = self._make_precursor_bin(k, midpoint, 0, 0, self.across_file_mass_tol, 0)
+                print "\t" + str(tb)
+                sys.stdout.flush()
+                top_bins.append(tb)            
+                k += 1
 
-            f = all_features[n]
-            precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]        
-
-            # check if any existing bin can fit this feature within some mass tolerance
-            prior_masses = np.array(top_bin_masses)[:, None]
-            mass_ok = utils.mass_match(precursor_mass, prior_masses, self.mass_tol)
-                
-            # if no common bin fits this feature
-            count = mass_ok.sum()
-            if count==0:
-                # then make new bin from the feature
-                top_bin_masses.append(np.asscalar(precursor_mass))
-
-        K = len(top_bin_masses)
-        top_bins = []
-        for k in range(K):
-            mass = top_bin_masses[k]
-            pc_bin = self._make_precursor_bin(k, mass, 0, 0, self.mass_tol, 0)
-            top_bins.append(pc_bin)            
+        K = len(top_bins)
         print
         print "Total top bins=" + str(K) + " total features=" + str(N)
-        for tb in top_bins:
-            print "\t" + str(tb)
+        sys.stdout.flush()
 
         # for each file, we want to instantiatie its concrete bins -- based on the top bins
         all_binning = []
@@ -131,17 +177,15 @@ class Discretiser(object):
                 
                 # find all features that can fit by mass in the top level bin
                 tb = top_bins[a]
-                fs = self._find_features(tb, features) 
-                if fs is not None:
-                    for f1 in fs:
-                        # make a new concrete bin from the feature based on mass and RT
-                        precursor_mass = (f1.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos] 
-                        precursor_mass = np.asscalar(precursor_mass)
-                        concrete_bin = PrecursorBin(k, precursor_mass, f1.rt, f1.intensity, self.mass_tol, self.rt_tol)
-                        concrete_bin.top_id = tb.bin_id
-                        concrete_bin.origin = j
-                        concrete_bins.append(concrete_bin)
-                        k += 1
+                fs = top_bin_features[a]
+                for f in fs:
+                    # make a new concrete bin from the feature based on mass and RT
+                    precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]                        
+                    concrete_bin = PrecursorBin(k, np.asscalar(precursor_mass), f.rt, f.intensity, self.mass_tol, self.rt_tol)
+                    concrete_bin.top_id = tb.bin_id
+                    concrete_bin.origin = j
+                    concrete_bins.append(concrete_bin)
+                    k += 1
 
             K = len(concrete_bins)
             print
