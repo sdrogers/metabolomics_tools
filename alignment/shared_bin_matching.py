@@ -177,20 +177,53 @@ class SharedBinMatching:
         # Second-stage clustering
         N = len(all_bins)
         assert N == len(posterior_bin_rts)
-        
-        # Here we cluster the 'concrete' common bins across files by their posterior RT values
+
         hp = HyperPars()
         hp.rt_prec = 1.0/(self.hp.across_file_rt_sd*self.hp.across_file_rt_sd)
-        hp.rt_prior_prec = 5E-3
-        hp.alpha = self.hp.alpha_rt
-        data = (posterior_bin_rts, all_bins)
-        dp = DpMixtureGibbs(data, hp, seed=1234567890)
-        dp.nsamps = self.hp.rt_clustering_nsamps
-        dp.burn_in = self.hp.rt_clustering_burnin
-        dp.run() 
+        hp.rt_prior_prec = 5E-6
+        hp.alpha = self.hp.alpha_rt        
+        matching_results = []
+        top_ids = [bb.top_id for bb in all_bins]
+        top_ids = list(set(top_ids))
+        for n in range(len(top_ids)):
+            selected_bins = []
+            selected_rts = []
+            print "Processing top_id " + str(top_ids[n])
+            for b in range(len(all_bins)):
+                bb = all_bins[b]
+                rt = posterior_bin_rts[b]
+                if bb.top_id == top_ids[n]:
+                    print " - " + str(bb) + " posterior RT = " + str(rt)
+                    selected_bins.append(bb)
+                    selected_rts.append(rt)
+            if top_ids[n] == 244:
+                print "Check here"
+            data = (selected_rts, selected_bins)
+            dp = DpMixtureGibbs(data, hp, seed=1234567890)
+            dp.nsamps = self.hp.rt_clustering_nsamps
+            dp.burn_in = self.hp.rt_clustering_burnin
+            dp.run() 
+            matching_results.extend(dp.matching_results)
+            
+        # all at once
+#         # Here we cluster the 'concrete' common bins across files by their posterior RT values
+#         hp = HyperPars()
+#         hp.rt_prec = 1.0/(self.hp.across_file_rt_sd*self.hp.across_file_rt_sd)
+#         hp.rt_prior_prec = 5E-3
+#         hp.alpha = self.hp.alpha_rt
+#         for b in range(len(all_bins)):
+#             bb = all_bins[b]
+#             rt = posterior_bin_rts[b]
+#             print "BIN " + str(bb) + " POSTERIOR RT " + str(rt)
+#         data = (posterior_bin_rts, all_bins)
+#         dp = DpMixtureGibbs(data, hp, seed=1234567890)
+#         dp.nsamps = self.hp.rt_clustering_nsamps
+#         dp.burn_in = self.hp.rt_clustering_burnin
+#         dp.run() 
 
         # plotter.plot_ZZ_all(dp.ZZ_all)
-        return dp.matching_results, dp.samples_obtained
+        samples_obtained = self.hp.rt_clustering_nsamps - self.hp.rt_clustering_burnin
+        return matching_results, samples_obtained
 
     def construct_alignment(self, matching_results, samples_obtained, show_singleton=False):
         
@@ -302,16 +335,27 @@ class SharedBinMatching:
 #                                 processed.add(closest)
 #                     tup = tuple(temp)
 #                     results.append(tup)  
+
+            # generate all combinations of size 2
+            processed = set()
             for bb1 in members:
                 for bb2 in members:
                     if bb1.origin == bb2.origin:
                         continue
+                    if bb1 in processed or bb2 in processed:
+                        continue
                     features1 = bb1.features
                     features2 = bb2.features
                     for f1 in features1:
+                        if f1 in processed:
+                            continue
                         for f2 in features2:
+                            if f2 in processed:
+                                continue
                             tup = (f1, f2)
                             results.append(tup)
+                            processed.add(f2)
+                        processed.add(f1)
                         
         return results
     

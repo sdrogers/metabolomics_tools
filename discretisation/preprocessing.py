@@ -18,7 +18,7 @@ class Discretiser(object):
 
         self.transformations = transformations
         self.mass_tol = mass_tol
-        self.across_file_mass_tol = mass_tol*4
+        self.across_file_mass_tol = mass_tol*15
         self.rt_tol = rt_tol
 
         self.adduct_name = np.array([t.name for t in self.transformations])[:,None]      # A x 1
@@ -121,23 +121,28 @@ class Discretiser(object):
 #         for tb in top_bins:
 #             print "\t" + str(tb)
             
-        # create equally-spaced bins instead
+        # create equally-spaced bins from start to end
         feature_masses = np.array([f.mass for f in all_features])[:, None]              # N x 1
         precursor_masses = (feature_masses - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]        
         min_val = np.min(precursor_masses)
         max_val = np.max(precursor_masses)
-        step = 1e-6 * self.across_file_mass_tol
-        start = min_val - step/2
-        end = max_val + step/2
-        all_bins = np.arange(start, end, step)
-
+        
+        # iteratively create bins
+        all_bins = []
+        bin_start, bin_end = utils.mass_range(min_val, self.across_file_mass_tol)
+        while bin_end < max_val:
+            # store the current bin centre
+            bin_centre = utils.mass_centre(bin_start, self.across_file_mass_tol)
+            all_bins.append(bin_centre)
+            # advance the bin
+            bin_start, bin_end = utils.mass_range(bin_centre, self.across_file_mass_tol)
+            bin_start = bin_end
+        
         top_bin_features = {}   
         top_bins = []     
         k = 0
-        for i in range(len(all_bins)-1):
-            interval_from = all_bins[i]
-            interval_to = all_bins[i+1]
-            midpoint = interval_from + step/2
+        for bin_centre in all_bins:
+            interval_from, interval_to = utils.mass_range(bin_centre, self.across_file_mass_tol)
             matching_idx = np.where((precursor_masses>interval_from) & (precursor_masses<interval_to))[0].tolist()
             if len(matching_idx)>0:
                 # this candidate top-level bin is not empty, add all the features that fit coming across all files
@@ -146,7 +151,7 @@ class Discretiser(object):
                     fs.append(all_features[pos])
                 top_bin_features[k] = fs
                 # create the new top-level bin too
-                tb = self._make_precursor_bin(k, midpoint, 0, 0, self.across_file_mass_tol, 0)
+                tb = self._make_precursor_bin(k, bin_centre, 0, 0, self.across_file_mass_tol, 0)
                 print "\t" + str(tb)
                 sys.stdout.flush()
                 top_bins.append(tb)            

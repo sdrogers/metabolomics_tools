@@ -51,6 +51,10 @@ def mass_range(mass_centre, mass_tol):
     mass_end = mass_centre + interval
     return (mass_start, mass_end)
 
+def mass_centre(mass_start, mass_tol):
+    mass_centre = mass_start / (1 - mass_tol * 1e-6)
+    return mass_centre    
+
 def rt_range(rt_centre, rt_tol):
     # must be the same as rt_match()
     rt_start = rt_centre - rt_tol
