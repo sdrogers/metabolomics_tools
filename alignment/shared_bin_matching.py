@@ -259,6 +259,8 @@ class SharedBinMatching:
         for item in sorted_list:
             members = item[0]
             prob = item[1]
+            if i == 1121:
+                print "Stop here"
             matched_list = self.match_features(members)
             for features in matched_list:
                 if len(features)==1 and not show_singleton:
@@ -342,8 +344,6 @@ class SharedBinMatching:
             for bb1 in members:
                 for bb2 in members:
                     if bb1.origin == bb2.origin:
-                        continue
-                    if bb1 in processed or bb2 in processed:
                         continue
                     features1 = bb1.features
                     features2 = bb2.features
