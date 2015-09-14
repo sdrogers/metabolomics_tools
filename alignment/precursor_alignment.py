@@ -38,7 +38,7 @@ def get_options(argv):
     parser.add_argument('-within_file_rt_sd', help='Within-file RT standard deviation.', type=float)
     parser.set_defaults(within_file_rt_sd=2.5)
     parser.add_argument('-across_file_binning_mass_tol', help='mass tolerance for binning.', type=float)
-    parser.set_defaults(across_file_mass_tol=4.0)
+    parser.set_defaults(across_file_binning_mass_tol=4.0)
     parser.add_argument('-across_file_rt_sd', help='Across-file RT standard deviation.', type=float)
     parser.set_defaults(across_file_rt_sd=30.0)
     parser.add_argument('-alpha_mass', help='Dirichlet prior for precursor mass clustering in the same file.', type=float)
@@ -48,11 +48,11 @@ def get_options(argv):
     parser.add_argument('-t', help='Threshold for precursor cluster membership.', type=float)
     parser.set_defaults(t=0.25)
     parser.add_argument('-mass_clustering_n_iterations', help='No. of iterations for variational inference for precursor clustering in the same file.', type=int)
-    parser.set_defaults(mass_clustering_n_iterations=10)
+    parser.set_defaults(mass_clustering_n_iterations=100)
     parser.add_argument('-rt_clustering_nsamps', help='Total no. of samples for RT clustering across files.', type=int)
-    parser.set_defaults(rt_clustering_nsamps=20)
+    parser.set_defaults(rt_clustering_nsamps=200)
     parser.add_argument('-rt_clustering_burnin', help='No. of burn-in samples for RT clustering across files.', type=int)
-    parser.set_defaults(rt_clustering_burnin=10)
+    parser.set_defaults(rt_clustering_burnin=100)
     
     # parse it
     options = parser.parse_args(argv)

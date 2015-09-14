@@ -190,7 +190,9 @@ class SharedBinMatching:
         for n in range(len(top_ids)):
             selected_bins = []
             selected_rts = []
-            print "Processing top_id " + str(top_ids[n]) + "\t\t(" + str(n) + "/" + str(len(top_ids)) + ")"
+            print "Processing top_id " + str(top_ids[n]) + "\t\t(" + str(n) + "/" + str(len(top_ids)) + ")",
+            if self.verbose:
+                print
             for b in range(len(all_bins)):
                 bb = all_bins[b]
                 rt = posterior_bin_rts[b]
@@ -205,6 +207,7 @@ class SharedBinMatching:
             dp.burn_in = self.hp.rt_clustering_burnin
             dp.run() 
             matching_results.extend(dp.matching_results)
+            print "\tlast_K = " + str(dp.last_K)
             
         # all at once
 #         # Here we cluster the 'concrete' common bins across files by their posterior RT values
@@ -309,54 +312,54 @@ class SharedBinMatching:
                 results.append(tup)                        
         else:
             # need to match across the same bins
-#             processed = set()
-#             for bb1 in members:
-#                 features1 = bb1.features
-#                 for f1 in features1:
-#                     if f1 in processed:
-#                         continue
-#                     # find features in other bins that are the closest in mass to f1
-#                     temp = []
-#                     temp.append(f1)
-#                     processed.add(f1)
-#                     for bb2 in members:
-#                         if bb1.origin == bb2.origin:
-#                             continue
-#                         else:
-#                             features2 = bb2.features
-#                             closest = None
-#                             min_diff = float('inf')
-#                             for f2 in features2:
-#                                 if f2 in processed:
-#                                     continue
-#                                 diff = abs(f1.mass - f2.mass)
-#                                 if diff < min_diff:
-#                                     min_diff = diff
-#                                     closest = f2
-#                             if closest is not None:
-#                                 temp.append(closest)
-#                                 processed.add(closest)
-#                     tup = tuple(temp)
-#                     results.append(tup)  
-
-            # generate all combinations of size 2
             processed = set()
             for bb1 in members:
-                for bb2 in members:
-                    if bb1.origin == bb2.origin:
+                features1 = bb1.features
+                for f1 in features1:
+                    if f1 in processed:
                         continue
-                    features1 = bb1.features
-                    features2 = bb2.features
-                    for f1 in features1:
-                        if f1 in processed:
+                    # find features in other bins that are the closest in mass to f1
+                    temp = []
+                    temp.append(f1)
+                    processed.add(f1)
+                    for bb2 in members:
+                        if bb1.origin == bb2.origin:
                             continue
-                        for f2 in features2:
-                            if f2 in processed:
-                                continue
-                            tup = (f1, f2)
-                            results.append(tup)
-                            processed.add(f2)
-                        processed.add(f1)
+                        else:
+                            features2 = bb2.features
+                            closest = None
+                            min_diff = float('inf')
+                            for f2 in features2:
+                                if f2 in processed:
+                                    continue
+                                diff = abs(f1.mass - f2.mass)
+                                if diff < min_diff:
+                                    min_diff = diff
+                                    closest = f2
+                            if closest is not None:
+                                temp.append(closest)
+                                processed.add(closest)
+                    tup = tuple(temp)
+                    results.append(tup)  
+
+#             # generate all combinations of size 2
+#             processed = set()
+#             for bb1 in members:
+#                 for bb2 in members:
+#                     if bb1.origin == bb2.origin:
+#                         continue
+#                     features1 = bb1.features
+#                     features2 = bb2.features
+#                     for f1 in features1:
+#                         if f1 in processed:
+#                             continue
+#                         for f2 in features2:
+#                             if f2 in processed:
+#                                 continue
+#                             tup = (f1, f2)
+#                             results.append(tup)
+#                             processed.add(f2)
+#                         processed.add(f1)
                         
         return results
     

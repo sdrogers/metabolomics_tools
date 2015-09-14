@@ -184,7 +184,7 @@ class DpMixtureGibbs:
             sys.stdout.flush()
                         
         # end sample loop
-        
+        self.last_K = K        
         self.ZZ_all = self.ZZ_all / self.samples_obtained
         if self.verbose:
             print "DONE!"
