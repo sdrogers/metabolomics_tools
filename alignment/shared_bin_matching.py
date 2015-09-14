@@ -23,22 +23,25 @@ AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 
 class SharedBinMatching:
     
-    def __init__(self, input_dir, database_file, transformation_file, hyperpars, synthetic=False, limit_n=-1, gt_file=None):
+    def __init__(self, input_dir, database_file, transformation_file, hyperpars, 
+                 synthetic=False, limit_n=-1, gt_file=None, verbose=False, seed=-1):
         ''' 
         Clusters bins by DP mixture model using variational inference
         '''
-        print 'DpMixtureVariational initialised'
         loader = FileLoader()
         self.hp = hyperpars
         self.data_list = loader.load_model_input(input_dir, database_file, transformation_file, 
-                                                 self.hp.binning_mass_tol, self.hp.binning_rt_tol, 
-                                                 synthetic=synthetic, limit_n=limit_n)
+                                                 self.hp.binning_mass_tol, self.hp.binning_rt_tol,
+                                                 self.hp.across_file_mass_tol, synthetic=synthetic, 
+                                                 limit_n=limit_n, verbose=verbose)
         sys.stdout.flush()
         self.file_list = loader.file_list
         self.input_dir = input_dir
         self.database_file = database_file
         self.transformation_file = transformation_file
         self.gt_file = gt_file
+        self.verbose = verbose
+        self.seed = seed
 
         self.annotations = {}
         
@@ -151,7 +154,6 @@ class SharedBinMatching:
             # assign peaks into their respective bins, 
             # this makes it easier when matching peaks across the same bins later
             # note: a peak can belong to multiple bins, depending on the choice of threshold t
-            print "Annotating peaks by transformations"
             cx = cluster_membership.tocoo()
             for i,j,v in itertools.izip(cx.row, cx.col, cx.data):
                 f = peak_data.features[i]
@@ -188,18 +190,17 @@ class SharedBinMatching:
         for n in range(len(top_ids)):
             selected_bins = []
             selected_rts = []
-            print "Processing top_id " + str(top_ids[n])
+            print "Processing top_id " + str(top_ids[n]) + " (" + str(n) + "/" + str(len(top_ids)) + ")"
             for b in range(len(all_bins)):
                 bb = all_bins[b]
                 rt = posterior_bin_rts[b]
                 if bb.top_id == top_ids[n]:
-                    print " - " + str(bb) + " posterior RT = " + str(rt)
+                    if self.verbose:
+                        print " - " + str(bb) + " posterior RT = " + str(rt)
                     selected_bins.append(bb)
                     selected_rts.append(rt)
-            if top_ids[n] == 244:
-                print "Check here"
             data = (selected_rts, selected_bins)
-            dp = DpMixtureGibbs(data, hp, seed=1234567890)
+            dp = DpMixtureGibbs(data, hp, seed=self.seed)
             dp.nsamps = self.hp.rt_clustering_nsamps
             dp.burn_in = self.hp.rt_clustering_burnin
             dp.run() 

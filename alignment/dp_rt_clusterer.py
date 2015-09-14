@@ -12,11 +12,13 @@ from numpy.random import RandomState
 
 class DpMixtureGibbs:
     
-    def __init__(self, data, hyperpars, seed=-1):
+    def __init__(self, data, hyperpars, seed=-1, verbose=False):
         ''' 
         Clusters bins by DP mixture model using Gibbs sampling
         '''
-        print 'DpMixtureGibbs initialised'
+        self.verbose = verbose
+        if self.verbose:
+            print 'DpMixtureGibbs initialised'
         self.rts = np.array(data[0])
         self.bins = data[1]
         self.N = len(self.rts)
@@ -26,8 +28,9 @@ class DpMixtureGibbs:
         self.alpha = float(hyperpars.alpha)
         self.nsamps = 200
         self.burn_in = 100
-        if seed > 0:
-            self.random_state = RandomState(seed)
+        self.seed = int(seed)
+        if self.seed > 0:
+            self.random_state = RandomState(self.seed)
         else:
             self.random_state = RandomState()        
         
@@ -161,7 +164,8 @@ class DpMixtureGibbs:
             time_taken = time.time() - start_time
             if s >= self.burn_in:
             
-                print('\tSAMPLE\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))
+                if self.verbose:
+                    print('\tSAMPLE\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))
                 self.Z = self.get_Z(self.N, K, current_ks)
                 self.ZZ_all = self.ZZ_all + self.get_ZZ(self.Z)
                 self.samples_obtained += 1
@@ -171,16 +175,19 @@ class DpMixtureGibbs:
                     pos = np.flatnonzero(current_ks==k)
                     members = [self.bins[a] for a in pos.tolist()]
                     memberstup = tuple(members)
-                    print "sample=" + str(s) + " k=" + str(k) + " memberstup=" + str(memberstup)                    
+                    if self.verbose:
+                        print "sample=" + str(s) + " k=" + str(k) + " memberstup=" + str(memberstup)                    
                     self.matching_results.append(memberstup)
             else:
-                print('\tBURN-IN\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))                
+                if self.verbose:
+                    print('\tBURN-IN\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))                
             sys.stdout.flush()
                         
         # end sample loop
         
         self.ZZ_all = self.ZZ_all / self.samples_obtained
-        print "DONE!"
+        if self.verbose:
+            print "DONE!"
         
     def reindex(self, deleted_k, current_ks):
         pos = np.where(current_ks > deleted_k)
@@ -200,14 +207,3 @@ class DpMixtureGibbs:
     def __repr__(self):
         return "Gibbs sampling for DP mixture model\n" + self.hyperpars.__repr__() + \
         "\nn_samples = " + str(self.n_samples)
-        
-class DpMixtureVariational:
-    
-    def __init__(self, data, hyperpars):
-        ''' 
-        Clusters bins by DP mixture model using variational inference
-        '''
-        print 'DpMixtureVariational initialised'
-        
-    def run(self):
-        print "Hello"
