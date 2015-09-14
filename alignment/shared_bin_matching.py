@@ -190,7 +190,7 @@ class SharedBinMatching:
         for n in range(len(top_ids)):
             selected_bins = []
             selected_rts = []
-            print "Processing top_id " + str(top_ids[n]) + " (" + str(n) + "/" + str(len(top_ids)) + ")"
+            print "Processing top_id " + str(top_ids[n]) + "\t\t(" + str(n) + "/" + str(len(top_ids)) + ")"
             for b in range(len(all_bins)):
                 bb = all_bins[b]
                 rt = posterior_bin_rts[b]

@@ -219,7 +219,10 @@ class FileLoader:
         """ Load everything that a clustering model requires """
 
         # load database and transformations
-        database = self.load_database(database_file)
+        if database_file is not None:
+            database = self.load_database(database_file)
+        else:
+            database = None
         transformations = self.load_transformation(transformation_file)
 
         # if this is a directory, process all files inside
