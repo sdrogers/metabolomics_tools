@@ -71,11 +71,17 @@ class AlignmentRow(object):
             total_mass = total_mass + feature.mass
         return total_mass / len(self.features)
     
-    def get_mass_range(self, dmz):
+    def get_mass_range(self, dmz, absolute_mass_tolerance=True):
         '''Computes tolerance window for mass difference'''
         average_mass = self.get_average_mass()
-        mass_lower = average_mass - dmz
-        mass_upper = average_mass + dmz
+        if absolute_mass_tolerance:
+            mass_lower = average_mass - dmz
+            mass_upper = average_mass + dmz
+        else:
+            mass_centre = average_mass
+            interval = mass_centre * dmz * 1e-6
+            mass_lower = mass_centre - interval
+            mass_upper = mass_centre + interval
         return (mass_lower, mass_upper)
 
     def get_average_rt(self):
@@ -99,14 +105,14 @@ class AlignmentRow(object):
             total_intensity = total_intensity + feature.intensity
         return total_intensity / len(self.features)    
     
-    def is_within_tolerance(self, another_row, dmz, drt):
+    def is_within_tolerance(self, another_row, dmz, drt, absolute_mass_tolerance=True):
         if another_row.aligned == True:
             return False
         else:
             # only process unaligned rows
             if dmz > 0:
                 mass_to_check = another_row.get_average_mass()
-                mass_lower, mass_upper = self.get_mass_range(dmz)
+                mass_lower, mass_upper = self.get_mass_range(dmz, absolute_mass_tolerance=absolute_mass_tolerance)
                 if mass_lower < mass_to_check < mass_upper:
                     if drt > 0:
                         # need to check rt as well

@@ -35,6 +35,7 @@ class MaxWeightedMatching:
         self.burn_in = int(self.options.burn_in)
         self.skip_matching = self.options.skip_matching
         self.verbose = self.options.verbose
+        self.absolute_mass_tolerance = self.options.absolute_mass_tolerance
 
     def do_matching(self):
         
@@ -138,32 +139,51 @@ class MaxWeightedMatching:
         T = IntervalTree(women.rows)
         for i in range(n_row):
             man = men.rows[i]
-            mass_lower, mass_upper = man.get_mass_range(dmz)
+            mass_lower, mass_upper = man.get_mass_range(dmz, absolute_mass_tolerance=self.absolute_mass_tolerance)
             candidate_women = T.search(int(mass_lower), int(mass_upper))
             for woman in candidate_women:
-                if man.is_within_tolerance(woman, dmz, drt):
+                if man.is_within_tolerance(woman, dmz, drt, absolute_mass_tolerance=self.absolute_mass_tolerance):
                     dist = self.compute_dist(man, woman, dmz, drt)
                     j = woman.row_id
                     dist_arr[i, j] = dist
                     if dist > max_dist:
                         max_dist = dist
 
-        # make this into a score matrix
-        dist_arr = dist_arr.tocoo()
-        score_arr = lil_matrix((n_row, n_col))
-        Q = lil_matrix((n_row, n_col))
-        max_score = 0
-        # see http://stackoverflow.com/questions/4319014/iterating-through-a-scipy-sparse-vector-or-matrix
-        for i, j, v in itertools.izip(dist_arr.row, dist_arr.col, dist_arr.data):
-            score = 1-(v/max_dist)
-            score_arr[i, j] = score
-            Q[i, j] = 1
-            if score > max_score:
-                max_score = score
-                                  
-        # normalise
-        score_arr = score_arr * (1/max_score)
-        return score_arr, Q          
+        try:
+
+            # make this into a score matrix
+            dist_arr = dist_arr.tocoo()
+            score_arr = lil_matrix((n_row, n_col))
+            Q = lil_matrix((n_row, n_col))
+            max_score = 0
+            # see http://stackoverflow.com/questions/4319014/iterating-through-a-scipy-sparse-vector-or-matrix
+            for i, j, v in itertools.izip(dist_arr.row, dist_arr.col, dist_arr.data):
+                score = 1-(v/max_dist)
+                score_arr[i, j] = score
+                Q[i, j] = 1
+                if score > max_score:
+                    max_score = score
+                                      
+            # normalise
+            score_arr = score_arr * (1/max_score)
+            return score_arr, Q          
+
+        except ZeroDivisionError:
+
+            # make this into a score matrix
+            dist_arr = dist_arr.tocoo()
+            score_arr = lil_matrix((n_row, n_col))
+            Q = lil_matrix((n_row, n_col))
+            max_score = 0
+            # see http://stackoverflow.com/questions/4319014/iterating-through-a-scipy-sparse-vector-or-matrix
+            for i, j, v in itertools.izip(dist_arr.row, dist_arr.col, dist_arr.data):
+                score = 1-v
+                score_arr[i, j] = score
+                Q[i, j] = 1
+                if score > max_score:
+                    max_score = score
+                                      
+            return score_arr, Q          
         
     def combine_scores(self, W, A, B, Q):
 
@@ -217,10 +237,15 @@ class MaxWeightedMatching:
             man = self.men.rows[i]
             woman = self.women.rows[j]                
             G.add_edge(man, woman, weight=v)
-            
-        mate = matching.max_weight_matching(G, maxcardinality=True)
         
-        return mate
+        # mate will contains duplicates, where the same {key:value} also occurs alongside {value:key}    
+        mate = matching.max_weight_matching(G, maxcardinality=True)
+        unique_mate = {}
+        for key, value in mate.iteritems():
+            if key not in unique_mate.values():
+                unique_mate[key] = value
+        
+        return unique_mate
     
     def approximate_matching_networkx(self, men, women, score_arr):
 

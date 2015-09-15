@@ -14,7 +14,10 @@ from discretisation.discrete_mass_clusterer import DiscreteVB
 from discretisation.continuous_mass_clusterer import ContinuousVB
 from discretisation.plotting import ClusterPlotter
 from discretisation.preprocessing import FileLoader
+from discretisation import utils
 from ground_truth import GroundTruth
+from models import AlignmentFile, Feature, AlignmentRow
+from matching import MaxWeightedMatching
 
 import shared_bin_matching_plotter as plotter
 from dp_rt_clusterer import DpMixtureGibbs
@@ -42,24 +45,26 @@ class SharedBinMatching:
         self.gt_file = gt_file
         self.verbose = verbose
         self.seed = seed
+        self.full_matching = False
 
         self.annotations = {}
         
     def run(self, show_singleton=False):
 
         print "Running first-stage clustering"
-        all_bins, posterior_bin_rts = self.first_stage_clustering()
+        all_bins, posterior_bin_rts = self._first_stage_clustering()
         
         print "Running second-stage clustering"
-        matching_results, samples_obtained = self.second_stage_clustering(all_bins, posterior_bin_rts)
+        matching_results, samples_obtained = self._second_stage_clustering(all_bins, posterior_bin_rts)
 
         print "Constructing alignment of peak features"
-        alignment_results = self.construct_alignment(matching_results, samples_obtained, show_singleton=show_singleton)
+        alignment_results = self._construct_alignment(matching_results, samples_obtained, show_plot=False)
+        self._print_report(alignment_results, show_singleton=False)
         self.alignment_results = alignment_results        
         
         if self.gt_file is not None:           
             print "Evaluating performance"
-            self.evaluate_performance()
+            self._evaluate_performance()
         
     def save_output(self, output_path):
         
@@ -96,13 +101,13 @@ class SharedBinMatching:
         
         print 'Output written to', output_path
         
-    def first_stage_clustering(self):
+    def _first_stage_clustering(self):
         
         # First stage clustering. 
         # Here we cluster peak features by their precursor masses to the common bins shared across files.
 
         any_transformations = self.data_list[0].transformations
-        tmap = self.get_transformation_map(any_transformations)
+        tmap = self._get_transformation_map(any_transformations)
         all_bins = []
         posterior_bin_rts = []    
         
@@ -164,17 +169,17 @@ class SharedBinMatching:
                 trans_idx = precursor_clustering.possible[i, j]
                 tran = tmap[trans_idx]
                 msg = "{:s}@{:3.5f}({:.4f})".format(tran.name, bb.mass, bin_prob)            
-                self.annotate(f, msg)   
+                self._annotate(f, msg)   
                 bin_id = bb.bin_id
                 bin_origin = bb.origin
-                msg = "bin_{:d}_origin{:d}".format(bin_id, bin_origin)                            
-                self.annotate(f, msg)
+                msg = "bin_{:d}_file{:d}".format(bin_id, bin_origin)                            
+                self._annotate(f, msg)
             print
                 
         # plotter.plot_bin_vs_bin(file_bins, file_post_rts)
         return all_bins, posterior_bin_rts
 
-    def second_stage_clustering(self, all_bins, posterior_bin_rts):
+    def _second_stage_clustering(self, all_bins, posterior_bin_rts):
 
         # Second-stage clustering
         N = len(all_bins)
@@ -209,30 +214,13 @@ class SharedBinMatching:
             matching_results.extend(dp.matching_results)
             print "\tlast_K = " + str(dp.last_K)
             
-        # all at once
-#         # Here we cluster the 'concrete' common bins across files by their posterior RT values
-#         hp = HyperPars()
-#         hp.rt_prec = 1.0/(self.hp.across_file_rt_sd*self.hp.across_file_rt_sd)
-#         hp.rt_prior_prec = 5E-3
-#         hp.alpha = self.hp.alpha_rt
-#         for b in range(len(all_bins)):
-#             bb = all_bins[b]
-#             rt = posterior_bin_rts[b]
-#             print "BIN " + str(bb) + " POSTERIOR RT " + str(rt)
-#         data = (posterior_bin_rts, all_bins)
-#         dp = DpMixtureGibbs(data, hp, seed=1234567890)
-#         dp.nsamps = self.hp.rt_clustering_nsamps
-#         dp.burn_in = self.hp.rt_clustering_burnin
-#         dp.run() 
-
         # plotter.plot_ZZ_all(dp.ZZ_all)
         samples_obtained = self.hp.rt_clustering_nsamps - self.hp.rt_clustering_burnin
         return matching_results, samples_obtained
 
-    def construct_alignment(self, matching_results, samples_obtained, show_singleton=False):
+    def _construct_alignment(self, matching_results, samples_obtained, show_plot=False):
         
         # count frequencies of aligned bins produced across the Gibbs samples
-        print "Counting frequencies of aligned peaksets"
         counter = dict()
         for bins in matching_results:
             if len(bins) > 1:
@@ -244,57 +232,63 @@ class SharedBinMatching:
                 counter[bins] += 1
         
         # normalise the counts
-        print "Normalising counts"
         S = samples_obtained
         for key, value in counter.items():
             new_value = float(value)/S
             counter[key] = new_value       
             
-        # print report of aligned peaksets in descending order of probabilities
+        # construct aligned peaksets in descending order of probabilities
         alignment_results = []
+        sorted_list = sorted(counter.items(), key=itemgetter(1), reverse=True)
+        probs = []
+        for item in sorted_list:
+            members = item[0]
+            prob = item[1]
+            print members
+            if members[0].bin_id == 911:
+                print "Stop here"
+            matched_list = self._match_features(members) # members is a tuple of bins
+            for features in matched_list:
+                res = AlignmentResults(peakset=features, prob=prob)
+                alignment_results.append(res)
+                
+        if show_plot:
+            probs = np.array(probs) 
+            plotter.plot_aligned_peaksets_probabilities(probs)
+
+        return alignment_results
+    
+    def _print_report(self, alignment_results, show_singleton=False):
         print 
         print "=========================================================================="
         print "REPORT"
         print "=========================================================================="
-        sorted_list = sorted(counter.items(), key=itemgetter(1), reverse=True)
-        probs = []
         i = 0
-        for item in sorted_list:
-            members = item[0]
-            prob = item[1]
-            if i == 1121:
-                print "Stop here"
-            matched_list = self.match_features(members)
-            for features in matched_list:
-                if len(features)==1 and not show_singleton:
-                    continue
-                mzs = np.array([f.mass for f in features])
-                rts = np.array([f.rt for f in features])
-                avg_mz = np.mean(mzs)
-                avg_rt = np.mean(rts)
-                print str(i+1) + ". avg m/z=" + str(avg_mz) + " avg RT=" + str(avg_rt) + " prob=" + str(prob)
-                for f in features:
-                    msg = self.annotations[f]            
-                    output = "\tfeature_id {:5d} file_id {:d} mz {:3.5f} RT {:5.2f} intensity {:.4e}\t{:s}".format(
-                                f.feature_id, f.file_id, f.mass, f.rt, f.intensity, msg)
-                    print(output) 
-                probs.append(prob)
-                i += 1             
-                res = AlignmentResults(peakset=features, prob=prob)
-                alignment_results.append(res)
-                
-        probs = np.array(probs) 
-        plotter.plot_aligned_peaksets_probabilities(probs)
-        return alignment_results
+        for res in alignment_results:
+            features = res.peakset
+            prob = res.prob
+            if len(features)==1 and not show_singleton:
+                continue
+            mzs = np.array([f.mass for f in features])
+            rts = np.array([f.rt for f in features])
+            avg_mz = np.mean(mzs)
+            avg_rt = np.mean(rts)
+            print str(i+1) + ". avg m/z=" + str(avg_mz) + " avg RT=" + str(avg_rt) + " prob=" + str(prob)
+            for f in features:
+                msg = self.annotations[f]            
+                output = "\tfeature_id {:5d} file_id {:d} mz {:3.5f} RT {:5.2f} intensity {:.4e}\t{:s}".format(
+                            f.feature_id, f.file_id, f.mass, f.rt, f.intensity, msg)
+                print(output) 
+            i += 1                         
                        
-    def annotate(self, feature, msg):
+    def _annotate(self, feature, msg):
         if feature in self.annotations:
             current_msg = self.annotations[feature]
             self.annotations[feature] = current_msg + ";" + msg
         else:
             self.annotations[feature] = msg
         
-    def get_transformation_map(self, transformations):
+    def _get_transformation_map(self, transformations):
         tmap = {}
         t = 1
         for trans in transformations:
@@ -302,7 +296,7 @@ class SharedBinMatching:
             t += 1
         return tmap
         
-    def match_features(self, members):
+    def _match_features(self, members):
         results = []
         if len(members) == 1:
             # just singleton things
@@ -311,58 +305,115 @@ class SharedBinMatching:
                 tup = (f, )
                 results.append(tup)                        
         else:
-            # need to match across the same bins
-            processed = set()
-            for bb1 in members:
-                features1 = bb1.features
-                for f1 in features1:
-                    if f1 in processed:
-                        continue
-                    # find features in other bins that are the closest in mass to f1
-                    temp = []
-                    temp.append(f1)
-                    processed.add(f1)
-                    for bb2 in members:
-                        if bb1.origin == bb2.origin:
-                            continue
-                        else:
-                            features2 = bb2.features
-                            closest = None
-                            min_diff = float('inf')
-                            for f2 in features2:
-                                if f2 in processed:
-                                    continue
-                                diff = abs(f1.mass - f2.mass)
-                                if diff < min_diff:
-                                    min_diff = diff
-                                    closest = f2
-                            if closest is not None:
-                                temp.append(closest)
-                                processed.add(closest)
-                    tup = tuple(temp)
-                    results.append(tup)  
-
-#             # generate all combinations of size 2
-#             processed = set()
-#             for bb1 in members:
-#                 for bb2 in members:
-#                     if bb1.origin == bb2.origin:
-#                         continue
-#                     features1 = bb1.features
-#                     features2 = bb2.features
-#                     for f1 in features1:
-#                         if f1 in processed:
-#                             continue
-#                         for f2 in features2:
-#                             if f2 in processed:
-#                                 continue
-#                             tup = (f1, f2)
-#                             results.append(tup)
-#                             processed.add(f2)
-#                         processed.add(f1)
-                        
+            if self.full_matching:
+                results = self._hungarian_matching(members)
+            else:
+                results = self._simple_matching(members)
         return results
-    
-    def evaluate_performance(self):
+
+    def _hungarian_matching(self, members):
+
+        file_id = 0
+        alignment_files = []
+        alignment_feature_to_discrete_feature = {}
+
+        # convert each bin in members into an alignment file        
+        for bb in members:
+            this_file = AlignmentFile("file_" + str(file_id), False)
+            peak_id = 0
+            row_id = 0
+            for discrete_feature in bb.features:                
+                
+                # initialise alignment feature
+                mass = discrete_feature.mass
+                charge = 1
+                intensity = discrete_feature.intensity
+                rt = discrete_feature.rt
+                alignment_feature = Feature(peak_id, mass, charge, intensity, rt, this_file)
+                alignment_feature_to_discrete_feature[alignment_feature] = discrete_feature
+
+                # initialise row
+                alignment_row = AlignmentRow(row_id)
+                alignment_row.features.append(alignment_feature)
+
+                peak_id = peak_id + 1
+                row_id = row_id + 1
+                this_file.rows.append(alignment_row)
+            
+            file_id += 1
+            alignment_files.append(this_file)
+
+        # do the matching
+        Options = namedtuple('Options', 'dmz drt alignment_method exact_match use_group use_peakshape absolute_mass_tolerance mcs grouping_method alpha grt dp_alpha num_samples burn_in skip_matching always_recluster verbose')
+        my_options = Options(dmz = self.hp.across_file_mass_tol, drt = self.hp.across_file_rt_sd, alignment_method = 'mw', exact_match = True, 
+                             use_group = False, use_peakshape = False, absolute_mass_tolerance=False, 
+                             mcs = 0.9,                             # unused
+                             grouping_method = 'posterior',         # unused
+                             alpha = 0.5, grt = 2,                  # unused
+                             dp_alpha = 1,                          # unused
+                             num_samples = 100,                     # unused
+                             burn_in = 100,                         # unused
+                             skip_matching = False,                 # unused
+                             always_recluster = True,               # unused
+                             verbose = True)
+        matched_results = AlignmentFile("", True)
+        num_files = len(alignment_files)        
+        for i in range(num_files):
+            alignment_file = alignment_files[i]
+            matcher = MaxWeightedMatching(matched_results, alignment_file, my_options)
+            matched_results = matcher.do_matching()      
+            
+        # map the results back
+        results = []
+        for row in matched_results.rows:
+            temp = []
+            for alignment_feature in row.features:
+                discrete_feature = alignment_feature_to_discrete_feature[alignment_feature]
+                temp.append(discrete_feature)
+            tup = tuple(temp)
+            results.append(tup)
+        print results
+        return results
+
+    def _simple_matching(self, members):
+        results = []
+        processed = set()
+        for bb1 in members:
+            features1 = bb1.features
+            for f1 in features1:
+                if f1 in processed:
+                    continue
+                # find features in other bins that are the closest in mass to f1
+                temp = []
+                temp.append(f1)
+                processed.add(f1)
+                for bb2 in members:
+                    if bb1.origin == bb2.origin:
+                        continue
+                    else:
+                        features2 = bb2.features
+                        closest = None
+                        min_diff = float('inf')
+                        for f2 in features2:
+                            # skip item that has been processed before
+                            if f2 in processed:
+                                continue
+                            # check mass and rt tol
+                            mass_ok = utils.mass_match(f1.mass, f2.mass, self.hp.across_file_mass_tol)
+                            rt_ok = utils.rt_match(f1.rt, f2.rt, self.hp.across_file_rt_sd*2)
+                            if not mass_ok or not rt_ok:
+                                continue
+                            diff = abs(f1.mass - f2.mass)
+                            if diff < min_diff:
+                                min_diff = diff
+                                closest = f2
+                        if closest is not None:
+                            temp.append(closest)
+                            processed.add(closest)
+                tup = tuple(temp)
+                results.append(tup)  
+        return results
+        
+    def _evaluate_performance(self):
         gt = GroundTruth(self.gt_file, self.file_list, self.data_list)        
         gt.evaluate_probabilistic_alignment(self.alignment_results)
