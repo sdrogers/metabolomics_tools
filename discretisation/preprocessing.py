@@ -14,12 +14,12 @@ import utils
 
 class Discretiser(object):
 
-    def __init__(self, transformations, mass_tol, rt_tol, across_file_mass_tol, verbose=False):
+    def __init__(self, transformations, within_file_mass_tol, within_file_rt_tol, across_file_mass_tol, verbose=False):
 
         self.transformations = transformations
-        self.mass_tol = mass_tol
+        self.within_file_mass_tol = within_file_mass_tol
+        self.within_file_rt_tol = within_file_rt_tol
         self.across_file_mass_tol = across_file_mass_tol
-        self.rt_tol = rt_tol
 
         self.adduct_name = np.array([t.name for t in self.transformations])[:,None]      # A x 1
         self.adduct_mul = np.array([t.mul for t in self.transformations])[:,None]        # A x 1
@@ -32,7 +32,7 @@ class Discretiser(object):
             
     def run_single(self, features):       
 
-        print "Discretising at mass_tol=" + str(self.mass_tol) + ", rt_tol=" + str(self.rt_tol)
+        print "Discretising at within_file_mass_tol=" + str(self.within_file_mass_tol) + ", within_file_rt_tol=" + str(self.within_file_rt_tol)
         # make bins using all the features in the file
         N = len(features)
         K = N # by definition
@@ -52,14 +52,14 @@ class Discretiser(object):
                 sys.stdout.write('.')
 
             current_mass, current_rt, current_intensity = feature_masses[n], prior_rts[n], prior_intensities[n]
-            pc_bin = self._make_precursor_bin(n, prior_masses[n], current_rt, current_intensity, self.mass_tol, self.rt_tol)
+            pc_bin = self._make_precursor_bin(n, prior_masses[n], current_rt, current_intensity, self.within_file_mass_tol, self.within_file_rt_tol)
             bins.append(pc_bin)
             
             prior_mass = (current_mass - self.adduct_sub)/self.adduct_mul + self.adduct_del
-            rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_tol)
+            rt_ok = utils.rt_match(current_rt, prior_rts, self.within_file_rt_tol)
             intensity_ok = (current_intensity <= prior_intensities)
             for t in np.arange(len(self.transformations)):
-                mass_ok = utils.mass_match(prior_mass[t], prior_masses, self.mass_tol)
+                mass_ok = utils.mass_match(prior_mass[t], prior_masses, self.within_file_mass_tol)
                 check = rt_ok*mass_ok*intensity_ok
                 # check = rt_ok*mass_ok                
                 pos = np.flatnonzero(check)
@@ -73,7 +73,7 @@ class Discretiser(object):
 
     def run_multiple(self, data_list):
 
-        print "Discretising at across_file_mass_tol=" + str(self.across_file_mass_tol) + " and within_file_mass_tol " + str(self.mass_tol)
+        print "Discretising at within_file_mass_tol=" + str(self.within_file_mass_tol) + " and across_file_mass_tol " + str(self.across_file_mass_tol)
         all_features = []
         for peak_data in data_list:
             all_features.extend(peak_data.features)    
@@ -140,7 +140,7 @@ class Discretiser(object):
                 for f in fs:
                     # make a new concrete bin from the feature based on mass and RT
                     precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]                        
-                    concrete_bin = PrecursorBin(k, np.asscalar(precursor_mass), f.rt, f.intensity, self.mass_tol, self.rt_tol)
+                    concrete_bin = PrecursorBin(k, np.asscalar(precursor_mass), f.rt, f.intensity, self.within_file_mass_tol, self.within_file_rt_tol)
                     concrete_bin.top_id = tb.bin_id
                     concrete_bin.origin = j
                     concrete_bins.append(concrete_bin)
@@ -170,11 +170,11 @@ class Discretiser(object):
                 current_mass, current_rt, current_intensity = f.mass, f.rt, f.intensity
                 transformed_masses = (current_mass - self.adduct_sub)/self.adduct_mul + self.adduct_del
 
-                rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_tol)
+                rt_ok = utils.rt_match(current_rt, prior_rts, self.within_file_rt_tol)
                 intensity_ok = (current_intensity <= prior_intensities)
                 for t in np.arange(len(self.transformations)):
                     # fill up the target bins that this transformation allows
-                    mass_ok = utils.mass_match(transformed_masses[t], prior_masses, self.mass_tol)
+                    mass_ok = utils.mass_match(transformed_masses[t], prior_masses, self.within_file_mass_tol)
                     check = mass_ok*rt_ok*intensity_ok
                     pos = np.flatnonzero(check)
                     # print (f.feature_id, t, pos)

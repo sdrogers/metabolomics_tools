@@ -34,7 +34,7 @@ class SharedBinMatching:
         loader = FileLoader()
         self.hp = hyperpars
         self.data_list = loader.load_model_input(input_dir, database_file, transformation_file, 
-                                                 self.hp.binning_mass_tol, self.hp.binning_rt_tol,
+                                                 self.hp.within_file_mass_tol, self.hp.within_file_rt_tol,
                                                  self.hp.across_file_mass_tol, synthetic=synthetic, 
                                                  limit_n=limit_n, verbose=verbose)
         sys.stdout.flush()
@@ -45,11 +45,10 @@ class SharedBinMatching:
         self.gt_file = gt_file
         self.verbose = verbose
         self.seed = seed
-        self.full_matching = False
 
         self.annotations = {}
         
-    def run(self, show_singleton=False):
+    def run(self, matching_mass_tol, matching_rt_tol, full_matching=False, show_singleton=False, show_plot=False):
 
         print "Running first-stage clustering"
         all_bins, posterior_bin_rts = self._first_stage_clustering()
@@ -58,8 +57,10 @@ class SharedBinMatching:
         matching_results, samples_obtained = self._second_stage_clustering(all_bins, posterior_bin_rts)
 
         print "Constructing alignment of peak features"
-        alignment_results = self._construct_alignment(matching_results, samples_obtained, show_plot=False)
-        self._print_report(alignment_results, show_singleton=False)
+        alignment_results = self._construct_alignment(matching_results, samples_obtained, 
+                                                      matching_mass_tol, matching_rt_tol, 
+                                                      full_matching=full_matching, show_plot=show_plot)
+        self._print_report(alignment_results, show_singleton=show_singleton)
         self.alignment_results = alignment_results        
         
         if self.gt_file is not None:           
@@ -118,15 +119,15 @@ class SharedBinMatching:
         
             # run precursor mass clustering
             peak_data = self.data_list[j]
-            # plotter.plot_possible_hist(peak_data.possible, self.input_dir, self.hp.binning_mass_tol, self.hp.binning_rt_tol)
+            # plotter.plot_possible_hist(peak_data.possible, self.input_dir, self.hp.within_file_mass_tol, self.hp.within_file_rt_tol)
             
             print "Clustering file " + str(j) + " by precursor masses"
             precursorHp = HyperPars()
             precursorHp.rt_prec = 1.0/(self.hp.within_file_rt_sd*self.hp.within_file_rt_sd)
-            precursorHp.mass_prec = 1.0/(self.hp.mass_sd*self.hp.mass_sd)
             precursorHp.alpha = self.hp.alpha_mass
             
-            precursor_clustering = DiscreteVB(peak_data, precursorHp)
+            precursor_clustering = DiscreteVB(peak_data, precursorHp)                        
+            # precursorHp.mass_prec = 1.0/(self.hp.within_file_rt_sd*self.hp.within_file_rt_sd)
             # precursor_clustering = ContinuousVB(peak_data, precursorHp)
 
             precursor_clustering.n_iterations = self.hp.mass_clustering_n_iterations
@@ -218,7 +219,9 @@ class SharedBinMatching:
         samples_obtained = self.hp.rt_clustering_nsamps - self.hp.rt_clustering_burnin
         return matching_results, samples_obtained
 
-    def _construct_alignment(self, matching_results, samples_obtained, show_plot=False):
+    def _construct_alignment(self, matching_results, samples_obtained, 
+                             matching_mass_tol, matching_rt_tol, 
+                             full_matching=False, show_plot=False):
         
         # count frequencies of aligned bins produced across the Gibbs samples
         counter = dict()
@@ -233,24 +236,28 @@ class SharedBinMatching:
         
         # normalise the counts
         S = samples_obtained
+        normalised = dict()
         for key, value in counter.items():
             new_value = float(value)/S
-            counter[key] = new_value       
+            normalised[key] = new_value       
             
         # construct aligned peaksets in descending order of probabilities
         alignment_results = []
-        sorted_list = sorted(counter.items(), key=itemgetter(1), reverse=True)
+        sorted_list = sorted(normalised.items(), key=itemgetter(1), reverse=True)
         probs = []
+        n = 0
         for item in sorted_list:
             members = item[0]
             prob = item[1]
-            print members
-            if members[0].bin_id == 911:
-                print "Stop here"
-            matched_list = self._match_features(members) # members is a tuple of bins
+            if n % 1000 == 0:
+                print "Processing aligned bins " + str(n) + "/" + str(len(sorted_list)) + "\tprob " + str(prob)
+                sys.stdout.flush()
+            # members is a tuple of bins so the features inside need to be matched
+            matched_list = self._match_features(members, full_matching, matching_mass_tol, matching_rt_tol) 
             for features in matched_list:
                 res = AlignmentResults(peakset=features, prob=prob)
                 alignment_results.append(res)
+            n += 1
                 
         if show_plot:
             probs = np.array(probs) 
@@ -296,7 +303,7 @@ class SharedBinMatching:
             t += 1
         return tmap
         
-    def _match_features(self, members):
+    def _match_features(self, members, full_matching, matching_mass_tol, matching_rt_tol):
         results = []
         if len(members) == 1:
             # just singleton things
@@ -305,13 +312,13 @@ class SharedBinMatching:
                 tup = (f, )
                 results.append(tup)                        
         else:
-            if self.full_matching:
-                results = self._hungarian_matching(members)
+            if full_matching:
+                results = self._hungarian_matching(members, matching_mass_tol, matching_rt_tol)
             else:
-                results = self._simple_matching(members)
+                results = self._simple_matching(members, matching_mass_tol, matching_rt_tol)
         return results
 
-    def _hungarian_matching(self, members):
+    def _hungarian_matching(self, members, mass_tol, rt_tol):
 
         file_id = 0
         alignment_files = []
@@ -319,7 +326,7 @@ class SharedBinMatching:
 
         # convert each bin in members into an alignment file        
         for bb in members:
-            this_file = AlignmentFile("file_" + str(file_id), False)
+            this_file = AlignmentFile("file_" + str(file_id), self.verbose)
             peak_id = 0
             row_id = 0
             for discrete_feature in bb.features:                
@@ -345,7 +352,7 @@ class SharedBinMatching:
 
         # do the matching
         Options = namedtuple('Options', 'dmz drt alignment_method exact_match use_group use_peakshape absolute_mass_tolerance mcs grouping_method alpha grt dp_alpha num_samples burn_in skip_matching always_recluster verbose')
-        my_options = Options(dmz = self.hp.across_file_mass_tol, drt = self.hp.across_file_rt_sd, alignment_method = 'mw', exact_match = True, 
+        my_options = Options(dmz = mass_tol, drt = rt_tol, alignment_method = 'mw', exact_match = True, 
                              use_group = False, use_peakshape = False, absolute_mass_tolerance=False, 
                              mcs = 0.9,                             # unused
                              grouping_method = 'posterior',         # unused
@@ -355,7 +362,7 @@ class SharedBinMatching:
                              burn_in = 100,                         # unused
                              skip_matching = False,                 # unused
                              always_recluster = True,               # unused
-                             verbose = True)
+                             verbose = self.verbose)
         matched_results = AlignmentFile("", True)
         num_files = len(alignment_files)        
         for i in range(num_files):
@@ -372,10 +379,9 @@ class SharedBinMatching:
                 temp.append(discrete_feature)
             tup = tuple(temp)
             results.append(tup)
-        print results
         return results
 
-    def _simple_matching(self, members):
+    def _simple_matching(self, members, mass_tol, rt_tol):
         results = []
         processed = set()
         for bb1 in members:
@@ -399,8 +405,8 @@ class SharedBinMatching:
                             if f2 in processed:
                                 continue
                             # check mass and rt tol
-                            mass_ok = utils.mass_match(f1.mass, f2.mass, self.hp.across_file_mass_tol)
-                            rt_ok = utils.rt_match(f1.rt, f2.rt, self.hp.across_file_rt_sd*2)
+                            mass_ok = utils.mass_match(f1.mass, f2.mass, mass_tol)
+                            rt_ok = utils.rt_match(f1.rt, f2.rt, rt_tol)
                             if not mass_ok or not rt_ok:
                                 continue
                             diff = abs(f1.mass - f2.mass)

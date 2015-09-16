@@ -61,12 +61,14 @@ class MaxWeightedMatching:
                 return matched_results
 
             # compute distance matrix            
-            print "Computing score matrix"
+            if self.verbose:
+                print "Computing score matrix"
             score_arr, Q = self.compute_scores(self.men, self.women, self.dmz, self.drt)
 
             # combine scores, if necessary
             if self.options.use_group:
-                print "\nCombining grouping information"
+                if self.verbose:
+                    print "\nCombining grouping information"
                 clusterer = self.get_clusterer(self.men, self.options)
                 A = clusterer.do_clustering()
                 clusterer = self.get_clusterer(self.women, self.options)
@@ -74,13 +76,15 @@ class MaxWeightedMatching:
                 score_arr = self.combine_scores(score_arr, A, B, Q)
             
             # do approximate or exact matching here
-            print "Running matching"
+            if self.verbose:
+                print "Running matching"
             if self.options.exact_match:
                 mate = self.hungarian_matching(self.men, self.women, score_arr)
             else:
                 # mate = self.approximate_matching_scipy(self.men, self.women, score_arr)
                 mate = self.approximate_matching_pq(self.men, self.women, score_arr)
-            print
+            if self.verbose:
+                print
 
             # process the matched rows
             row_id = 0
@@ -187,7 +191,8 @@ class MaxWeightedMatching:
         
     def combine_scores(self, W, A, B, Q):
 
-        print " - Combining scores"
+        if self.verbose:
+            print " - Combining scores"
         sys.stdout.flush()
 
         W_row, W_col = W.shape
@@ -205,13 +210,16 @@ class MaxWeightedMatching:
         B = B - scipy.sparse.dia_matrix((B.diagonal()[scipy.newaxis, :], [0]), shape=(B_row, B_row))
         
         # do the multiplication to upweight / downweight
-        print "\tComputing D=(AW)"
+        if self.verbose:
+            print "\tComputing D=(AW)"
         AW = A * W
-        print "\tComputing D=(AW)B"
+        if self.verbose:
+            print "\tComputing D=(AW)B"
         AWB = AW * B
         
         # mask the resulting output
-        print "\tComputing D.*Q"                    
+        if self.verbose:
+            print "\tComputing D.*Q"                    
         D = AWB.multiply(Q)
         
         # normalise it
@@ -219,7 +227,8 @@ class MaxWeightedMatching:
         D = D * (1/max_score)
 
         # combine with original scores
-        print "\tComputing W'=(alpha.*W)+((1-alpha).*D)"            
+        if self.verbose:
+            print "\tComputing W'=(alpha.*W)+((1-alpha).*D)"            
         W = W * self.alpha
         D = D * (1-self.alpha)
         score_arr = W + D

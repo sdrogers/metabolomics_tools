@@ -49,7 +49,6 @@ class DpMixtureGibbs:
         cluster_counts = np.array([float(self.N)])
         cluster_sums = np.array([self.rts.sum()])
         current_ks = np.zeros(self.N, dtype=np.int)
-        cluster_member_topids = []
         cluster_member_origins = []
 
         # everything assigned to the first cluster
@@ -58,7 +57,6 @@ class DpMixtureGibbs:
         for bb in self.bins:
             topids.append(bb.top_id)
             origins.append(bb.origin)
-        cluster_member_topids.append(topids)
         cluster_member_origins.append(origins)
 
         # start sampling
@@ -79,7 +77,6 @@ class DpMixtureGibbs:
                 # remove from model, detecting empty table if necessary
                 cluster_counts[k] = cluster_counts[k] - 1
                 cluster_sums[k] = cluster_sums[k] - current_data
-                cluster_member_topids[k].remove(this_bin.top_id)
                 cluster_member_origins[k].remove(this_bin.origin)
                 
                 # if empty table, delete this cluster
@@ -87,7 +84,6 @@ class DpMixtureGibbs:
                     K = K - 1
                     cluster_counts = np.delete(cluster_counts, k) # delete k-th entry
                     cluster_sums = np.delete(cluster_sums, k) # delete k-th entry
-                    del cluster_member_topids[k] # delete k-th entry
                     del cluster_member_origins[k] # delete k-th entry
                     current_ks = self.reindex(k, current_ks) # remember to reindex all the clusters
                     
@@ -113,13 +109,9 @@ class DpMixtureGibbs:
                 
                 valid_clusters_check = np.zeros(K+1)
                 for k_idx in range(K):
-                    # this_bin cannot go into a cluster where the existing top_ids are not the same
-                    existing_topids = cluster_member_topids[k_idx]
+                    # this_bin cannot go into a cluster where the origin file is the same
                     existing_origins = cluster_member_origins[k_idx]
-                    if this_bin.top_id not in existing_topids:
-                        valid_clusters_check[k_idx] = float('-inf')
-                    elif this_bin.origin in existing_origins:
-                        # this_bin cannot go into a cluster where the origin file is the same
+                    if this_bin.origin in existing_origins:
                         valid_clusters_check[k_idx] = float('-inf')
                 log_likelihood = log_likelihood + valid_clusters_check                
                 
@@ -141,13 +133,11 @@ class DpMixtureGibbs:
                     K = K + 1
                     cluster_counts = np.append(cluster_counts, 1)
                     cluster_sums = np.append(cluster_sums, current_data)
-                    cluster_member_topids.append([this_bin.top_id])
                     cluster_member_origins.append([this_bin.origin])
                 else:
                     # put into existing cluster
                     cluster_counts[new_k] = cluster_counts[new_k] + 1
                     cluster_sums[new_k] = cluster_sums[new_k] + current_data
-                    cluster_member_topids[new_k].append(this_bin.top_id)
                     cluster_member_origins[new_k].append(this_bin.origin)
 
                 # assign object to the cluster new_k, regardless whether it's current or new
@@ -155,7 +145,6 @@ class DpMixtureGibbs:
 
                 assert len(cluster_counts) == K, "len(cluster_counts)=%d != K=%d)" % (len(cluster_counts), K)
                 assert len(cluster_sums) == K, "len(cluster_sums)=%d != K=%d)" % (len(cluster_sums), K)                    
-                assert len(cluster_member_topids) == K, "len(cluster_member_topids)=%d != K=%d)" % (len(cluster_member_topids), K)                    
                 assert len(cluster_member_origins) == K, "len(cluster_member_origins)=%d != K=%d)" % (len(cluster_member_origins), K)
                 assert current_ks[n] < K, "current_ks[%d] = %d >= %d" % (n, current_ks[n])
         
