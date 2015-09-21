@@ -44,9 +44,8 @@ start_feature_extraction <- function(config_filename) {
     
     source('extractLossFeatures.R')
     results <- extract_neutral_loss_df(ms1, ms2, config)
-    neutral_loss_df <- results$neutral_loss_df
+    loss_df <- results$loss_df
     ms2 <- results$ms2
-    loss_values_df <- results$loss_values_df
     
     # source('extractMzdiffFeatures.R')
     # results <- extract_mzdiff_df(ms1, ms2, config)
