@@ -54,15 +54,14 @@ start_feature_extraction <- function(config_filename) {
     
     # post-processing: for losses<40, merge rows within 0.01 Dalton together
     source('postProcessing.R')
-    results <- post_process_neutral_loss(neutral_loss_df, loss_values_df, ms2, config)   
-    neutral_loss_df <- results$neutral_loss_df
-    ms2 <- results$ms2
+    fragment_df <- remove_empty_rows(fragment_df)
+    loss_df <- remove_empty_rows(loss_df)
     
     ########################
     ##### Write Output #####
     ########################
     
     source('writeDataframes.R')
-    write_output(ms1, ms2, fragment_df, neutral_loss_df, config)
+    write_output(ms1, ms2, fragment_df, loss_df, config)
     
 }
