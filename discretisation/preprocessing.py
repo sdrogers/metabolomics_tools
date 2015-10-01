@@ -14,11 +14,12 @@ import utils
 
 class Discretiser(object):
 
-    def __init__(self, transformations, mass_tol, rt_tol):
+    def __init__(self, transformations, within_file_mass_tol, within_file_rt_tol, across_file_mass_tol, verbose=False):
 
         self.transformations = transformations
-        self.mass_tol = mass_tol
-        self.rt_tol = rt_tol
+        self.within_file_mass_tol = within_file_mass_tol
+        self.within_file_rt_tol = within_file_rt_tol
+        self.across_file_mass_tol = across_file_mass_tol
 
         self.adduct_name = np.array([t.name for t in self.transformations])[:,None]      # A x 1
         self.adduct_mul = np.array([t.mul for t in self.transformations])[:,None]        # A x 1
@@ -27,10 +28,11 @@ class Discretiser(object):
 
         # find index of M+H adduct in the list of transformations
         self.proton_pos = np.flatnonzero(np.array(self.adduct_name)=='M+H') 
+        self.verbose = verbose
             
     def run_single(self, features):       
 
-        print "Discretising at mass_tol=" + str(self.mass_tol) + ", rt_tol=" + str(self.rt_tol)
+        print "Discretising at within_file_mass_tol=" + str(self.within_file_mass_tol) + ", within_file_rt_tol=" + str(self.within_file_rt_tol)
         # make bins using all the features in the file
         N = len(features)
         K = N # by definition
@@ -50,14 +52,14 @@ class Discretiser(object):
                 sys.stdout.write('.')
 
             current_mass, current_rt, current_intensity = feature_masses[n], prior_rts[n], prior_intensities[n]
-            pc_bin = self._make_precursor_bin(n, prior_masses[n], current_rt, current_intensity, self.mass_tol, self.rt_tol)
+            pc_bin = self._make_precursor_bin(n, prior_masses[n], current_rt, current_intensity, self.within_file_mass_tol, self.within_file_rt_tol)
             bins.append(pc_bin)
             
             prior_mass = (current_mass - self.adduct_sub)/self.adduct_mul + self.adduct_del
-            rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_tol)
+            rt_ok = utils.rt_match(current_rt, prior_rts, self.within_file_rt_tol)
             intensity_ok = (current_intensity <= prior_intensities)
             for t in np.arange(len(self.transformations)):
-                mass_ok = utils.mass_match(prior_mass[t], prior_masses, self.mass_tol)
+                mass_ok = utils.mass_match(prior_mass[t], prior_masses, self.within_file_mass_tol)
                 check = rt_ok*mass_ok*intensity_ok
                 # check = rt_ok*mass_ok                
                 pos = np.flatnonzero(check)
@@ -65,56 +67,64 @@ class Discretiser(object):
                 transformed[n, pos] = prior_mass[t]
                 matRT[n, pos] = current_rt            
 
-        print
         print "Total bins=" + str(K) + " total features=" + str(N)
         binning = DiscreteInfo(possible, transformed, matRT, bins, prior_masses, prior_rts)
         return binning         
 
     def run_multiple(self, data_list):
 
-        print "Discretising at mass_tol=" + str(self.mass_tol)
-        sys.stdout.write('Making top-level bins shared across files ')
+        print "Discretising at within_file_mass_tol=" + str(self.within_file_mass_tol) + " and across_file_mass_tol " + str(self.across_file_mass_tol)
         all_features = []
         for peak_data in data_list:
             all_features.extend(peak_data.features)    
         all_features = sorted(all_features, key = attrgetter('mass'))            
         N = len(all_features)        
-                        
-        # define a set of top mass bins shared across files
-        top_bin_masses = []
-        for n in range(len(all_features)):
+            
+        # create equally-spaced bins from start to end
+        feature_masses = np.array([f.mass for f in all_features])[:, None]              # N x 1
+        precursor_masses = (feature_masses - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]        
+        min_val = np.min(precursor_masses)
+        max_val = np.max(precursor_masses)
+        
+        # iteratively create bins
+        all_bins = []
+        bin_start, bin_end = utils.mass_range(min_val, self.across_file_mass_tol)
+        while bin_end < max_val:
+            # store the current bin centre
+            bin_centre = utils.mass_centre(bin_start, self.across_file_mass_tol)
+            all_bins.append(bin_centre)
+            # advance the bin
+            bin_start, bin_end = utils.mass_range(bin_centre, self.across_file_mass_tol)
+            bin_start = bin_end
+        
+        top_bin_features = {}   
+        top_bins = []     
+        k = 0
+        for bin_centre in all_bins:
+            interval_from, interval_to = utils.mass_range(bin_centre, self.across_file_mass_tol)
+            matching_idx = np.where((precursor_masses>interval_from) & (precursor_masses<interval_to))[0].tolist()
+            if len(matching_idx)>0:
+                # this candidate top-level bin is not empty, add all the features that fit coming across all files
+                fs = []
+                for pos in matching_idx:
+                    fs.append(all_features[pos])
+                top_bin_features[k] = fs
+                # create the new top-level bin too
+                tb = self._make_precursor_bin(k, bin_centre, 0, 0, self.across_file_mass_tol, 0)
+                if self.verbose:
+                    print "\t" + str(tb)
+                sys.stdout.flush()
+                top_bins.append(tb)            
+                k += 1
 
-            if n%200 == 0:
-                sys.stdout.write('.')                             
-
-            f = all_features[n]
-            precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]        
-
-            # check if any existing bin can fit this feature within some mass tolerance
-            prior_masses = np.array(top_bin_masses)[:, None]
-            mass_ok = utils.mass_match(precursor_mass, prior_masses, self.mass_tol)
-                
-            # if no common bin fits this feature
-            count = mass_ok.sum()
-            if count==0:
-                # then make new bin from the feature
-                top_bin_masses.append(np.asscalar(precursor_mass))
-
-        K = len(top_bin_masses)
-        top_bins = []
-        for k in range(K):
-            mass = top_bin_masses[k]
-            pc_bin = self._make_precursor_bin(k, mass, 0, 0, self.mass_tol, 0)
-            top_bins.append(pc_bin)            
-        print
+        K = len(top_bins)
         print "Total top bins=" + str(K) + " total features=" + str(N)
+        sys.stdout.flush()
 
         # for each file, we want to instantiatie its concrete bins -- based on the top bins
         all_binning = []
         for j in range(len(data_list)):
-            
-            sys.stdout.write("Instantiating concrete bins for file " + str(j) + " ")
-            
+                       
             peak_data = data_list[j]            
             features = peak_data.features
             N = len(features)        
@@ -123,27 +133,24 @@ class Discretiser(object):
             concrete_bins = []
             k = 0
             for a in range(len(top_bins)):
-                
-                if a%200 == 0:
-                    sys.stdout.write('.')                             
-                
+                                
                 # find all features that can fit by mass in the top level bin
                 tb = top_bins[a]
-                fs = self._find_features(tb, features) 
-                if fs is not None:
-                    for f1 in fs:
-                        # make a new concrete bin from the feature based on mass and RT
-                        precursor_mass = (f1.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos] 
-                        precursor_mass = np.asscalar(precursor_mass)
-                        concrete_bin = PrecursorBin(k, precursor_mass, f1.rt, f1.intensity, self.mass_tol, self.rt_tol)
-                        concrete_bin.top_id = tb.bin_id
-                        concrete_bin.origin = j
-                        concrete_bins.append(concrete_bin)
-                        k += 1
+                fs = top_bin_features[a]
+                for f in fs:
+                    # make a new concrete bin from the feature based on mass and RT
+                    precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]                        
+                    concrete_bin = PrecursorBin(k, np.asscalar(precursor_mass), f.rt, f.intensity, self.within_file_mass_tol, self.within_file_rt_tol)
+                    concrete_bin.top_id = tb.bin_id
+                    concrete_bin.origin = j
+                    concrete_bins.append(concrete_bin)
+                    k += 1
 
             K = len(concrete_bins)
-            print
-            print "File " + str(j) + " has " + str(K) + " concrete bins instantiated"
+            if self.verbose:
+                print "File " + str(j) + " has " + str(K) + " concrete bins instantiated"
+                for cb in concrete_bins:
+                    print "\t" + str(cb)
             prior_masses = np.array([bb.mass for bb in concrete_bins])[:, None]                # K x 1                                
             prior_rts = np.array([bb.rt for bb in concrete_bins])[:, None]                     # K x 1
             prior_intensities = np.array([bb.intensity for bb in concrete_bins])[:, None]      # K x 1
@@ -157,16 +164,17 @@ class Discretiser(object):
                 
                 if n%200 == 0:
                     sys.stdout.write('.')                            
+                    sys.stdout.flush()
     
                 f = features[n]    
                 current_mass, current_rt, current_intensity = f.mass, f.rt, f.intensity
                 transformed_masses = (current_mass - self.adduct_sub)/self.adduct_mul + self.adduct_del
 
-                rt_ok = utils.rt_match(current_rt, prior_rts, self.rt_tol)
+                rt_ok = utils.rt_match(current_rt, prior_rts, self.within_file_rt_tol)
                 intensity_ok = (current_intensity <= prior_intensities)
                 for t in np.arange(len(self.transformations)):
                     # fill up the target bins that this transformation allows
-                    mass_ok = utils.mass_match(transformed_masses[t], prior_masses, self.mass_tol)
+                    mass_ok = utils.mass_match(transformed_masses[t], prior_masses, self.within_file_mass_tol)
                     check = mass_ok*rt_ok*intensity_ok
                     pos = np.flatnonzero(check)
                     # print (f.feature_id, t, pos)
@@ -206,12 +214,15 @@ class Discretiser(object):
     
 class FileLoader:
         
-    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol, 
-                         make_bins=True, synthetic=False, limit_n=-1):
+    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol, across_file_mass_tol=0,
+                         make_bins=True, synthetic=False, limit_n=-1, verbose=False):
         """ Load everything that a clustering model requires """
 
         # load database and transformations
-        database = self.load_database(database_file)
+        if database_file is not None:
+            database = self.load_database(database_file)
+        else:
+            database = None
         transformations = self.load_transformation(transformation_file)
 
         # if this is a directory, process all files inside
@@ -221,10 +232,12 @@ class FileLoader:
             input_dir = input_file
             filelist = []
             types = ('*.csv', '*.txt')
+            starting_dir = os.getcwd() # save the initial dir to restore
             os.chdir(input_dir)
             for files in types:
                 filelist.extend(glob.glob(files))
             filelist = utils.natural_sort(filelist)
+            self.file_list = filelist
             
             # load the files
             file_id = 0
@@ -242,10 +255,13 @@ class FileLoader:
                 data = PeakData(features, database, transformations, corr_mat=corr_mat)
                 all_features.extend(features)
                 data_list.append(data)
+                sys.stdout.flush()
                 
             # bin the files if necessary
             if make_bins:
-                discretiser = Discretiser(transformations, mass_tol, rt_tol)
+                assert across_file_mass_tol > 0
+                discretiser = Discretiser(transformations, mass_tol, rt_tol, across_file_mass_tol=across_file_mass_tol, 
+                                          verbose=verbose)
                 # make common bins shared across files using all the features                   
                 discrete_infos = discretiser.run_multiple(data_list) 
                 assert len(data_list) == len(discrete_infos)
@@ -253,7 +269,8 @@ class FileLoader:
                     peak_data = data_list[j]
                     common = discrete_infos[j]
                     peak_data.set_discrete_info(common)
-                
+                            
+            os.chdir(starting_dir)    
             return data_list
                     
         else:   

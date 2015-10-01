@@ -36,7 +36,7 @@ def as_scalar(s):
 def timer(msg, start, end):
     hours, rem = divmod(end-start, 3600)
     minutes, seconds = divmod(rem, 60)
-    print(msg + " {:0>2} hours {:0>2} minutes {:05.2f} seconds".format(int(hours),int(minutes),seconds))    
+    print(msg + " {:0>2} hours {:0>2} minutes {:05.6f} seconds".format(int(hours),int(minutes),seconds))    
 
 def mass_match(mass, other_masses, tol):
     return np.abs((mass-other_masses)/mass)<tol*1e-6
@@ -50,6 +50,10 @@ def mass_range(mass_centre, mass_tol):
     mass_start = mass_centre - interval
     mass_end = mass_centre + interval
     return (mass_start, mass_end)
+
+def mass_centre(mass_start, mass_tol):
+    mass_centre = mass_start / (1 - mass_tol * 1e-6)
+    return mass_centre    
 
 def rt_range(rt_centre, rt_tol):
     # must be the same as rt_match()

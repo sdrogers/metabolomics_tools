@@ -1,7 +1,31 @@
-import os
-import csv
-
 from collections import namedtuple
+import csv
+import os
+from discretisation import utils
+
+class HyperPars(object):
+
+    def __init__(self):
+
+        self.within_file_mass_tol = 2.0             # mass tolerance in ppm when binning within the same file
+        self.within_file_rt_tol = 5.0               # rt tolerance in seconds when binning within the same file
+        self.within_file_mass_sd = 3                # standard deviation for mass when clustering by precursor masses within the same file
+        self.within_file_rt_sd = 2.5                # standard deviation for rt when clustering by precursor masses within the same file
+
+        self.across_file_mass_tol = 4.0             # mass tolerance in ppm when binning across files
+        self.across_file_rt_tol = 30.0              # rt tolerance in seconds when matching peak features across bins in the same cluster but coming from different files
+        self.across_file_rt_sd = 15.0               # standard deviation of mixture component when clustering bins by posterior RT across files
+
+        self.alpha_mass = 100.0                     # Dirichlet parameter for precursor mass clustering
+        self.alpha_rt = 1.0                         # Dirichlet Process concentration parameter for mixture on RT
+        self.t = 0.25                               # threshold for cluster membership for precursor mass clustering
+
+        self.mass_clustering_n_iterations = 200     # no. of iterations for VB precursor clustering
+        self.rt_clustering_nsamps = 200             # no. of total samples for Gibbs RT clustering
+        self.rt_clustering_burnin = 100             # no. of burn-in samples for Gibbs RT clustering
+        
+    def __repr__(self):
+        return "Hyperparameters " + utils.print_all_attributes(self)
 
 class Feature(object):
         
@@ -51,11 +75,17 @@ class AlignmentRow(object):
             total_mass = total_mass + feature.mass
         return total_mass / len(self.features)
     
-    def get_mass_range(self, dmz):
+    def get_mass_range(self, dmz, absolute_mass_tolerance=True):
         '''Computes tolerance window for mass difference'''
         average_mass = self.get_average_mass()
-        mass_lower = average_mass - dmz
-        mass_upper = average_mass + dmz
+        if absolute_mass_tolerance:
+            mass_lower = average_mass - dmz
+            mass_upper = average_mass + dmz
+        else:
+            mass_centre = average_mass
+            interval = mass_centre * dmz * 1e-6
+            mass_lower = mass_centre - interval
+            mass_upper = mass_centre + interval
         return (mass_lower, mass_upper)
 
     def get_average_rt(self):
@@ -79,14 +109,14 @@ class AlignmentRow(object):
             total_intensity = total_intensity + feature.intensity
         return total_intensity / len(self.features)    
     
-    def is_within_tolerance(self, another_row, dmz, drt):
+    def is_within_tolerance(self, another_row, dmz, drt, absolute_mass_tolerance=True):
         if another_row.aligned == True:
             return False
         else:
             # only process unaligned rows
             if dmz > 0:
                 mass_to_check = another_row.get_average_mass()
-                mass_lower, mass_upper = self.get_mass_range(dmz)
+                mass_lower, mass_upper = self.get_mass_range(dmz, absolute_mass_tolerance=absolute_mass_tolerance)
                 if mass_lower < mass_to_check < mass_upper:
                     if drt > 0:
                         # need to check rt as well

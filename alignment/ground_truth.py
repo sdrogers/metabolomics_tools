@@ -1,11 +1,11 @@
 import glob
 import os
+import sys
 
 from discretisation import utils
 from discretisation.preprocessing import FileLoader
 import numpy as np
 import pylab as plt
-
 
 class GroundTruth:
         
@@ -42,7 +42,9 @@ class GroundTruth:
                     state = 0
                     for tok in tokens:
                         if state == 0:
-                            filenames.append(tok)
+                            base = os.path.basename(tok)
+                            front_part = os.path.splitext(base)[0]                            
+                            filenames.append(front_part)
                             state = 1 # go to next state
                         elif state == 1:
                             unknown.append(tok)
@@ -115,7 +117,10 @@ class GroundTruth:
                         res_mat[i, j] = 1
         plt.figure()
         plt.pcolor(res_mat)
-        plt.show()                
+        plt.show()    
+        
+    def evaluate_probabilistic_alignment(self, alignment_results):            
+        print "Hello"
                 
     def _find_features(self, filename, mass, rt, intensity):
         EPSILON = 0.0001;
@@ -123,29 +128,14 @@ class GroundTruth:
         for f in features:
             if abs(f.mass - mass) < EPSILON and abs(f.rt - rt) < EPSILON and abs(f.intensity - intensity) < EPSILON:
                 return f
-
-
                 
-database = '/home/joewandy/git/metabolomics_tools/discretisation/database/std1_mols.csv'
-transformation = '/home/joewandy/git/metabolomics_tools/discretisation/mulsubs/mulsub2.txt'
-input_dir = './input/std1_csv_2'
-
-# find all the .txt and csv files in input_dir
-file_list = []
-types = ('*.csv', '*.txt')
-os.chdir(input_dir)
-for files in types:
-    file_list.extend(glob.glob(files))
-file_list = utils.natural_sort(file_list)
-
-file_peak_data = []
-for j in range(len(file_list)):
-    input_file = file_list[j]
-    loader = FileLoader()
-    peak_data = loader.load_model_input(input_file, database, transformation, 0, 0, make_bins=False)
-    for f in peak_data.features:
-        f.file_id = j
-    file_peak_data.append(peak_data)
-
-gt_file = '/home/joewandy/git/metabolomics_tools/alignment/input/std1_csv_2/ground_truth/std1.positive.dat'
-gt = GroundTruth(gt_file, file_list, file_peak_data)
+def main(argv):    
+                
+    database_file = '/home/joewandy/git/metabolomics_tools/discretisation/database/std1_mols.csv'
+    transformation_file = '/home/joewandy/git/metabolomics_tools/discretisation/mulsubs/mulsub2.txt'
+    input_dir = './input/std1_csv_2'
+    gt_file = '/home/joewandy/git/metabolomics_tools/alignment/input/std1_csv_2/ground_truth/std1.positive.dat'
+    gt = GroundTruth(gt_file, database_file, transformation_file, input_dir)
+    
+if __name__ == "__main__":
+   main(sys.argv[1:])

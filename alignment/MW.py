@@ -29,6 +29,8 @@ def get_options(argv):
     parser.set_defaults(alignment_method='mw')
     parser.add_argument('-exact_match', dest='exact_match', action='store_true', help='perform exact match if using MW?')
     parser.set_defaults(exact_match=False)
+    parser.add_argument('-relative_mass_tolerance', dest='absolute_mass_tolerance', action='store_false', help='use relative mass tolerance (in ppm) when matching?')
+    parser.set_defaults(absolute_mass_tolerance=True)
     # grouping arguments
     parser.add_argument('-g', dest='use_group', action='store_true', help='use grouping information?')
     parser.set_defaults(use_group=False)

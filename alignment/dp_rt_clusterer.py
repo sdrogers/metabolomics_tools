@@ -7,15 +7,18 @@ import math
 
 import numpy as np
 import scipy.sparse as sp
+from numpy.random import RandomState
 
 
 class DpMixtureGibbs:
     
-    def __init__(self, data, hyperpars):
+    def __init__(self, data, hyperpars, seed=-1, verbose=False):
         ''' 
         Clusters bins by DP mixture model using Gibbs sampling
         '''
-        print 'DpMixtureGibbs initialised'
+        self.verbose = verbose
+        if self.verbose:
+            print 'DpMixtureGibbs initialised'
         self.rts = np.array(data[0])
         self.bins = data[1]
         self.N = len(self.rts)
@@ -25,6 +28,11 @@ class DpMixtureGibbs:
         self.alpha = float(hyperpars.alpha)
         self.nsamps = 200
         self.burn_in = 100
+        self.seed = int(seed)
+        if self.seed > 0:
+            self.random_state = RandomState(self.seed)
+        else:
+            self.random_state = RandomState()        
         
         self.Z = None
         self.ZZ_all = sp.lil_matrix((self.N, self.N),dtype=np.float)
@@ -41,7 +49,6 @@ class DpMixtureGibbs:
         cluster_counts = np.array([float(self.N)])
         cluster_sums = np.array([self.rts.sum()])
         current_ks = np.zeros(self.N, dtype=np.int)
-        cluster_member_topids = []
         cluster_member_origins = []
 
         # everything assigned to the first cluster
@@ -50,7 +57,6 @@ class DpMixtureGibbs:
         for bb in self.bins:
             topids.append(bb.top_id)
             origins.append(bb.origin)
-        cluster_member_topids.append(topids)
         cluster_member_origins.append(origins)
 
         # start sampling
@@ -61,7 +67,7 @@ class DpMixtureGibbs:
             
             # loop through the objects in random order
             random_order = range(self.N)
-            shuffle(random_order)
+            self.random_state.shuffle(random_order)
             for n in random_order:
 
                 this_bin = self.bins[n]
@@ -71,7 +77,6 @@ class DpMixtureGibbs:
                 # remove from model, detecting empty table if necessary
                 cluster_counts[k] = cluster_counts[k] - 1
                 cluster_sums[k] = cluster_sums[k] - current_data
-                cluster_member_topids[k].remove(this_bin.top_id)
                 cluster_member_origins[k].remove(this_bin.origin)
                 
                 # if empty table, delete this cluster
@@ -79,7 +84,6 @@ class DpMixtureGibbs:
                     K = K - 1
                     cluster_counts = np.delete(cluster_counts, k) # delete k-th entry
                     cluster_sums = np.delete(cluster_sums, k) # delete k-th entry
-                    del cluster_member_topids[k] # delete k-th entry
                     del cluster_member_origins[k] # delete k-th entry
                     current_ks = self.reindex(k, current_ks) # remember to reindex all the clusters
                     
@@ -105,13 +109,9 @@ class DpMixtureGibbs:
                 
                 valid_clusters_check = np.zeros(K+1)
                 for k_idx in range(K):
-                    # this_bin cannot go into a cluster where the existing top_ids are not the same
-                    existing_topids = cluster_member_topids[k_idx]
+                    # this_bin cannot go into a cluster where the origin file is the same
                     existing_origins = cluster_member_origins[k_idx]
-                    if this_bin.top_id not in existing_topids:
-                        valid_clusters_check[k_idx] = float('-inf')
-                    elif this_bin.origin in existing_origins:
-                        # this_bin cannot go into a cluster where the origin file is the same
+                    if this_bin.origin in existing_origins:
                         valid_clusters_check[k_idx] = float('-inf')
                 log_likelihood = log_likelihood + valid_clusters_check                
                 
@@ -119,7 +119,7 @@ class DpMixtureGibbs:
                 post = log_likelihood + np.log(prior)
                 post = np.exp(post - post.max())
                 post = post / post.sum()
-                random_number = np.random.rand()
+                random_number = self.random_state.rand()
                 cumsum = np.cumsum(post)
                 new_k = 0
                 for new_k in range(len(cumsum)):
@@ -133,13 +133,11 @@ class DpMixtureGibbs:
                     K = K + 1
                     cluster_counts = np.append(cluster_counts, 1)
                     cluster_sums = np.append(cluster_sums, current_data)
-                    cluster_member_topids.append([this_bin.top_id])
                     cluster_member_origins.append([this_bin.origin])
                 else:
                     # put into existing cluster
                     cluster_counts[new_k] = cluster_counts[new_k] + 1
                     cluster_sums[new_k] = cluster_sums[new_k] + current_data
-                    cluster_member_topids[new_k].append(this_bin.top_id)
                     cluster_member_origins[new_k].append(this_bin.origin)
 
                 # assign object to the cluster new_k, regardless whether it's current or new
@@ -147,7 +145,6 @@ class DpMixtureGibbs:
 
                 assert len(cluster_counts) == K, "len(cluster_counts)=%d != K=%d)" % (len(cluster_counts), K)
                 assert len(cluster_sums) == K, "len(cluster_sums)=%d != K=%d)" % (len(cluster_sums), K)                    
-                assert len(cluster_member_topids) == K, "len(cluster_member_topids)=%d != K=%d)" % (len(cluster_member_topids), K)                    
                 assert len(cluster_member_origins) == K, "len(cluster_member_origins)=%d != K=%d)" % (len(cluster_member_origins), K)
                 assert current_ks[n] < K, "current_ks[%d] = %d >= %d" % (n, current_ks[n])
         
@@ -156,7 +153,8 @@ class DpMixtureGibbs:
             time_taken = time.time() - start_time
             if s >= self.burn_in:
             
-                print('\tSAMPLE\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))
+                if self.verbose:
+                    print('\tSAMPLE\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))
                 self.Z = self.get_Z(self.N, K, current_ks)
                 self.ZZ_all = self.ZZ_all + self.get_ZZ(self.Z)
                 self.samples_obtained += 1
@@ -166,15 +164,19 @@ class DpMixtureGibbs:
                     pos = np.flatnonzero(current_ks==k)
                     members = [self.bins[a] for a in pos.tolist()]
                     memberstup = tuple(members)
+                    if self.verbose:
+                        print "sample=" + str(s) + " k=" + str(k) + " memberstup=" + str(memberstup)                    
                     self.matching_results.append(memberstup)
             else:
-                print('\tBURN-IN\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))                
+                if self.verbose:
+                    print('\tBURN-IN\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))                
             sys.stdout.flush()
                         
         # end sample loop
-        
+        self.last_K = K        
         self.ZZ_all = self.ZZ_all / self.samples_obtained
-        print "DONE!"
+        if self.verbose:
+            print "DONE!"
         
     def reindex(self, deleted_k, current_ks):
         pos = np.where(current_ks > deleted_k)
@@ -194,14 +196,3 @@ class DpMixtureGibbs:
     def __repr__(self):
         return "Gibbs sampling for DP mixture model\n" + self.hyperpars.__repr__() + \
         "\nn_samples = " + str(self.n_samples)
-        
-class DpMixtureVariational:
-    
-    def __init__(self, data, hyperpars):
-        ''' 
-        Clusters bins by DP mixture model using variational inference
-        '''
-        print 'DpMixtureVariational initialised'
-        
-    def run(self):
-        print "Hello"
