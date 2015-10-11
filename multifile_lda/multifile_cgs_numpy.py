@@ -88,7 +88,7 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
             
             # update alpha for this file
             alpha_new = estimate_alpha_from_counts(file_D, K, file_alpha, file_cdk)
-            alphas[f] = alpha_new
+            # alphas[f] = alpha_new
             posterior_alphas.append(alpha_new)
 
         # update phi for all files

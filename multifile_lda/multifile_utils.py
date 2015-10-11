@@ -117,10 +117,12 @@ def estimate_alpha_from_counts(D, K, initial_alpha, counts, n_iter=1000):
         alpha_new = alpha_old * (g/h)
         if np.max(np.abs(alpha_new-alpha_old)) < 1e-6:
             break
+        if np.isnan(np.min(alpha_new)): # prevent NaN from propagating
+            return alpha_old
         
         # set alpha_new to alpha_old for the next iteration update
-        alpha_old = alpha_new    
-
+        alpha_old = alpha_new
+        
     return alpha_new
 
 def main():

@@ -17,6 +17,8 @@ class MultifileLDA(object):
             self.random_state = RandomState(1234567890)
         else:
             self.random_state = random_state    
+
+        self.blowup = 10
     
     def _load_data(self, f, fragment_filename, neutral_loss_filename, ms1_filename, ms2_filename):
     
@@ -31,10 +33,10 @@ class MultifileLDA(object):
     
         data = pd.DataFrame()
     
-        # discretise the fragment and neutral loss intensities values by converting it to 0 .. 100
-        fragment_data *= 100
+        # discretise the fragment and neutral loss intensities values by converting it to 0 .. blowup
+        fragment_data *= self.blowup
         data = data.append(fragment_data)
-        neutral_loss_data *= 100
+        neutral_loss_data *= self.blowup
         data = data.append(neutral_loss_data)
                 
         # get rid of NaNs, transpose the data and floor it
@@ -165,6 +167,7 @@ class MultifileLDA(object):
                 plt.subplot(1, self.F, f+1, sharey=ax)                
             post_alpha = self.posterior_alphas[f]
             e_alpha = post_alpha / np.sum(post_alpha)
+            print e_alpha
             ind = range(len(e_alpha))
             plt.bar(ind, e_alpha, 0.5)        
             plt.title('File ' + str(f))
@@ -189,10 +192,13 @@ class MultifileLDA(object):
 def main():    
     
     lda = MultifileLDA()
-    input_set = [('input/beer3pos_fragments_1.csv', 'input/beer3pos_losses_1.csv', 'input/beer3pos_ms1_1.csv','input/beer3pos_ms2_1.csv'),
-                 ('input/beer3pos_fragments_2.csv', 'input/beer3pos_losses_2.csv', 'input/beer3pos_ms1_2.csv','input/beer3pos_ms2_2.csv')]
+    input_set = [
+                 ('input/beer3pos_fragments_1.csv', 'input/beer3pos_losses_1.csv', 'input/beer3pos_ms1_1.csv','input/beer3pos_ms2_1.csv'),
+                 ('input/beer3pos_fragments_2.csv', 'input/beer3pos_losses_2.csv', 'input/beer3pos_ms1_2.csv','input/beer3pos_ms2_2.csv'),
+                 ('input/beer3pos_fragments_3.csv', 'input/beer3pos_losses_3.csv', 'input/beer3pos_ms1_3.csv','input/beer3pos_ms2_3.csv')
+                 ]
     lda.load_all(input_set)    
-    lda.run(30, 0.01, 0.1, n_burn=0, n_samples=10, n_thin=1)
+    lda.run(30, 0.01, 0.1, n_burn=0, n_samples=20, n_thin=1)
     lda.plot_e_alphas()
     
 if __name__ == "__main__": main()
