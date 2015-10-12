@@ -1,4 +1,4 @@
-create_peaklist_single <- function(peaks) {
+create_peaklist_single <- function(peaks, config) {
 
     ### MS1 ###
     
@@ -60,7 +60,7 @@ create_peaklist_single <- function(peaks) {
 
 create_peaklist <- function(peaksets, config) {
 
-    results <- lapply(peaksets, create_peaklist_single)
+    results <- lapply(peaksets, create_peaklist_single, config=config)
     
     # separate results into the ms1 and ms2 info
     all_ms1 <- list()
