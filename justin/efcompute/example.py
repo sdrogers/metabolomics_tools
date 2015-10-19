@@ -37,6 +37,8 @@ if __name__=='__main__':
     for test_molecule in test_molecules:
         precursor_mass_list.append(str(get_formula_mass(atoms,test_molecule)+1.00727645199076))
     
+
+    # precursor_mass_list = [55.0182]
     # Create the ef_assigner object
     ef = ef_assigner(scale_factor=1000)
 
