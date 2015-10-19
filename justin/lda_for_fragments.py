@@ -9,14 +9,17 @@ import timeit
 import numpy as np
 import pandas as pd
 import pylab as plt
-from scipy.sparse import coo_matrix
 import yaml
+from scipy.sparse import coo_matrix
+import scipy.spatial.distance as distance
+import scipy.cluster.hierarchy as hierarchy
 
 from lda_cgs import CollapseGibbsLda
 from visualisation.pylab.lda_for_fragments_viz import Ms2Lda_Viz
 import visualisation.pyLDAvis as pyLDAvis
 import visualisation.sirius.sirius_wrapper as sir
 import lda_utils as utils
+from efcompute.ef_assigner import ef_assigner
 
 class Ms2Lda(object):
     
@@ -323,12 +326,12 @@ class Ms2Lda(object):
         for i, topic_dist in enumerate(self.topic_word):
             if selected_topics is not None:
                 if i < len(selected_topics):
-                    topic_name = 'Fixed Topic {}'.format(selected_topics[i])
+                    topic_name = 'Fixed_M2M {}'.format(selected_topics[i])
                 else:
-                    topic_name = 'Topic {}'.format(counter)
+                    topic_name = 'M2M_{}'.format(counter)
                     counter += 1
             else:
-                topic_name = 'Topic {}'.format(i)                    
+                topic_name = 'M2M_{}'.format(i)                    
             self.topic_names.append(topic_name)
         
         # create document-topic output file        
@@ -380,8 +383,8 @@ class Ms2Lda(object):
             raise ValueError('Thresholding not done yet.')
         
         # create topic-word output file
-        outfile = self._get_outfile(results_prefix, '_topics.csv') 
-        print "Writing topics to " + outfile
+        outfile = self._get_outfile(results_prefix, '_motifs.csv') 
+        print "Writing Mass2Motif features to " + outfile
         with open(outfile,'w') as f:
             
             for i, topic_dist in enumerate(self.topic_word):
@@ -403,13 +406,15 @@ class Ms2Lda(object):
     
         # write out topicdf and docdf
 
-        outfile = self._get_outfile(results_prefix, '_all.csv') 
-        print "Writing fragments x topics to " + outfile
+        outfile = self._get_outfile(results_prefix, '_features.csv') 
+        print "Writing features X motifs to " + outfile
         self.topicdf.to_csv(outfile)
     
         outfile = self._get_outfile(results_prefix, '_docs.csv') 
-        print "Writing topic docs to " + outfile
-        self.docdf.transpose().to_csv(outfile)
+        print "Writing docs X motifs to " + outfile
+        docdf = self.docdf.transpose()
+        docdf.columns = self.topic_names
+        docdf.to_csv(outfile)
         
     def save_project(self, project_out, message=None):
         start = timeit.default_timer()        
@@ -428,7 +433,8 @@ class Ms2Lda(object):
         return plotter.rank_topics(sort_by=sort_by, selected_topics=selected_topics, top_N=top_N)
         
     def plot_lda_fragments(self, consistency=0.0, sort_by="h_index", 
-                           selected_topics=None, interactive=False, to_highlight=None):
+                           selected_motifs=None, interactive=False, to_highlight=None, 
+                           additional_info=None):
 
         if not hasattr(self, 'topic_word'):
             raise ValueError('Thresholding not done yet.')        
@@ -437,7 +443,7 @@ class Ms2Lda(object):
         if interactive:
             # if interactive mode, we always sort by the h_index because we need both the h-index and degree for plotting
             plotter.plot_lda_fragments(consistency=consistency, sort_by='h_index', 
-                                       selected_topics=selected_topics, interactive=interactive,
+                                       selected_motifs=selected_motifs, interactive=interactive,
                                        to_highlight=to_highlight)
             # self.model.visualise(plotter)
             data = {}
@@ -456,13 +462,86 @@ class Ms2Lda(object):
             data['th_doc_topic'] = self.th_doc_topic
             data['topic_wordfreq'] = plotter.topic_wordfreqs
             data['topic_ms1_count'] = plotter.topic_ms1_count
+            data['topic_annotation'] = additional_info
             vis_data = pyLDAvis.prepare(**data)   
             pyLDAvis.show(vis_data, topic_plotter=plotter)
         else:
             plotter.plot_lda_fragments(consistency=consistency, sort_by=sort_by, 
-                                       selected_topics=selected_topics, interactive=interactive)
-            
+                                       selected_motifs=selected_motifs, interactive=interactive)
+
+    # this should only be run once LDA has been run and the thresholding applied,
+    # because docdf wouldn't exist otherwise            
+    def run_cosine_clustering(self, method='greedy'):
+        
+        if not hasattr(self, 'topic_word'):
+            raise ValueError('Thresholding not done yet.')        
+        
+        # Swap the NaNs for zeros. Turn into a numpy array and grab the parent names
+        data = self.docdf.fillna(0)
+        data_array = np.array(data)
+        peak_names = list(data.columns.values)
+
+        # Create a matrix with the normalised values (each parent ion has magnitude 1)
+        l = np.sqrt((data_array**2).sum(axis=0))
+        norm_data = np.divide(data_array,l)
+
+        if method.lower() == 'hierarchical': # scipy hierarchical clustering
+        
+            clustering = hierarchy.fclusterdata(norm_data.transpose(), 0.8, criterion = 'distance', 
+                                                metric='euclidean', method='single')
+        
+        elif method.lower() == 'greedy': # greedy cosine clustering
+        
+            cosine_sim = np.dot(norm_data.transpose(),norm_data)
+            finished = False
+            total_intensity = data_array.sum(axis=0)
+            total_intensity = total_intensity
+            n_features, n_parents = data_array.shape
+            clustering = np.zeros((n_parents,),np.int)
+            current_cluster = 1
+            thresh = 0.55
+            count = 0
+            while not finished:
+                # Find the parent with the max intensity left
+                current = np.argmax(total_intensity)
+                total_intensity[current] = 0.0
+                count += 1
+                clustering[current] = current_cluster
+                # Find other parents with cosine similarity over the threshold
+                friends = np.where((cosine_sim[current,:]>thresh) * (total_intensity > 0.0))[0]
+                clustering[friends] = current_cluster
+                total_intensity[friends] = 0.0
+                # When points are clustered, their total_intensity is set zto zero. 
+                # If there is nothing left with zero, quit
+                left = np.where(total_intensity > 0.0)[0]
+                if len(left) == 0:
+                    finished = True
+                current_cluster += 1
+                    
+        else:
+            raise ValueError('Unknown clustering method')
+        
+        return peak_names, clustering
+    
+    def plot_cosine_clustering(self, motif_id, clustering, peak_names):  
+        
+        if not hasattr(self, 'topic_word'):
+            raise ValueError('Thresholding not done yet.')        
+        
+        colnames = self.docdf.columns.values
+        row = self.docdf.iloc[[motif_id]]
+        pos = row.values[0] > 0
+        ions_of_interest = colnames[pos]
+        
+        plotter = Ms2Lda_Viz(self.model, self.ms1, self.ms2, self.docdf, self.topicdf)
+        G, cluster_interests = plotter.plot_cosine_clustering(motif_id, ions_of_interest, clustering, peak_names)
+        return G, cluster_interests
+
     def print_topic_words(self, selected_topics=None, with_probabilities=True, compact_output=False):
+        
+        raise ValueError("print_topic_words is now called print_motif_features")
+            
+    def print_motif_features(self, selected_motifs=None, with_probabilities=True, compact_output=False):
         
         if not hasattr(self, 'topic_word'):
             raise ValueError('Thresholding not done yet.')
@@ -470,21 +549,21 @@ class Ms2Lda(object):
         for i, topic_dist in enumerate(self.topic_word):    
 
             show_print = False
-            if selected_topics is None:
+            if selected_motifs is None:
                 show_print = True
-            if selected_topics is not None and i in selected_topics:
+            if selected_motifs is not None and i in selected_motifs:
                 show_print = True
                 
             if show_print:
                 ordering = np.argsort(topic_dist)
                 topic_words = np.array(self.vocab)[ordering][::-1]
                 dist = topic_dist[ordering][::-1]        
-                topic_name = 'Topic {}:'.format(i)
+                topic_name = 'Mass2Motif {}:'.format(i)
                 print topic_name,                    
                 for j in range(len(topic_words)):
                     if dist[j] > 0:
                         if with_probabilities:
-                            print('{} ({}),'.format(topic_words[j], dist[j])),
+                            print '%s (%.3f),' % (topic_words[j], dist[j]),
                         else:
                             print('{},'.format(topic_words[j])),                            
                     else:
@@ -502,11 +581,54 @@ class Ms2Lda(object):
         
     def annotate_with_sirius(self, sirius_platform="orbitrap", mode="pos", ppm_max=5, min_score=0.01, max_ms1=700, 
                              verbose=False):
+        mode = mode.lower()
         annot_ms1, annot_ms2 = sir.annotate_sirius(self.ms1, self.ms2, sirius_platform=sirius_platform, 
                                                    mode=mode, ppm_max=ppm_max, min_score=min_score, 
                                                    max_ms1=max_ms1, verbose=verbose)
         self.ms1 = annot_ms1
         self.ms2 = annot_ms2
+
+    def annotate_with_ef_assigner(self, mode="pos", ppm_max=5, scale_factor=1000, max_ms1=700,
+                             verbose=False):
+        
+        mode = mode.lower()
+        if mode != "pos" and mode != "neg":
+            raise ValueError("mode is either 'pos' or 'neg'")
+        else:
+            print "Running EF annotation (with 7 golden rules filtering) with parameters:"
+            print "- mode = " + mode
+            print "- ppm_max = " + str(ppm_max)
+            print "- max_ms1 = " + str(max_ms1)
+            print        
+
+        # run EF annotation on MS1 dataframe        
+        print "Annotating MS1 dataframe"
+        mass_list = self.ms1.mz.values.tolist()
+        ef = ef_assigner(scale_factor=scale_factor)
+        formulas_out, top_hit_string, precursor_mass_list = ef.find_formulas(mass_list, ppm=ppm_max, polarisation=mode.upper(), max_mass_to_check=max_ms1)
+        
+        # replace all None with NaN
+        for i in range(len(top_hit_string)):
+            if top_hit_string[i] is None:
+                top_hit_string[i] = np.NaN        
+
+        # set the results back into the dataframe        
+        self.ms1['annotation'] = top_hit_string
+        
+        # run EF annotation on MS2 dataframe        
+        print "Annotating MS2 dataframe"
+        mass_list = self.ms2.mz.values.tolist()
+        ef = ef_assigner(scale_factor=scale_factor)
+        formulas_out, top_hit_string, precursor_mass_list = ef.find_formulas(mass_list, ppm=ppm_max, polarisation=mode.upper())
+        
+        # replace all None with NaN
+        for i in range(len(top_hit_string)):
+            if top_hit_string[i] is None:
+                top_hit_string[i] = np.NaN        
+
+        # set the results back into the dataframe        
+        self.ms2['annotation'] = top_hit_string
+
         
     # def annotate_with_name(self, peaklist_file, ppm_max=5):  
         

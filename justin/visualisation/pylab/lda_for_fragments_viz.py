@@ -3,7 +3,10 @@ import os
 import sys
 
 from pandas.core.frame import DataFrame
+import networkx as nx
+from networkx.algorithms import bipartite
 
+import matplotlib.pylab as pylab
 import matplotlib.patches as mpatches
 import numpy as np
 import pylab as plt
@@ -18,10 +21,14 @@ class Ms2Lda_Viz(object):
         self.ms2 = ms2
         self.docdf = docdf
         self.topicdf = topicdf        
-    
+
     def rank_topics(self, sort_by="h_index", selected_topics=None, top_N=None, interactive=False):
 
-        print "Ranking topics ..."
+        raise ValueError("rank_topics is now called rank_motifs")
+    
+    def rank_motifs(self, sort_by="h_index", selected_motifs=None, top_N=None, interactive=False):
+
+        print "Ranking motifs ..."
         self.sort_by = sort_by
         if sort_by == 'h_index':
             topic_sort_criteria = self._h_index() 
@@ -49,16 +56,16 @@ class Ms2Lda_Viz(object):
         return topic_sort_criteria, sorted_topic_counts                
                 
     def plot_lda_fragments(self, consistency=0.50, sort_by="h_index", 
-                           selected_topics=None, interactive=False,
+                           selected_motifs=None, interactive=False,
                            to_highlight=None):
         
         self.to_highlight = to_highlight
                 
-        if selected_topics is not None and interactive:
-            raise ValueError("For interactive mode, the selected_topics parameter is not yet supported so you must visualise all topics.")
+        if selected_motifs is not None and interactive:
+            raise ValueError("For interactive mode, the selected_motifs parameter is not yet supported so you must visualise all motifs.")
                 
-        topic_ranking, sorted_topic_counts = self.rank_topics(sort_by=sort_by, 
-                                                              selected_topics=selected_topics, interactive=interactive)               
+        topic_ranking, sorted_topic_counts = self.rank_motifs(sort_by=sort_by, 
+                                                              selected_motifs=selected_motifs, interactive=interactive)               
         self.topic_plots = {}
         self.topic_ms1_count = {}
         self.topic_ms1_ordering = {}
@@ -67,15 +74,15 @@ class Ms2Lda_Viz(object):
         for (i, c) in sorted_topic_counts:
             
             # skip non-selected topics
-            if selected_topics is not None:
-                if i not in selected_topics:
+            if selected_motifs is not None:
+                if i not in selected_motifs:
                     continue
 
             if not interactive:            
                 if sort_by == 'h_index':
-                    print "Topic " + str(i) + " h-index=" + str(topic_ranking[i])
+                    print "Mass2Motif " + str(i) + " h-index=" + str(topic_ranking[i])
                 elif sort_by == 'in_degree':
-                    print "Topic " + str(i) + " in-degree=" + str(topic_ranking[i])
+                    print "Mass2Motif " + str(i) + " in-degree=" + str(topic_ranking[i])
                     print "====================="
                     print
 
@@ -98,7 +105,7 @@ class Ms2Lda_Viz(object):
             
             if not interactive:            
                 if len(top_n_docs) == 0:
-                    print "No parent peaks above the threshold found for this topic"
+                    print "No parent peaks above the threshold found for this motif"
                     continue
                 print "Parent peaks"
                 print
@@ -354,7 +361,7 @@ class Ms2Lda_Viz(object):
             
                 for n in range(num_peaks):
                         # compute the ordering of ms1 peaks to be plotted in this topic
-                        self.update_topic_ordering(i, parent_ids, parent_topic_fragments, parent_topic_losses, wordfreq, consistency)
+                        self._update_topic_ordering(i, parent_ids, parent_topic_fragments, parent_topic_losses, wordfreq, consistency)
                         # make the plot
                         self._make_ms1_plot(i, n, parent_masses, parent_rts, parent_ids, 
                            parent_all_fragments, parent_topic_fragments, parent_topic_losses,
@@ -369,12 +376,12 @@ class Ms2Lda_Viz(object):
                            wordfreq, consistency, max_parent_mz, parent_annots)
 
                 # compute the ordering of ms1 peaks to be plotted in this topic
-                self.update_topic_ordering(i, parent_ids, parent_topic_fragments, parent_topic_losses, wordfreq, consistency)
+                self._update_topic_ordering(i, parent_ids, parent_topic_fragments, parent_topic_losses, wordfreq, consistency)
 
                 # save the plot data for interactive use later
                 self.topic_plots[i] = plot_data
                 self.topic_ms1_count[i] = num_peaks                
-                print "Generating plots for topic " + str(i) + " h-index=" + str(topic_ranking[i]) + ", degree=" + str(num_peaks)
+                print "Generating plots for Mass2Motif " + str(i) + " h-index=" + str(topic_ranking[i]) + ", degree=" + str(num_peaks)
 
                 # set coordinate of each circle too
                 x_coord = topic_ranking[i]
@@ -388,7 +395,112 @@ class Ms2Lda_Viz(object):
         sorted_coords = sorted(self.topic_coordinates.iteritems(), key=lambda key_value: key_value[0])
         self.topic_coordinates = [item[1] for item in sorted_coords]        
         
-    def update_topic_ordering(self, i, parent_ids, parent_topic_fragments, parent_topic_losses, wordfreq, consistency):
+    def plot_cosine_clustering(self, motif_id, ions_of_interest, clustering, peak_names):  
+        
+        C, P, G, pos, peak_nodes, cluster_interests = self._get_cosine_network_graph(ions_of_interest, clustering, peak_names)
+        interest_nodes = [n for i,n in peak_nodes.items() if i in ions_of_interest]      
+        
+        scaling = 10
+        fig = plt.figure(figsize=(12,12))
+        ax = fig.add_subplot(111)
+        nx.draw_networkx_edges(G, pos, width=0.2, ax=ax)
+        nx.draw_networkx_nodes(G, pos, nodelist=C, node_size = 1*scaling, node_color = 'g', linewidths=0.1, ax=ax)
+        nx.draw_networkx_nodes(G, pos, nodelist=P, node_size = 0.5*scaling, node_color = 'b', linewidths=0.1, ax=ax)
+        nx.draw_networkx_nodes(G, pos, nodelist=interest_nodes, node_size=2*scaling, node_color='r', linewidths=0.1, ax=ax)
+        
+        labels_pos = {}
+        labels = {} 
+        for c in C:
+            cluster = G.node[c]['name']
+            if cluster in cluster_interests:
+                labels_pos[c] = pos[c]
+                labels[c] = cluster
+        nx.draw_networkx_labels(G, labels_pos, labels, font_size=10, font_weight='bold')
+
+        title = 'Mass2Motif ' + str(motif_id)
+        plt.title(title)
+        plt.axis('off')
+        plt.show()
+        
+        return G, cluster_interests
+        
+    def _get_cosine_network_graph(self, ions_of_interest, clustering, peak_names):
+
+        ions_of_interest_clustering = []
+        for item in ions_of_interest:
+            pos = peak_names.index(item)
+            cl = clustering[pos]
+            ions_of_interest_clustering.append(cl)
+        ions_of_interest_clustering = np.array(ions_of_interest_clustering)
+
+        # Create the networkx graph object.
+        # Clusters with fewer than min_size_to_plot members are not plotted
+        min_size_to_plot = 4
+        node_no = 0
+        G = nx.Graph()
+        uc = np.unique(clustering)
+        cluster_nodes = {}
+        singleton_clusters = []
+        cluster_interests = {}
+        for cluster in uc:
+            # check cluster size
+            members = np.where(clustering == cluster)[0]
+            if len(members) < min_size_to_plot:
+                # print "Not plotting cluster %d with %d members." % (cluster, len(members))
+                singleton_clusters.append(cluster)
+                continue
+            # append to graph
+            cluster_nodes[cluster] = node_no
+            G.add_node(node_no, bipartite=0, name=cluster)
+            node_no += 1
+            # also print out the ions of interest in this cluster
+            interest_members = np.where(ions_of_interest_clustering == cluster)[0]
+            if len(interest_members) > 0:
+                cluster_interests[cluster] = []
+                for idx in interest_members:
+                    tokens = ions_of_interest[idx].split('_')
+                    pid = int(tokens[2])
+                    cluster_interests[cluster].append(pid)
+        
+        peak_nodes = {}
+        for i,name in enumerate(peak_names):
+            this_cluster = clustering[i]
+            if this_cluster in cluster_nodes:
+                peak_nodes[name] = node_no
+                G.add_node(node_no,bipartite=1, name=name)
+                G.add_edge(node_no,cluster_nodes[clustering[i]])
+                node_no += 1
+        
+        # Position the clusters in a grid, and their members in circle coming out from the cluster. 
+        # cstep determines the distance between grid points. 
+        # If you want cluster members closer to the cluster centers, change the 0.75 in 
+        # the x_pos and y_pos lines
+        C,P = bipartite.sets(G)
+        n_clusters = len(C)
+        n_rows = np.ceil(np.sqrt(n_clusters))
+        pos = {}
+        current_row = 0
+        current_col = 0
+        cstep = 2.0
+        for c in C:
+            n_list = G.neighbors(c)
+            pos[c] = [cstep*current_row,cstep*current_col]
+            # find neighbours
+            step = 2*np.pi/len(n_list)
+            angle = 0.0
+            for n in n_list:
+                x_pos = 0.75*np.sin(angle)
+                y_pos = 0.75*np.cos(angle)
+                pos[n] = [pos[c][0]+x_pos,pos[c][1]+y_pos]
+                angle += step
+            current_col += 1
+            if current_col >= n_rows:
+                current_col = 0
+                current_row += 1
+                
+        return C, P, G, pos, peak_nodes, cluster_interests
+        
+    def _update_topic_ordering(self, i, parent_ids, parent_topic_fragments, parent_topic_losses, wordfreq, consistency):
 
         # count how many words are being plotted (above the consistency ratio) for each parent id
         parent_word_counts = []
@@ -458,7 +570,8 @@ class Ms2Lda_Viz(object):
         ax = fig.add_subplot(111)
         
         #set the bbox for the text. Increase txt_width for wider text.
-        txt_width = 40*(plt.xlim()[1] - plt.xlim()[0])
+        txt_width = 20*(plt.xlim()[1] - plt.xlim()[0])        
+        txt_width_annot = 40*(plt.xlim()[1] - plt.xlim()[0])
         txt_height = 0.2*(plt.ylim()[1] - plt.ylim()[0])
 
         ## handle empty topic
@@ -509,6 +622,7 @@ class Ms2Lda_Viz(object):
             y_data = []
             line_type = []    
             labels = []        
+            has_annots = []
             xlim_upper = max_parent_mz
     
             # plot the fragment peaks in this topic that also occur in this parent peak
@@ -545,6 +659,7 @@ class Ms2Lda_Viz(object):
                         y_data.append(y)
                         line_type.append('fragment')
                         labels.append(label)
+                        has_annots.append(has_annotation)
                 
             # plot the neutral losses in this topic that also occur in this parent peak
             if parent_id in parent_topic_losses:        
@@ -580,12 +695,15 @@ class Ms2Lda_Viz(object):
                         y_data.append(y)
                         line_type.append('loss')
                         labels.append(label)
+                        has_annots.append(has_annotation)
                 
             # Get the corrected text positions, then write the text.
             x_data = np.array(x_data)
             y_data = np.array(y_data)
-            text_positions = self._get_text_positions(x_data, y_data, txt_width, txt_height)
-            self._text_plotter(x_data, y_data, line_type, labels, text_positions, ax, txt_width, txt_height, 
+            text_positions = self._get_text_positions(x_data, y_data, has_annots, txt_width, txt_width_annot, txt_height)
+            self._text_plotter(x_data, y_data, line_type, labels, has_annots, 
+                               text_positions, ax, 
+                               txt_width, txt_width_annot, txt_height, 
                                fragment_fontspec, loss_fontspec)
     
         plt.xlim([0, xlim_upper+100])
@@ -597,25 +715,30 @@ class Ms2Lda_Viz(object):
         pid_value = ("%d" % parent_id)
         mz_value = ("%.4f" % parent_mass)
         rt_value = ("%.3f" % parent_rt)
-        title = 'Topic ' + str(i) + ' peak ' + str(n+1) + '/' + ms1_peak_counts
+        title = 'Mass2Motif ' + str(i) + ' peak ' + str(n+1) + '/' + ms1_peak_counts
         title += ' (pid=' + pid_value + ' m/z=' + mz_value + ' RT=' + rt_value + ")"
         plt.title(title)
         
         blue_patch = mpatches.Patch(color='blue', label='Parent peak')
         yellow_patch = mpatches.Patch(color='#FF9933', label='Fragment peaks')
-        red_patch = mpatches.Patch(color='#800000', label='Topic fragment')
-        green_patch = mpatches.Patch(color='green', label='Topic loss')                
+        red_patch = mpatches.Patch(color='#800000', label='M2M fragment')
+        green_patch = mpatches.Patch(color='green', label='M2M loss')                
         plt.legend(handles=[blue_patch, yellow_patch, red_patch, green_patch])                
 
         return fig
                     
     # from http://stackoverflow.com/questions/8850142/matplotlib-overlapping-annotations
-    def _get_text_positions(self, x_data, y_data, txt_width, txt_height):
+    def _get_text_positions(self, x_data, y_data, has_annots, txt_width, txt_width_annot, txt_height):
         a = zip(y_data, x_data)
         text_positions = y_data.copy()
         for index, (y, x) in enumerate(a):
+            has_annot = has_annots[index]
+            if has_annot:
+                txtw = txt_width_annot
+            else:
+                txtw = txt_width
             local_text_positions = [i for i in a if i[0] > (y - txt_height) 
-                                and (abs(i[1] - x) < txt_width * 2) and i != (y,x)]
+                                and (abs(i[1] - x) < txtw * 2) and i != (y,x)]
             if local_text_positions:
                 sorted_ltp = sorted(local_text_positions)
                 if abs(sorted_ltp[0][0] - y) < txt_height: #True == collision
@@ -631,16 +754,22 @@ class Ms2Lda_Viz(object):
         return text_positions
     
     # from http://stackoverflow.com/questions/8850142/matplotlib-overlapping-annotations
-    def _text_plotter(self, x_data, y_data, line_type, labels, text_positions, axis, txt_width, txt_height, 
+    def _text_plotter(self, x_data, y_data, line_type, labels, has_annots, 
+                      text_positions, axis, 
+                      txt_width, txt_width_annot, txt_height, 
                       fragment_fontspec, loss_fontspec):
-        for x,y,t,l,lab in zip(x_data, y_data, text_positions, line_type, labels):
+        for x,y,t,l,lab,has_annot in zip(x_data, y_data, text_positions, line_type, labels, has_annots):
+            if has_annot:
+                txtw = txt_width_annot
+            else:
+                txtw = txt_width
             if l == 'fragment':
-                axis.text(x-txt_width, 1.01*t, lab, rotation=0, **fragment_fontspec)
+                axis.text(x-txtw, 1.01*t, lab, rotation=0, **fragment_fontspec)
             elif l == 'loss':
-                axis.text(x-txt_width, 1.01*t, lab, rotation=0, **loss_fontspec)                
+                axis.text(x-txtw, 1.01*t, lab, rotation=0, **loss_fontspec)                
             if y != t:
-                axis.arrow(x, t,0,y-t, color='black', alpha=0.2, width=txt_width*0.01, 
-                           head_width=txt_width/4, head_length=txt_height*0.25, 
+                axis.arrow(x, t,0,y-t, color='black', alpha=0.2, width=txtw*0.01, 
+                           head_width=txtw/4, head_length=txt_height*0.25, 
                            zorder=0,length_includes_head=True)
     
     # compute the h-index of topics TODO: this only works for fragment and loss words!
@@ -739,20 +868,11 @@ class Ms2Lda_Viz(object):
                         else:
                             break
 
-                print " - topic " + str(i) + " h-index = " + str(h_index)
+                print " - Mass2Motif " + str(i) + " h-index = " + str(h_index)
                 topic_counts[i] = h_index
             
         return topic_counts
-    
-    def _get_docname(self, row_index):
-        tokens = row_index.split('_')
-        docname = "doc_"+ str(tokens[0]) + "_" + str(tokens[1])
-        return docname
-    
-    def _get_topicname(self, col_index):
-        topic = "topic_" + str(col_index)
-        return topic    
-    
+        
     # computes the in-degree of topics
     def _in_degree(self):    
 
