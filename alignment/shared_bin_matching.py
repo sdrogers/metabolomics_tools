@@ -136,6 +136,11 @@ class SharedBinMatching:
             print precursor_clustering
             precursor_clustering.run()
         
+            # make some plots
+            cp = ClusterPlotter(peak_data, precursor_clustering, threshold=self.hp.t)
+            cp.summary(file_idx=j)
+            # cp.plot_biggest(3)        
+        
             # pick the non-empty bins for the second stage clustering
             cluster_membership = (precursor_clustering.Z>self.hp.t)
             s = cluster_membership.sum(0)
@@ -153,43 +158,41 @@ class SharedBinMatching:
             bin_rts = bin_rts.ravel().tolist()
             posterior_bin_rts.extend(bin_rts)
             file_post_rts.append(bin_rts)
-        
-            # make some plots
-            cp = ClusterPlotter(peak_data, precursor_clustering)
-            cp.summary(file_idx=j)
-            # cp.plot_biggest(3)        
-        
+                
             # assign peaks into their respective bins, 
             # this makes it easier when matching peaks across the same bins later
             # note: a peak can belong to multiple bins, depending on the choice of threshold t
-            cx = cluster_membership.tocoo()
-            plt.matshow(cx.todense())
-            plt.show()
+            cx = precursor_clustering.Z.tocoo()
             for i,j,v in itertools.izip(cx.row, cx.col, cx.data):
                 
-                f = peak_data.features[i]
-                bb = peak_data.bins[j] # copy of the common bin specific to file j
-                bb.add_feature(f)    
-
-                # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
-                bin_prob = precursor_clustering.Z[i, j]
-                trans_idx = precursor_clustering.possible[i, j]
-                tran = tmap[trans_idx]
-                msg = "{:s}@{:3.5f}({:.4f})".format(tran.name, bb.mass, bin_prob)            
-                self._annotate(f, msg)   
-                bin_id = bb.bin_id
-                bin_origin = bb.origin
-                msg = "bin_{:d}_file{:d}".format(bin_id, bin_origin)                            
-                self._annotate(f, msg)                
-
-                # track the word counts too for each transformation
-                tidx = trans_idx-1  # we use trans_idx-1 because the value of trans goes from 1 .. T
-                bb.word_counts[tidx] += 1
+                if cluster_membership[i, j] > 0:
+                                    
+                    f = peak_data.features[i]
+                    bb = peak_data.bins[j] # copy of the common bin specific to file j
+                    bb.add_feature(f)    
+    
+                    # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
+                    bin_prob = precursor_clustering.Z[i, j]
+                    trans_idx = precursor_clustering.possible[i, j]
+                    tran = tmap[trans_idx]
+                    msg = "{:s}@{:3.5f}({:.4f})".format(tran.name, bb.mass, bin_prob)            
+                    self._annotate(f, msg)   
+                    bin_id = bb.bin_id
+                    bin_origin = bb.origin
+                    msg = "bin_{:d}_file{:d}".format(bin_id, bin_origin)                            
+                    self._annotate(f, msg)                
+    
+                    # track the word counts too for each transformation
+                    tidx = trans_idx-1  # we use trans_idx-1 because the value of trans goes from 1 .. T
+                    bb.word_counts[tidx] += 1
             
             print
 
             for bb in bins:
-                print bb.word_counts
+                wc = ""
+                for c in bb.word_counts:
+                    wc += str(c)
+                print wc
                 
         # plotter.plot_bin_vs_bin(file_bins, file_post_rts)
         return all_bins, posterior_bin_rts
@@ -204,6 +207,7 @@ class SharedBinMatching:
         hp.rt_prec = 1.0/(self.hp.across_file_rt_sd*self.hp.across_file_rt_sd)
         hp.rt_prior_prec = 5E-6
         hp.alpha = self.hp.alpha_rt        
+        hp.alpha = 1
         matching_results = []
         top_ids = [bb.top_id for bb in all_bins]
         top_ids = list(set(top_ids))
@@ -235,7 +239,7 @@ class SharedBinMatching:
 
     def _construct_alignment(self, matching_results, samples_obtained, 
                              matching_mass_tol, matching_rt_tol, 
-                             full_matching=False, show_plot=False):
+                             full_matching=True, show_plot=False):
         
         # count frequencies of aligned bins produced across the Gibbs samples
         counter = dict()
