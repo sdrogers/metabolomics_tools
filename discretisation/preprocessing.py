@@ -3,12 +3,16 @@ import glob
 from operator import attrgetter
 import os
 import sys
+import multiprocessing
+from joblib import Parallel, delayed  
 
-from interval_tree import IntervalTree
-from models import DiscreteInfo, PrecursorBin, PeakData, Feature, DatabaseEntry, Transformation
 import numpy as np
 import scipy.io as sio
 import scipy.sparse as sp
+
+from interval_tree import IntervalTree
+from models import DiscreteInfo, PrecursorBin, PeakData, Feature, DatabaseEntry, Transformation
+from file_binner import _process_file, _make_precursor_bin
 import utils
 
 
@@ -110,7 +114,7 @@ class Discretiser(object):
                     fs.append(all_features[pos])
                 top_bin_features[k] = fs
                 # create the new top-level bin too
-                tb = self._make_precursor_bin(k, bin_centre, 0, 0, self.across_file_mass_tol, 0)
+                tb = self._create_top_level_bin(k, bin_centre, 0, 0, self.across_file_mass_tol, 0)
                 if self.verbose:
                     print "\t" + str(tb)
                 sys.stdout.flush()
@@ -123,85 +127,31 @@ class Discretiser(object):
         sys.stdout.flush()
 
         # for each file, we want to instantiatie its concrete bins -- based on the top bins
-        all_binning = []
-        for j in range(len(data_list)):
-                       
-            peak_data = data_list[j]            
-            features = peak_data.features
-            N = len(features)        
 
-            # initialise the 'concrete' realisations of the top bins in this file
-            concrete_bins = []
-            k = 0
-            for a in range(len(top_bins)):
-                                
-                # find all features that can fit by mass in the top level bin
-                tb = top_bins[a]
-                fs = top_bin_features[a]
-                for f in fs:
-                    # make a new concrete bin from the feature based on mass and RT
-                    precursor_mass = (f.mass - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]                        
-                    concrete_bin = PrecursorBin(k, np.asscalar(precursor_mass), f.rt, f.intensity, self.within_file_mass_tol, self.within_file_rt_tol)
-                    concrete_bin.top_id = tb.bin_id
-                    concrete_bin.origin = j
-                    concrete_bin.T = T
-                    concrete_bin.word_counts = np.zeros(T)
-                    concrete_bins.append(concrete_bin)
-                    k += 1
+        # process serially
+#         all_binning = []
+#         for j in range(len(data_list)):     
+#             file_binning = _process_file(peak_data, top_bins, top_bin_features,
+#                                          self.transformations, self.adduct_sub, 
+#                                          self.adduct_mul, self.adduct_del, self.proton_pos, 
+#                                          self.within_file_mass_tol, self.within_file_rt_tol, j)
+#             all_binning.append(file_binning)
 
-            K = len(concrete_bins)
-            if self.verbose:
-                print "File " + str(j) + " has " + str(K) + " concrete bins instantiated"
-                for cb in concrete_bins:
-                    print "\t" + str(cb)
-            prior_masses = np.array([bb.mass for bb in concrete_bins])[:, None]                # K x 1                                
-            prior_rts = np.array([bb.rt for bb in concrete_bins])[:, None]                     # K x 1
-            prior_intensities = np.array([bb.intensity for bb in concrete_bins])[:, None]      # K x 1
-
-            # build the matrices for this file
-            matRT = sp.lil_matrix((N, K), dtype=np.float)       # N x K, RTs of f n in bin k
-            possible = sp.lil_matrix((N, K), dtype=np.int)      # N x K, transformation id+1 of f n in bin k
-            transformed = sp.lil_matrix((N, K), dtype=np.float) # N x K, transformed masses of f n in bin k
-            sys.stdout.write("Building matrices for file " + str(j) + " ")
-            for n in range(N):
-                
-                if n%200 == 0:
-                    sys.stdout.write('.')                            
-                    sys.stdout.flush()
-    
-                f = features[n]    
-                current_mass, current_rt, current_intensity = f.mass, f.rt, f.intensity
-                transformed_masses = (current_mass - self.adduct_sub)/self.adduct_mul + self.adduct_del
-
-                rt_ok = utils.rt_match(current_rt, prior_rts, self.within_file_rt_tol)
-                intensity_ok = (current_intensity <= prior_intensities)
-                for t in np.arange(len(self.transformations)):
-                    # fill up the target bins that this transformation allows
-                    mass_ok = utils.mass_match(transformed_masses[t], prior_masses, self.within_file_mass_tol)
-                    check = mass_ok*rt_ok*intensity_ok
-                    pos = np.flatnonzero(check)
-                    # print (f.feature_id, t, pos)
-                    possible[n, pos] = t+1
-                    # and other prior values too
-                    transformed[n, pos] = transformed_masses[t]
-                    matRT[n, pos] = current_rt            
-                    
-                possible_clusters = np.nonzero(possible[n, :])[1]
-                assert len(possible_clusters) > 0, str(f) + " has no possible clusters"
-                
-            print
-            binning = DiscreteInfo(possible, transformed, matRT, concrete_bins, prior_masses, prior_rts)
-            all_binning.append(binning)
-
+        # in parallel
+        print "Building matrices for all files"
+        num_cores = multiprocessing.cpu_count()
+        all_binning = Parallel(n_jobs=num_cores)(delayed(_process_file)(data_list, top_bins, top_bin_features, 
+                                                                        self.transformations, self.adduct_sub, 
+                                                                        self.adduct_mul, self.adduct_del, 
+                                                                        self.proton_pos, 
+                                                                        self.within_file_mass_tol, self.within_file_rt_tol, 
+                                                                        j) for j in range(len(data_list)))      
+        print
         return all_binning     
-            
-    def _make_precursor_bin(self, bin_id, bin_mass, bin_RT, bin_intensity, mass_tol, rt_tol):
-        bin_mass = utils.as_scalar(bin_mass)
-        bin_RT = utils.as_scalar(bin_RT)
-        bin_intensity = utils.as_scalar(bin_intensity)
-        pcb = PrecursorBin(bin_id, bin_mass, bin_RT, bin_intensity, mass_tol, rt_tol)
-        return pcb
     
+    def _create_top_level_bin(self, bin_id, bin_mass, bin_RT, bin_intensity, mass_tol, rt_tol):
+        return _make_precursor_bin(bin_id, bin_mass, bin_RT, bin_intensity, mass_tol, rt_tol)
+        
     def _find_features(self, bb, features):
         masses = np.array([f.mass for f in features])
         precursor_masses = (masses - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]
@@ -214,7 +164,7 @@ class Discretiser(object):
             return None
         else:
             return results
-    
+            
 class FileLoader:
         
     def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol, across_file_mass_tol=0,
