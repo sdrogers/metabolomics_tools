@@ -230,6 +230,9 @@ class SharedBinMatching:
             dp.nsamps = self.hp.rt_clustering_nsamps
             dp.burn_in = self.hp.rt_clustering_burnin
             dp.run() 
+#             if top_ids[n] == 46:
+#                 print "log_likelihood_rt = " + str(dp.like_rt)
+#                 print "log_likelihood_wc = " + str(dp.like_wc)
             matching_results.extend(dp.matching_results)
             print "\tlast_K = " + str(dp.last_K)
             

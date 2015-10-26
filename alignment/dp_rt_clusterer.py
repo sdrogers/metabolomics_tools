@@ -4,6 +4,7 @@ from random import shuffle
 import sys
 import time
 import math
+from scipy.special import gammaln
 
 import numpy as np
 import scipy.sparse as sp
@@ -19,16 +20,23 @@ class DpMixtureGibbs:
         self.verbose = verbose
         if self.verbose:
             print 'DpMixtureGibbs initialised'
+
+        # prepare arrays for concrete bins, posterior rts 
+        # and word counts (from 1st stage clustering)
         self.rts = np.array(data[0])
         self.bins = data[1]
         self.word_counts_list = []
         for bb in self.bins:
             self.word_counts_list.append(bb.word_counts)
+        assert len(self.bins) == len(self.rts)
+        assert len(self.rts) == len(self.word_counts_list)
+        
         self.N = len(self.rts)
         self.mu_zero = np.mean(self.rts)
         self.rt_prec = float(hyperpars.rt_prec)
         self.rt_prior_prec = float(hyperpars.rt_prior_prec)
         self.alpha = float(hyperpars.alpha)
+        self.beta = 1
         self.nsamps = 200
         self.burn_in = 100
         self.seed = int(seed)
@@ -51,6 +59,11 @@ class DpMixtureGibbs:
         K = 1
         cluster_counts = np.array([float(self.N)])
         cluster_sums = np.array([self.rts.sum()])
+        W = len(self.word_counts_list[0])
+        all_word_counts = np.zeros(W)
+        for wc in self.word_counts_list:
+            all_word_counts += wc
+        cluster_word_sums = [all_word_counts]
         current_ks = np.zeros(self.N, dtype=np.int)
         cluster_member_origins = []
 
@@ -75,11 +88,13 @@ class DpMixtureGibbs:
 
                 this_bin = self.bins[n]
                 current_data = self.rts[n]
+                current_word_counts = self.word_counts_list[n]
                 k = current_ks[n] # the current cluster of this item
                 
                 # remove from model, detecting empty table if necessary
                 cluster_counts[k] = cluster_counts[k] - 1
                 cluster_sums[k] = cluster_sums[k] - current_data
+                cluster_word_sums[k] = cluster_word_sums[k] - current_word_counts
                 cluster_member_origins[k].remove(this_bin.origin)
                 
                 # if empty table, delete this cluster
@@ -88,12 +103,15 @@ class DpMixtureGibbs:
                     cluster_counts = np.delete(cluster_counts, k) # delete k-th entry
                     cluster_sums = np.delete(cluster_sums, k) # delete k-th entry
                     del cluster_member_origins[k] # delete k-th entry
-                    current_ks = self.reindex(k, current_ks) # remember to reindex all the clusters
+                    del cluster_word_sums[k]
+                    current_ks = self._reindex(k, current_ks) # remember to reindex all the clusters
                     
                 # compute prior probability for K existing table and new table
                 prior = np.array(cluster_counts)
                 prior = np.append(prior, self.alpha)
                 prior = prior / prior.sum()
+                
+                ## RT likelihood
                 
                 # for current k
                 param_beta = self.rt_prior_prec + (self.rt_prec*cluster_counts)
@@ -106,9 +124,26 @@ class DpMixtureGibbs:
                 
                 # pick new k
                 prec = 1/((1/param_beta)+(1/self.rt_prec))
-                log_likelihood = -0.5*np.log(2*np.pi)
-                log_likelihood = log_likelihood + 0.5*np.log(prec)
-                log_likelihood = log_likelihood - 0.5*np.multiply(prec, np.square(current_data-param_alpha))
+                log_likelihood_rt = -0.5*np.log(2*np.pi)
+                log_likelihood_rt = log_likelihood_rt + 0.5*np.log(prec)
+                log_likelihood_rt = log_likelihood_rt - 0.5*np.multiply(prec, np.square(current_data-param_alpha))
+
+                ## adducts likelihood
+
+                log_likelihood_wc = np.zeros_like(log_likelihood_rt)
+                for k_idx in range(K): # the finite portion
+                    wcb = cluster_word_sums[k_idx] + self.beta
+                    log_likelihood_wc[k_idx] = self._C(wcb+current_word_counts) - self._C(wcb)
+                # the infinite bit
+                wcb = np.zeros(W) + self.beta
+                log_likelihood_wc[-1] = self._C(wcb+current_word_counts) - self._C(wcb)
+
+                # the combined likelihood                                    
+                log_likelihood = log_likelihood_rt + log_likelihood_wc
+                self.like_rt = log_likelihood_rt
+                self.like_wc = log_likelihood_wc
+                
+                ## plus some additional rules to prevent bins from different files to be clustered together
                 
                 valid_clusters_check = np.zeros(K+1)
                 for k_idx in range(K):
@@ -137,11 +172,13 @@ class DpMixtureGibbs:
                     cluster_counts = np.append(cluster_counts, 1)
                     cluster_sums = np.append(cluster_sums, current_data)
                     cluster_member_origins.append([this_bin.origin])
+                    cluster_word_sums.append(current_word_counts)
                 else:
                     # put into existing cluster
                     cluster_counts[new_k] = cluster_counts[new_k] + 1
                     cluster_sums[new_k] = cluster_sums[new_k] + current_data
                     cluster_member_origins[new_k].append(this_bin.origin)
+                    cluster_word_sums[new_k] += cluster_word_sums[new_k] + current_word_counts
 
                 # assign object to the cluster new_k, regardless whether it's current or new
                 current_ks[n] = new_k 
@@ -149,6 +186,7 @@ class DpMixtureGibbs:
                 assert len(cluster_counts) == K, "len(cluster_counts)=%d != K=%d)" % (len(cluster_counts), K)
                 assert len(cluster_sums) == K, "len(cluster_sums)=%d != K=%d)" % (len(cluster_sums), K)                    
                 assert len(cluster_member_origins) == K, "len(cluster_member_origins)=%d != K=%d)" % (len(cluster_member_origins), K)
+                assert len(cluster_word_sums) == K, "len(cluster_word_sums)=%d != K=%d)" % (len(cluster_word_sums), K)
                 assert current_ks[n] < K, "current_ks[%d] = %d >= %d" % (n, current_ks[n])
         
             # end objects loop
@@ -158,8 +196,8 @@ class DpMixtureGibbs:
             
                 if self.verbose:
                     print('\tSAMPLE\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))
-                self.Z = self.get_Z(self.N, K, current_ks)
-                self.ZZ_all = self.ZZ_all + self.get_ZZ(self.Z)
+                self.Z = self._get_Z(self.N, K, current_ks)
+                self.ZZ_all = self.ZZ_all + self._get_ZZ(self.Z)
                 self.samples_obtained += 1
             
                 # construct the actual alignment here
@@ -180,20 +218,26 @@ class DpMixtureGibbs:
         self.ZZ_all = self.ZZ_all / self.samples_obtained
         if self.verbose:
             print "DONE!"
+    
+    def _C(self, arr):
+        sum_arr = np.sum(arr)
+        sum_log_gamma = np.sum(gammaln(arr))
+        res = sum_log_gamma - gammaln(sum_arr)
+        return res
         
-    def reindex(self, deleted_k, current_ks):
+    def _reindex(self, deleted_k, current_ks):
         pos = np.where(current_ks > deleted_k)
         current_ks[pos] = current_ks[pos] - 1
         return current_ks
     
-    def get_Z(self, N, K, current_ks):
+    def _get_Z(self, N, K, current_ks):
         Z = sp.lil_matrix((N, K))
         for n in range(len(current_ks)):
             k = current_ks[n]
             Z[n, k] = 1
         return Z
     
-    def get_ZZ(self, Z):
+    def _get_ZZ(self, Z):
         return Z.tocsr() * Z.tocsr().transpose()
     
     def __repr__(self):
