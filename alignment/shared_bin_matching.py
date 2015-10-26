@@ -1,28 +1,27 @@
-import numpy as np
-
-import sys
-import os
-import itertools
-from operator import attrgetter
-from operator import itemgetter
 from collections import namedtuple
 import csv
-
-import pylab as plt
+import itertools
+import math
+from operator import attrgetter
+from operator import itemgetter
+import os
+import sys
 
 sys.path.append('/home/joewandy/git/metabolomics_tools')
-from discretisation.models import HyperPars
-from discretisation.discrete_mass_clusterer import DiscreteVB
+
+from discretisation import utils
 from discretisation.continuous_mass_clusterer import ContinuousVB
+from discretisation.discrete_mass_clusterer import DiscreteVB
+from discretisation.models import HyperPars
 from discretisation.plotting import ClusterPlotter
 from discretisation.preprocessing import FileLoader
-from discretisation import utils
-from ground_truth import GroundTruth
-from models import AlignmentFile, Feature, AlignmentRow
-from matching import MaxWeightedMatching
-
-import shared_bin_matching_plotter as plotter
 from dp_rt_clusterer import DpMixtureGibbs
+from ground_truth import GroundTruth
+from matching import MaxWeightedMatching
+from models import AlignmentFile, Feature, AlignmentRow
+import numpy as np
+import pylab as plt
+import shared_bin_matching_plotter as plotter
 
 AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 
@@ -35,6 +34,7 @@ class SharedBinMatching:
         '''
         loader = FileLoader()
         self.hp = hyperpars
+        print self.hp
         self.data_list = loader.load_model_input(input_dir, database_file, transformation_file, 
                                                  self.hp.within_file_mass_tol, self.hp.within_file_rt_tol,
                                                  self.hp.across_file_mass_tol, synthetic=synthetic, 
@@ -202,19 +202,20 @@ class SharedBinMatching:
         # Second-stage clustering
         N = len(all_bins)
         assert N == len(posterior_bin_rts)
-
-        hp = HyperPars()
-        hp.rt_prec = 1.0/(self.hp.across_file_rt_sd*self.hp.across_file_rt_sd)
-        hp.rt_prior_prec = 5E-6
-        hp.alpha = self.hp.alpha_rt        
-        hp.alpha = 1
-        matching_results = []
+        
+        # get all the unique top ids of the non-empty concrete bins
         top_ids = [bb.top_id for bb in all_bins]
         top_ids = list(set(top_ids))
+
+        matching_results = []        
         for n in range(len(top_ids)):
-            selected_bins = []
+
             selected_rts = []
-            print "Processing top_id " + str(top_ids[n]) + "\t\t(" + str(n) + "/" + str(len(top_ids)) + ")",
+            selected_word_counts = []
+            selected_origins = []
+            selected_bins = []
+            
+            # find all concrete bins under this top id
             if self.verbose:
                 print
             for b in range(len(all_bins)):
@@ -223,18 +224,26 @@ class SharedBinMatching:
                 if bb.top_id == top_ids[n]:
                     if self.verbose:
                         print " - " + str(bb) + " posterior RT = " + str(rt)
-                    selected_bins.append(bb)
                     selected_rts.append(rt)
-            data = (selected_rts, selected_bins)
-            dp = DpMixtureGibbs(data, hp, seed=self.seed)
+                    selected_word_counts.append(bb.word_counts)
+                    selected_origins.append(bb.origin)
+                    selected_bins.append(bb)
+
+            print "Processing top_id " + str(top_ids[n]) + "\t\t(" + str(n) + "/" + str(len(top_ids)) + ")",
+            # run dp clustering for each top id
+            data = (selected_rts, selected_word_counts, selected_origins)
+            dp = DpMixtureGibbs(data, self.hp, seed=self.seed)
             dp.nsamps = self.hp.rt_clustering_nsamps
             dp.burn_in = self.hp.rt_clustering_burnin
             dp.run() 
-#             if top_ids[n] == 46:
-#                 print "log_likelihood_rt = " + str(dp.like_rt)
-#                 print "log_likelihood_wc = " + str(dp.like_wc)
-            matching_results.extend(dp.matching_results)
-            print "\tlast_K = " + str(dp.last_K)
+
+            # read the clustering results back
+            for matched_set in dp.matching_results:
+                members = [selected_bins[a] for a in matched_set]
+                memberstup = tuple(members)
+                matching_results.append(memberstup)
+                
+            print "\t\tconcrete_bins=" + str(len(selected_bins)) + "\t\t\tlast_K = " + str(dp.last_K)
             
         # plotter.plot_ZZ_all(dp.ZZ_all)
         samples_obtained = self.hp.rt_clustering_nsamps - self.hp.rt_clustering_burnin
@@ -242,7 +251,7 @@ class SharedBinMatching:
 
     def _construct_alignment(self, matching_results, samples_obtained, 
                              matching_mass_tol, matching_rt_tol, 
-                             full_matching=True, show_plot=False):
+                             full_matching=False, show_plot=False):
         
         # count frequencies of aligned bins produced across the Gibbs samples
         counter = dict()
@@ -420,7 +429,7 @@ class SharedBinMatching:
                     else:
                         features2 = bb2.features
                         closest = None
-                        min_diff = float('inf')
+                        min_dist = float('inf')
                         for f2 in features2:
                             # skip item that has been processed before
                             if f2 in processed:
@@ -430,9 +439,9 @@ class SharedBinMatching:
                             rt_ok = utils.rt_match(f1.rt, f2.rt, rt_tol)
                             if not mass_ok or not rt_ok:
                                 continue
-                            diff = abs(f1.mass - f2.mass)
-                            if diff < min_diff:
-                                min_diff = diff
+                            dist = math.sqrt((f1.rt-f2.rt)**2 + (f1.mass-f2.mass)**2)                            
+                            if dist < min_dist:
+                                min_dist = dist
                                 closest = f2
                         if closest is not None:
                             temp.append(closest)
