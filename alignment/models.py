@@ -42,14 +42,14 @@ class Feature(object):
         self.rt = float(new_rt)
         self.parent_file = parent_file
         
-    def __key(self):
+    def _get_key(self):
         return (self.peak_id, self.parent_file)
 
     def __eq__(self, x, y):
-        return x.__key() == y.__key()
+        return x._get_key() == y._get_key()
 
     def __hash__(self):
-        return hash(self.__key())        
+        return hash(self._get_key())        
         
     def __repr__(self):
         return "peak_id " + str(self.peak_id) + " parent_file " + self.parent_file.filename + \

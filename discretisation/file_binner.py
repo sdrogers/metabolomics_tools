@@ -5,11 +5,10 @@ import sys
 import utils
 from models import DiscreteInfo, PrecursorBin
 
-def _process_file(data_list, top_bins, top_bin_features, 
+def _process_file(j, peak_data, top_bins, top_bin_features, 
                   transformations, adduct_sub, adduct_mul, adduct_del, proton_pos, 
-                  within_file_mass_tol, within_file_rt_tol, file_idx):
+                  within_file_mass_tol, within_file_rt_tol):
 
-    peak_data = data_list[file_idx]
     features = peak_data.features
     N = len(features)     
     T = len(transformations)   
@@ -27,7 +26,7 @@ def _process_file(data_list, top_bins, top_bin_features,
             precursor_mass = (f.mass - adduct_sub[proton_pos])/adduct_mul[proton_pos]                        
             concrete_bin = PrecursorBin(k, np.asscalar(precursor_mass), f.rt, f.intensity, within_file_mass_tol, within_file_rt_tol)
             concrete_bin.top_id = tb.bin_id
-            concrete_bin.origin = file_idx
+            concrete_bin.origin = j
             concrete_bin.T = T
             concrete_bin.word_counts = np.zeros(T)
             concrete_bins.append(concrete_bin)
@@ -49,7 +48,7 @@ def _process_file(data_list, top_bins, top_bin_features,
     for n in range(N):
         
         if n%200 == 0:
-            sys.stdout.write(str(file_idx))                            
+            sys.stdout.write(str(j)+' ')                            
             sys.stdout.flush()
 
         f = features[n]    

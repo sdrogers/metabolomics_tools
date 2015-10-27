@@ -140,12 +140,11 @@ class Discretiser(object):
         # in parallel
         print "Building matrices for all files"
         num_cores = multiprocessing.cpu_count()
-        all_binning = Parallel(n_jobs=num_cores)(delayed(_process_file)(data_list, top_bins, top_bin_features, 
+        all_binning = Parallel(n_jobs=num_cores)(delayed(_process_file)(j, data_list[j], top_bins, top_bin_features, 
                                                                         self.transformations, self.adduct_sub, 
                                                                         self.adduct_mul, self.adduct_del, 
                                                                         self.proton_pos, 
-                                                                        self.within_file_mass_tol, self.within_file_rt_tol, 
-                                                                        j) for j in range(len(data_list)))      
+                                                                        self.within_file_mass_tol, self.within_file_rt_tol) for j in range(len(data_list)))      
         print
         return all_binning     
     

@@ -1,26 +1,30 @@
+import sys
+import os
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+
 from collections import namedtuple
 import csv
 import itertools
 import math
 from operator import attrgetter
 from operator import itemgetter
-import os
-import sys
-sys.path.append('/home/joewandy/git/metabolomics_tools')
+import multiprocessing
+from joblib import Parallel, delayed  
 
 from discretisation import utils
-from discretisation.continuous_mass_clusterer import ContinuousVB
 from discretisation.discrete_mass_clusterer import DiscreteVB
 from discretisation.models import HyperPars
 from discretisation.plotting import ClusterPlotter
 from discretisation.preprocessing import FileLoader
-from second_stage_clusterer import DpMixtureGibbs
 from ground_truth import GroundTruth
 from matching import MaxWeightedMatching
 from models import AlignmentFile, Feature, AlignmentRow
 import numpy as np
 import pylab as plt
+from second_stage_clusterer import DpMixtureGibbs
 import shared_bin_matching_plotter as plotter
+from clustering_calls import _run_first_stage_clustering, _run_second_stage_clustering
+
 
 AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 
@@ -46,18 +50,16 @@ class SharedBinMatching:
         self.gt_file = gt_file
         self.verbose = verbose
         self.seed = seed
+        self.num_cores = multiprocessing.cpu_count()
 
         self.annotations = {}
         
     def run(self, matching_mass_tol, matching_rt_tol, full_matching=False, show_singleton=False, show_plot=False):
 
-        print "Running first-stage clustering"
         all_bins, posterior_bin_rts = self._first_stage_clustering()
         
-        print "Running second-stage clustering"
         matching_results, samples_obtained = self._second_stage_clustering(all_bins, posterior_bin_rts)
 
-        print "Constructing alignment of peak features"
         alignment_results = self._construct_alignment(matching_results, samples_obtained, 
                                                       matching_mass_tol, matching_rt_tol, 
                                                       full_matching=full_matching, show_plot=show_plot)
@@ -92,7 +94,7 @@ class SharedBinMatching:
                 features = row.peakset
                 prob = row.prob
                 for f in features:
-                    msg = self.annotations[f]
+                    msg = self.annotations[f._get_key()]
                     parent_filename = self.file_list[f.file_id]
                     peak_id = f.feature_id-1
                     mass = f.mass
@@ -115,25 +117,16 @@ class SharedBinMatching:
         
         file_bins = []
         file_post_rts = []
-        
+
+        print "Running first-stage clustering for all files"
+        all_clusterings = Parallel(n_jobs=self.num_cores)(delayed(_run_first_stage_clustering)(j, self.data_list[j], self.hp) for j in range(len(self.data_list)))
+
+        # process the results
         for j in range(len(self.data_list)):
         
-            # run precursor mass clustering
+            print "Processing first-stage clustering results for file " + str(j)
             peak_data = self.data_list[j]
-            # plotter.plot_possible_hist(peak_data.possible, self.input_dir, self.hp.within_file_mass_tol, self.hp.within_file_rt_tol)
-            
-            print "Clustering file " + str(j) + " by precursor masses"
-            precursorHp = HyperPars()
-            precursorHp.rt_prec = 1.0/(self.hp.within_file_rt_sd*self.hp.within_file_rt_sd)
-            precursorHp.alpha = self.hp.alpha_mass
-            
-            precursor_clustering = DiscreteVB(peak_data, precursorHp)                        
-            # precursorHp.mass_prec = 1.0/(self.hp.within_file_rt_sd*self.hp.within_file_rt_sd)
-            # precursor_clustering = ContinuousVB(peak_data, precursorHp)
-
-            precursor_clustering.n_iterations = self.hp.mass_clustering_n_iterations
-            print precursor_clustering
-            precursor_clustering.run()
+            precursor_clustering = all_clusterings[j]
         
             # make some plots
             cp = ClusterPlotter(peak_data, precursor_clustering, threshold=self.hp.t)
@@ -209,9 +202,10 @@ class SharedBinMatching:
         top_ids = [bb.top_id for bb in all_bins]
         top_ids = list(set(top_ids))
 
-        matching_results = []        
+        # gather all the information we need for second-stage clustering for each abstract bin
+        abstract_data = {}
         for n in range(len(top_ids)):
-
+            
             selected_rts = []
             selected_word_counts = []
             selected_origins = []
@@ -231,29 +225,26 @@ class SharedBinMatching:
                     selected_origins.append(bb.origin)
                     selected_bins.append(bb)
 
-            print "Processing top_id " + str(top_ids[n]) + "\t\t(" + str(n) + "/" + str(len(top_ids)) + ")",
-            # run dp clustering for each top id
-            data = (selected_rts, selected_word_counts, selected_origins)
-            dp = DpMixtureGibbs(data, self.hp, seed=self.seed)
-            dp.nsamps = self.hp.rt_clustering_nsamps
-            dp.burn_in = self.hp.rt_clustering_burnin
-            dp.run() 
+            abstract_data[n] = (selected_rts, selected_word_counts, selected_origins, selected_bins)
 
-            # read the clustering results back
-            for matched_set in dp.matching_results:
-                members = [selected_bins[a] for a in matched_set]
-                memberstup = tuple(members)
-                matching_results.append(memberstup)
-                
-            print "\t\tconcrete_bins=" + str(len(selected_bins)) + "\t\t\tlast_K = " + str(dp.last_K)
-            
-        # plotter.plot_ZZ_all(dp.ZZ_all)
+        print "Running second-stage clustering for all abstract bins"
+        file_matchings = Parallel(n_jobs=self.num_cores)(delayed(_run_second_stage_clustering)(
+                                                        n, top_ids[n], len(top_ids), 
+                                                        abstract_data[n], self.hp, self.seed
+                                                    ) for n in range(len(top_ids)))
+
+        matching_results = []
+        for file_res in file_matchings:
+            matching_results.extend(file_res)
         samples_obtained = self.hp.rt_clustering_nsamps - self.hp.rt_clustering_burnin
+                    
         return matching_results, samples_obtained
 
     def _construct_alignment(self, matching_results, samples_obtained, 
                              matching_mass_tol, matching_rt_tol, 
                              full_matching=False, show_plot=False):
+        
+        print "Constructing alignment of peak features"        
         
         # count frequencies of aligned bins produced across the Gibbs samples
         counter = dict()
@@ -314,18 +305,19 @@ class SharedBinMatching:
             avg_rt = np.mean(rts)
             print str(i+1) + ". avg m/z=" + str(avg_mz) + " avg RT=" + str(avg_rt) + " prob=" + str(prob)
             for f in features:
-                msg = self.annotations[f]            
+                print f
+                msg = self.annotations[f._get_key()]            
                 output = "\tfeature_id {:5d} file_id {:d} mz {:3.5f} RT {:5.2f} intensity {:.4e}\t{:s}".format(
                             f.feature_id, f.file_id, f.mass, f.rt, f.intensity, msg)
                 print(output) 
             i += 1                         
                        
     def _annotate(self, feature, msg):
-        if feature in self.annotations:
-            current_msg = self.annotations[feature]
-            self.annotations[feature] = current_msg + ";" + msg
+        if feature._get_key() in self.annotations:
+            current_msg = self.annotations[feature._get_key()]
+            self.annotations[feature._get_key()] = current_msg + ";" + msg
         else:
-            self.annotations[feature] = msg
+            self.annotations[feature._get_key()] = msg
         
     def _get_transformation_map(self, transformations):
         tmap = {}
