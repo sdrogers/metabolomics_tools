@@ -10,6 +10,7 @@ from operator import attrgetter
 from operator import itemgetter
 import multiprocessing
 from joblib import Parallel, delayed  
+import time
 
 from discretisation import utils
 from discretisation.discrete_mass_clusterer import DiscreteVB
@@ -56,6 +57,8 @@ class SharedBinMatching:
         
     def run(self, matching_mass_tol, matching_rt_tol, full_matching=False, show_singleton=False, show_plot=False):
 
+        start_time = time.time()
+
         all_bins, posterior_bin_rts = self._first_stage_clustering()
         
         matching_results, samples_obtained = self._second_stage_clustering(all_bins, posterior_bin_rts)
@@ -65,6 +68,10 @@ class SharedBinMatching:
                                                       full_matching=full_matching, show_plot=show_plot)
         self._print_report(alignment_results, show_singleton=show_singleton)
         self.alignment_results = alignment_results        
+
+        print
+        print("--- TOTAL TIME %d seconds ---" % (time.time() - start_time))
+        print
         
         if self.gt_file is not None:           
             print "Evaluating performance"
@@ -125,6 +132,7 @@ class SharedBinMatching:
         for j in range(len(self.data_list)):
         
             print "Processing first-stage clustering results for file " + str(j)
+            sys.stdout.flush()
             peak_data = self.data_list[j]
             precursor_clustering = all_clusterings[j]
         
