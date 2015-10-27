@@ -1,7 +1,3 @@
-from collections import Counter
-from collections import defaultdict
-import math
-from random import shuffle
 import sys
 import time
 
@@ -241,6 +237,7 @@ class DpMixtureGibbs:
         
 def main(argv):    
 
+    # just a simple test case
     rts = [10, 11, 12, 100, 101, 98]
     word_counts = [
                    [0, 0, 0, 1, 0, 0],

@@ -3,9 +3,6 @@
 import sys
 import argparse
 
-import sys
-sys.path.append('..')
-
 from shared_bin_matching import SharedBinMatching
 from models import HyperPars as AlignmentHyperPars
 

@@ -14,7 +14,7 @@ from discretisation.discrete_mass_clusterer import DiscreteVB
 from discretisation.models import HyperPars
 from discretisation.plotting import ClusterPlotter
 from discretisation.preprocessing import FileLoader
-from dp_rt_clusterer import DpMixtureGibbs
+from second_stage_clusterer import DpMixtureGibbs
 from ground_truth import GroundTruth
 from matching import MaxWeightedMatching
 from models import AlignmentFile, Feature, AlignmentRow
