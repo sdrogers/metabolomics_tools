@@ -95,7 +95,7 @@ def main(argv):
                            alignment_hp, synthetic=True, gt_file=gt_file, 
                            verbose=options.verbose, seed=options.seed)
     sb.run(alignment_hp.across_file_mass_tol, alignment_hp.across_file_rt_tol, 
-           full_matching=True, show_singleton=True)
+           full_matching=False, show_singleton=True)
     sb.save_output(output_path)
     
 if __name__ == "__main__":

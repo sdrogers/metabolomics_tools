@@ -169,7 +169,6 @@ class SharedBinMatching:
                                     
                     f = peak_data.features[i]
                     bb = peak_data.bins[j] # copy of the common bin specific to file j
-                    bb.add_feature(f)    
     
                     # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
                     bin_prob = precursor_clustering.Z[i, j]
@@ -181,6 +180,10 @@ class SharedBinMatching:
                     bin_origin = bb.origin
                     msg = "bin_{:d}_file{:d}".format(bin_id, bin_origin)                            
                     self._annotate(f, msg)                
+
+                    # add feature, transformation and its probability into the concrete bin
+                    item = (f, trans_idx, bin_prob)
+                    bb.add_feature(item)    
     
                     # track the word counts too for each transformation
                     tidx = trans_idx-1  # we use trans_idx-1 because the value of trans goes from 1 .. T
@@ -188,11 +191,11 @@ class SharedBinMatching:
             
             print
 
-            for bb in bins:
-                wc = ""
-                for c in bb.word_counts:
-                    wc += str(c)
-                print wc
+#             for bb in bins:
+#                 wc = ""
+#                 for c in bb.word_counts:
+#                     wc += str(c)
+#                 print wc
                 
         # plotter.plot_bin_vs_bin(file_bins, file_post_rts)
         return all_bins, posterior_bin_rts
@@ -337,9 +340,9 @@ class SharedBinMatching:
         results = []
         if len(members) == 1:
             # just singleton things
-            features = members[0].features
-            for f in features:
-                tup = (f, )
+            for f in members[0].features:
+                peak_feature = f[0]
+                tup = (peak_feature, )
                 results.append(tup)                        
         else:
             if full_matching:
@@ -348,6 +351,8 @@ class SharedBinMatching:
                 results = self._simple_matching(members, matching_mass_tol, matching_rt_tol)
         return results
 
+    # performs max-weight bipartite matching using the Hungarian algorithm
+    # doesn't take the adduct types into account when matching
     def _hungarian_matching(self, members, mass_tol, rt_tol):
 
         file_id = 0
@@ -359,13 +364,17 @@ class SharedBinMatching:
             this_file = AlignmentFile("file_" + str(file_id), self.verbose)
             peak_id = 0
             row_id = 0
-            for discrete_feature in bb.features:                
+            for feature in bb.features:
+                
+                peak_feature = feature[0]
+                trans_idx = feature[1]
+                trans_prob = feature[2] 
                 
                 # initialise alignment feature
-                mass = discrete_feature.mass
+                mass = peak_feature.mass
                 charge = 1
-                intensity = discrete_feature.intensity
-                rt = discrete_feature.rt
+                intensity = peak_feature.intensity
+                rt = peak_feature.rt
                 alignment_feature = Feature(peak_id, mass, charge, intensity, rt, this_file)
                 alignment_feature_to_discrete_feature[alignment_feature] = discrete_feature
 
@@ -411,43 +420,67 @@ class SharedBinMatching:
             results.append(tup)
         return results
 
+    # simple greedy matching that takes into account the different adduct types and their probabilities when matching
     def _simple_matching(self, members, mass_tol, rt_tol):
         results = []
         processed = set()
         for bb1 in members:
-            features1 = bb1.features
-            for f1 in features1:
+            for item1 in bb1.features:
+
+                # 'features' in a concrete bin is actually a tuple of the actual peak feature, the transformation index and its probability 
+                f1 = item1[0]
+                trans_idx1 = item1[1]
+                trans_prob1 = item1[2]
                 if f1 in processed:
                     continue
-                # find features in other bins that are the closest in mass to f1
+
+                # find features in other bins that are most similar to f1
                 temp = []
                 temp.append(f1)
                 processed.add(f1)
+                
                 for bb2 in members:
                     if bb1.origin == bb2.origin:
                         continue
                     else:
                         features2 = bb2.features
                         closest = None
-                        min_dist = float('inf')
-                        for f2 in features2:
+                        max_sim = 0
+                        for item2 in features2:
+
+                            f2 = item2[0]
+                            trans_idx2 = item2[1]
+                            trans_prob2 = item2[2]                            
+                            
                             # skip item that has been processed before
                             if f2 in processed:
                                 continue
-                            # check mass and rt tol
+
+                            # check mass and rt tol -- maybe we can take this out ??!!
+                            # leaving it here because performance seems to be worse without the tolerance windows
                             mass_ok = utils.mass_match(f1.mass, f2.mass, mass_tol)
                             rt_ok = utils.rt_match(f1.rt, f2.rt, rt_tol)
                             if not mass_ok or not rt_ok:
                                 continue
-                            dist = math.sqrt((f1.rt-f2.rt)**2 + (f1.mass-f2.mass)**2)                            
-                            if dist < min_dist:
-                                min_dist = dist
+
+                            # if the two peak features are of different transformation types, then they can't possibly be matched
+                            if trans_idx1 != trans_idx2:
+                                continue
+
+                            # compute dodgy similarity from the euclidean distance and the transition probabilities
+                            dist = math.sqrt((f1.rt-f2.rt)**2 + (f1.mass-f2.mass)**2)
+                            sim = (trans_prob1*trans_prob2) * (1/(1+dist))                            
+                            if sim > max_sim:
+                                max_sim = sim
                                 closest = f2
+
                         if closest is not None:
                             temp.append(closest)
                             processed.add(closest)
+                
                 tup = tuple(temp)
-                results.append(tup)  
+                results.append(tup)
+                  
         return results
         
     def _evaluate_performance(self):

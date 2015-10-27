@@ -134,7 +134,11 @@ class PrecursorBin(object):
     def get_features_rt(self):
         total_rt = 0
         for feature in self.features:
-            total_rt = total_rt + feature.rt
+            if isinstance(feature, tuple):
+                # if it's a list of tuples, then take the first element
+                total_rt += feature[0].rt
+            else:
+                total_rt += feature.rt
         return total_rt
     
     def add_molecule(self, molecule):
