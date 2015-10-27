@@ -6,7 +6,6 @@ from operator import attrgetter
 from operator import itemgetter
 import os
 import sys
-
 sys.path.append('/home/joewandy/git/metabolomics_tools')
 
 from discretisation import utils
@@ -367,8 +366,8 @@ class SharedBinMatching:
             for feature in bb.features:
                 
                 peak_feature = feature[0]
-                trans_idx = feature[1]
-                trans_prob = feature[2] 
+                trans_idx = feature[1] # unused
+                trans_prob = feature[2] # unused
                 
                 # initialise alignment feature
                 mass = peak_feature.mass
@@ -376,7 +375,7 @@ class SharedBinMatching:
                 intensity = peak_feature.intensity
                 rt = peak_feature.rt
                 alignment_feature = Feature(peak_id, mass, charge, intensity, rt, this_file)
-                alignment_feature_to_discrete_feature[alignment_feature] = discrete_feature
+                alignment_feature_to_discrete_feature[alignment_feature] = peak_feature
 
                 # initialise row
                 alignment_row = AlignmentRow(row_id)
