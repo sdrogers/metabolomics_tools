@@ -58,14 +58,14 @@ class Feature(object):
         self.gt_metabolite = None   # used for synthetic data
         self.gt_adduct = None       # used for synthetic data
         
-    def __key(self):
+    def _get_key(self):
         return (self.feature_id, self.file_id)
 
     def __eq__(self, x, y):
-        return x.__key() == y.__key()
+        return x._get_key() == y._get_key()
 
     def __hash__(self):
-        return hash(self.__key())    
+        return hash(self._get_key())    
         
     def __repr__(self):
         return "Feature " + utils.print_all_attributes(self)
@@ -134,7 +134,11 @@ class PrecursorBin(object):
     def get_features_rt(self):
         total_rt = 0
         for feature in self.features:
-            total_rt = total_rt + feature.rt
+            if isinstance(feature, tuple):
+                # if it's a list of tuples, then take the first element
+                total_rt += feature[0].rt
+            else:
+                total_rt += feature.rt
         return total_rt
     
     def add_molecule(self, molecule):

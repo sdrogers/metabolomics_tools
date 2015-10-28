@@ -1,28 +1,31 @@
-import numpy as np
-
 import sys
 import os
-import itertools
-from operator import attrgetter
-from operator import itemgetter
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+
 from collections import namedtuple
 import csv
+import itertools
+import math
+from operator import attrgetter
+from operator import itemgetter
+import multiprocessing
+from joblib import Parallel, delayed  
+import time
 
-import pylab as plt
-
-sys.path.append('/home/joewandy/git/metabolomics_tools')
-from discretisation.models import HyperPars
+from discretisation import utils
 from discretisation.discrete_mass_clusterer import DiscreteVB
-from discretisation.continuous_mass_clusterer import ContinuousVB
+from discretisation.models import HyperPars
 from discretisation.plotting import ClusterPlotter
 from discretisation.preprocessing import FileLoader
-from discretisation import utils
 from ground_truth import GroundTruth
-from models import AlignmentFile, Feature, AlignmentRow
 from matching import MaxWeightedMatching
-
+from models import AlignmentFile, Feature, AlignmentRow
+import numpy as np
+import pylab as plt
+from second_stage_clusterer import DpMixtureGibbs
 import shared_bin_matching_plotter as plotter
-from dp_rt_clusterer import DpMixtureGibbs
+from clustering_calls import _run_first_stage_clustering, _run_second_stage_clustering
+
 
 AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 
@@ -35,6 +38,7 @@ class SharedBinMatching:
         '''
         loader = FileLoader()
         self.hp = hyperpars
+        print self.hp
         self.data_list = loader.load_model_input(input_dir, database_file, transformation_file, 
                                                  self.hp.within_file_mass_tol, self.hp.within_file_rt_tol,
                                                  self.hp.across_file_mass_tol, synthetic=synthetic, 
@@ -47,23 +51,27 @@ class SharedBinMatching:
         self.gt_file = gt_file
         self.verbose = verbose
         self.seed = seed
+        self.num_cores = multiprocessing.cpu_count()
 
         self.annotations = {}
         
     def run(self, matching_mass_tol, matching_rt_tol, full_matching=False, show_singleton=False, show_plot=False):
 
-        print "Running first-stage clustering"
+        start_time = time.time()
+
         all_bins, posterior_bin_rts = self._first_stage_clustering()
         
-        print "Running second-stage clustering"
         matching_results, samples_obtained = self._second_stage_clustering(all_bins, posterior_bin_rts)
 
-        print "Constructing alignment of peak features"
         alignment_results = self._construct_alignment(matching_results, samples_obtained, 
                                                       matching_mass_tol, matching_rt_tol, 
                                                       full_matching=full_matching, show_plot=show_plot)
         self._print_report(alignment_results, show_singleton=show_singleton)
         self.alignment_results = alignment_results        
+
+        print
+        print("--- TOTAL TIME %d seconds ---" % (time.time() - start_time))
+        print
         
         if self.gt_file is not None:           
             print "Evaluating performance"
@@ -93,7 +101,7 @@ class SharedBinMatching:
                 features = row.peakset
                 prob = row.prob
                 for f in features:
-                    msg = self.annotations[f]
+                    msg = self.annotations[f._get_key()]
                     parent_filename = self.file_list[f.file_id]
                     peak_id = f.feature_id-1
                     mass = f.mass
@@ -116,25 +124,22 @@ class SharedBinMatching:
         
         file_bins = []
         file_post_rts = []
-        
+
+        print "Running first-stage clustering for all files"
+        all_clusterings = Parallel(n_jobs=self.num_cores)(delayed(_run_first_stage_clustering)(j, self.data_list[j], self.hp) for j in range(len(self.data_list)))
+
+        # process the results
         for j in range(len(self.data_list)):
         
-            # run precursor mass clustering
+            print "Processing first-stage clustering results for file " + str(j)
+            sys.stdout.flush()
             peak_data = self.data_list[j]
-            # plotter.plot_possible_hist(peak_data.possible, self.input_dir, self.hp.within_file_mass_tol, self.hp.within_file_rt_tol)
-            
-            print "Clustering file " + str(j) + " by precursor masses"
-            precursorHp = HyperPars()
-            precursorHp.rt_prec = 1.0/(self.hp.within_file_rt_sd*self.hp.within_file_rt_sd)
-            precursorHp.alpha = self.hp.alpha_mass
-            
-            precursor_clustering = DiscreteVB(peak_data, precursorHp)                        
-            # precursorHp.mass_prec = 1.0/(self.hp.within_file_rt_sd*self.hp.within_file_rt_sd)
-            # precursor_clustering = ContinuousVB(peak_data, precursorHp)
-
-            precursor_clustering.n_iterations = self.hp.mass_clustering_n_iterations
-            print precursor_clustering
-            precursor_clustering.run()
+            precursor_clustering = all_clusterings[j]
+        
+            # make some plots
+            cp = ClusterPlotter(peak_data, precursor_clustering, threshold=self.hp.t)
+            cp.summary(file_idx=j)
+            # cp.plot_biggest(3)        
         
             # pick the non-empty bins for the second stage clustering
             cluster_membership = (precursor_clustering.Z>self.hp.t)
@@ -153,43 +158,44 @@ class SharedBinMatching:
             bin_rts = bin_rts.ravel().tolist()
             posterior_bin_rts.extend(bin_rts)
             file_post_rts.append(bin_rts)
-        
-            # make some plots
-            cp = ClusterPlotter(peak_data, precursor_clustering)
-            cp.summary(file_idx=j)
-            # cp.plot_biggest(3)        
-        
+                
             # assign peaks into their respective bins, 
             # this makes it easier when matching peaks across the same bins later
             # note: a peak can belong to multiple bins, depending on the choice of threshold t
-            cx = cluster_membership.tocoo()
-            plt.matshow(cx.todense())
-            plt.show()
+            cx = precursor_clustering.Z.tocoo()
             for i,j,v in itertools.izip(cx.row, cx.col, cx.data):
                 
-                f = peak_data.features[i]
-                bb = peak_data.bins[j] # copy of the common bin specific to file j
-                bb.add_feature(f)    
+                if cluster_membership[i, j] > 0:
+                                    
+                    f = peak_data.features[i]
+                    bb = peak_data.bins[j] # copy of the common bin specific to file j
+    
+                    # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
+                    bin_prob = precursor_clustering.Z[i, j]
+                    trans_idx = precursor_clustering.possible[i, j]
+                    tran = tmap[trans_idx]
+                    msg = "{:s}@{:3.5f}({:.4f})".format(tran.name, bb.mass, bin_prob)            
+                    self._annotate(f, msg)   
+                    bin_id = bb.bin_id
+                    bin_origin = bb.origin
+                    msg = "bin_{:d}_file{:d}".format(bin_id, bin_origin)                            
+                    self._annotate(f, msg)                
 
-                # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
-                bin_prob = precursor_clustering.Z[i, j]
-                trans_idx = precursor_clustering.possible[i, j]
-                tran = tmap[trans_idx]
-                msg = "{:s}@{:3.5f}({:.4f})".format(tran.name, bb.mass, bin_prob)            
-                self._annotate(f, msg)   
-                bin_id = bb.bin_id
-                bin_origin = bb.origin
-                msg = "bin_{:d}_file{:d}".format(bin_id, bin_origin)                            
-                self._annotate(f, msg)                
-
-                # track the word counts too for each transformation
-                tidx = trans_idx-1  # we use trans_idx-1 because the value of trans goes from 1 .. T
-                bb.word_counts[tidx] += 1
+                    # add feature, transformation and its probability into the concrete bin
+                    item = (f, trans_idx, bin_prob)
+                    bb.add_feature(item)    
+    
+                    # track the word counts too for each transformation
+                    tidx = trans_idx-1  # we use trans_idx-1 because the value of trans goes from 1 .. T
+                    bb.word_counts[tidx] += 1
             
             print
 
-            for bb in bins:
-                print bb.word_counts
+#             for bb in bins:
+#                 wc = ""
+#                 for c in bb.word_counts:
+#                     wc += str(c)
+#                 print wc
                 
         # plotter.plot_bin_vs_bin(file_bins, file_post_rts)
         return all_bins, posterior_bin_rts
@@ -199,18 +205,21 @@ class SharedBinMatching:
         # Second-stage clustering
         N = len(all_bins)
         assert N == len(posterior_bin_rts)
-
-        hp = HyperPars()
-        hp.rt_prec = 1.0/(self.hp.across_file_rt_sd*self.hp.across_file_rt_sd)
-        hp.rt_prior_prec = 5E-6
-        hp.alpha = self.hp.alpha_rt        
-        matching_results = []
+        
+        # get all the unique top ids of the non-empty concrete bins
         top_ids = [bb.top_id for bb in all_bins]
         top_ids = list(set(top_ids))
+
+        # gather all the information we need for second-stage clustering for each abstract bin
+        abstract_data = {}
         for n in range(len(top_ids)):
-            selected_bins = []
+            
             selected_rts = []
-            print "Processing top_id " + str(top_ids[n]) + "\t\t(" + str(n) + "/" + str(len(top_ids)) + ")",
+            selected_word_counts = []
+            selected_origins = []
+            selected_bins = []
+            
+            # find all concrete bins under this top id
             if self.verbose:
                 print
             for b in range(len(all_bins)):
@@ -219,23 +228,31 @@ class SharedBinMatching:
                 if bb.top_id == top_ids[n]:
                     if self.verbose:
                         print " - " + str(bb) + " posterior RT = " + str(rt)
-                    selected_bins.append(bb)
                     selected_rts.append(rt)
-            data = (selected_rts, selected_bins)
-            dp = DpMixtureGibbs(data, hp, seed=self.seed)
-            dp.nsamps = self.hp.rt_clustering_nsamps
-            dp.burn_in = self.hp.rt_clustering_burnin
-            dp.run() 
-            matching_results.extend(dp.matching_results)
-            print "\tlast_K = " + str(dp.last_K)
-            
-        # plotter.plot_ZZ_all(dp.ZZ_all)
+                    selected_word_counts.append(bb.word_counts)
+                    selected_origins.append(bb.origin)
+                    selected_bins.append(bb)
+
+            abstract_data[n] = (selected_rts, selected_word_counts, selected_origins, selected_bins)
+
+        print "Running second-stage clustering for all abstract bins"
+        file_matchings = Parallel(n_jobs=self.num_cores)(delayed(_run_second_stage_clustering)(
+                                                        n, top_ids[n], len(top_ids), 
+                                                        abstract_data[n], self.hp, self.seed
+                                                    ) for n in range(len(top_ids)))
+
+        matching_results = []
+        for file_res in file_matchings:
+            matching_results.extend(file_res)
         samples_obtained = self.hp.rt_clustering_nsamps - self.hp.rt_clustering_burnin
+                    
         return matching_results, samples_obtained
 
     def _construct_alignment(self, matching_results, samples_obtained, 
                              matching_mass_tol, matching_rt_tol, 
                              full_matching=False, show_plot=False):
+        
+        print "Constructing alignment of peak features"        
         
         # count frequencies of aligned bins produced across the Gibbs samples
         counter = dict()
@@ -296,18 +313,19 @@ class SharedBinMatching:
             avg_rt = np.mean(rts)
             print str(i+1) + ". avg m/z=" + str(avg_mz) + " avg RT=" + str(avg_rt) + " prob=" + str(prob)
             for f in features:
-                msg = self.annotations[f]            
+                print f
+                msg = self.annotations[f._get_key()]            
                 output = "\tfeature_id {:5d} file_id {:d} mz {:3.5f} RT {:5.2f} intensity {:.4e}\t{:s}".format(
                             f.feature_id, f.file_id, f.mass, f.rt, f.intensity, msg)
                 print(output) 
             i += 1                         
                        
     def _annotate(self, feature, msg):
-        if feature in self.annotations:
-            current_msg = self.annotations[feature]
-            self.annotations[feature] = current_msg + ";" + msg
+        if feature._get_key() in self.annotations:
+            current_msg = self.annotations[feature._get_key()]
+            self.annotations[feature._get_key()] = current_msg + ";" + msg
         else:
-            self.annotations[feature] = msg
+            self.annotations[feature._get_key()] = msg
         
     def _get_transformation_map(self, transformations):
         tmap = {}
@@ -321,9 +339,9 @@ class SharedBinMatching:
         results = []
         if len(members) == 1:
             # just singleton things
-            features = members[0].features
-            for f in features:
-                tup = (f, )
+            for f in members[0].features:
+                peak_feature = f[0]
+                tup = (peak_feature, )
                 results.append(tup)                        
         else:
             if full_matching:
@@ -332,6 +350,8 @@ class SharedBinMatching:
                 results = self._simple_matching(members, matching_mass_tol, matching_rt_tol)
         return results
 
+    # performs max-weight bipartite matching using the Hungarian algorithm
+    # doesn't take the adduct types into account when matching
     def _hungarian_matching(self, members, mass_tol, rt_tol):
 
         file_id = 0
@@ -343,15 +363,19 @@ class SharedBinMatching:
             this_file = AlignmentFile("file_" + str(file_id), self.verbose)
             peak_id = 0
             row_id = 0
-            for discrete_feature in bb.features:                
+            for feature in bb.features:
+                
+                peak_feature = feature[0]
+                trans_idx = feature[1] # unused
+                trans_prob = feature[2] # unused
                 
                 # initialise alignment feature
-                mass = discrete_feature.mass
+                mass = peak_feature.mass
                 charge = 1
-                intensity = discrete_feature.intensity
-                rt = discrete_feature.rt
+                intensity = peak_feature.intensity
+                rt = peak_feature.rt
                 alignment_feature = Feature(peak_id, mass, charge, intensity, rt, this_file)
-                alignment_feature_to_discrete_feature[alignment_feature] = discrete_feature
+                alignment_feature_to_discrete_feature[alignment_feature] = peak_feature
 
                 # initialise row
                 alignment_row = AlignmentRow(row_id)
@@ -395,43 +419,67 @@ class SharedBinMatching:
             results.append(tup)
         return results
 
+    # simple greedy matching that takes into account the different adduct types and their probabilities when matching
     def _simple_matching(self, members, mass_tol, rt_tol):
         results = []
         processed = set()
         for bb1 in members:
-            features1 = bb1.features
-            for f1 in features1:
+            for item1 in bb1.features:
+
+                # 'features' in a concrete bin is actually a tuple of the actual peak feature, the transformation index and its probability 
+                f1 = item1[0]
+                trans_idx1 = item1[1]
+                trans_prob1 = item1[2]
                 if f1 in processed:
                     continue
-                # find features in other bins that are the closest in mass to f1
+
+                # find features in other bins that are most similar to f1
                 temp = []
                 temp.append(f1)
                 processed.add(f1)
+                
                 for bb2 in members:
                     if bb1.origin == bb2.origin:
                         continue
                     else:
                         features2 = bb2.features
                         closest = None
-                        min_diff = float('inf')
-                        for f2 in features2:
+                        max_sim = 0
+                        for item2 in features2:
+
+                            f2 = item2[0]
+                            trans_idx2 = item2[1]
+                            trans_prob2 = item2[2]                            
+                            
                             # skip item that has been processed before
                             if f2 in processed:
                                 continue
-                            # check mass and rt tol
+
+                            # check mass and rt tol -- maybe we can take this out ??!!
+                            # leaving it here because performance seems to be worse without the tolerance windows
                             mass_ok = utils.mass_match(f1.mass, f2.mass, mass_tol)
                             rt_ok = utils.rt_match(f1.rt, f2.rt, rt_tol)
                             if not mass_ok or not rt_ok:
                                 continue
-                            diff = abs(f1.mass - f2.mass)
-                            if diff < min_diff:
-                                min_diff = diff
+
+                            # if the two peak features are of different transformation types, then they can't possibly be matched
+                            if trans_idx1 != trans_idx2:
+                                continue
+
+                            # compute dodgy similarity from the euclidean distance and the transition probabilities
+                            dist = math.sqrt((f1.rt-f2.rt)**2 + (f1.mass-f2.mass)**2)
+                            sim = (trans_prob1*trans_prob2) * (1/(1+dist))                            
+                            if sim > max_sim:
+                                max_sim = sim
                                 closest = f2
+
                         if closest is not None:
                             temp.append(closest)
                             processed.add(closest)
+                
                 tup = tuple(temp)
-                results.append(tup)  
+                results.append(tup)
+                  
         return results
         
     def _evaluate_performance(self):

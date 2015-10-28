@@ -48,7 +48,7 @@ def get_options(argv):
     parser.add_argument('-alpha_rt', help='Dirichlet Process concentration parameter for mixture on RT', type=float)
     parser.set_defaults(alpha_rt=1.0)
     parser.add_argument('-t', help='threshold for cluster membership for precursor mass clustering', type=float)
-    parser.set_defaults(t=0.25)
+    parser.set_defaults(t=0.0)
     parser.add_argument('-mass_clustering_n_iterations', help='no. of iterations for VB precursor clustering', type=int)
     parser.set_defaults(mass_clustering_n_iterations=100)
     parser.add_argument('-rt_clustering_nsamps', help='no. of total samples for Gibbs RT clustering', type=int)
@@ -84,7 +84,7 @@ def main(argv):
     alignment_hp.across_file_rt_sd = options.across_file_rt_sd
 
     alignment_hp.alpha_mass = options.alpha_mass
-    alignment_hp.alpha_rt = options.alpha_rt
+    alignment_hp.dp_alpha = options.alpha_rt
     alignment_hp.t = options.t
     
     alignment_hp.mass_clustering_n_iterations = options.mass_clustering_n_iterations
@@ -95,7 +95,7 @@ def main(argv):
                            alignment_hp, synthetic=True, gt_file=gt_file, 
                            verbose=options.verbose, seed=options.seed)
     sb.run(alignment_hp.across_file_mass_tol, alignment_hp.across_file_rt_tol, 
-           full_matching=True, show_singleton=True)
+           full_matching=False, show_singleton=True)
     sb.save_output(output_path)
     
 if __name__ == "__main__":
