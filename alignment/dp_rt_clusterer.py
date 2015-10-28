@@ -21,6 +21,9 @@ class DpMixtureGibbs:
             print 'DpMixtureGibbs initialised'
         self.rts = np.array(data[0])
         self.bins = data[1]
+        self.word_counts_list = []
+        for bb in self.bins:
+            self.word_counts_list.append(bb.word_counts)
         self.N = len(self.rts)
         self.mu_zero = np.mean(self.rts)
         self.rt_prec = float(hyperpars.rt_prec)

@@ -8,6 +8,8 @@ from operator import itemgetter
 from collections import namedtuple
 import csv
 
+import pylab as plt
+
 sys.path.append('/home/joewandy/git/metabolomics_tools')
 from discretisation.models import HyperPars
 from discretisation.discrete_mass_clusterer import DiscreteVB
@@ -161,10 +163,14 @@ class SharedBinMatching:
             # this makes it easier when matching peaks across the same bins later
             # note: a peak can belong to multiple bins, depending on the choice of threshold t
             cx = cluster_membership.tocoo()
+            plt.matshow(cx.todense())
+            plt.show()
             for i,j,v in itertools.izip(cx.row, cx.col, cx.data):
+                
                 f = peak_data.features[i]
                 bb = peak_data.bins[j] # copy of the common bin specific to file j
                 bb.add_feature(f)    
+
                 # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
                 bin_prob = precursor_clustering.Z[i, j]
                 trans_idx = precursor_clustering.possible[i, j]
@@ -174,8 +180,16 @@ class SharedBinMatching:
                 bin_id = bb.bin_id
                 bin_origin = bb.origin
                 msg = "bin_{:d}_file{:d}".format(bin_id, bin_origin)                            
-                self._annotate(f, msg)
+                self._annotate(f, msg)                
+
+                # track the word counts too for each transformation
+                tidx = trans_idx-1  # we use trans_idx-1 because the value of trans goes from 1 .. T
+                bb.word_counts[tidx] += 1
+            
             print
+
+            for bb in bins:
+                print bb.word_counts
                 
         # plotter.plot_bin_vs_bin(file_bins, file_post_rts)
         return all_bins, posterior_bin_rts

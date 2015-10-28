@@ -118,7 +118,8 @@ class Discretiser(object):
                 k += 1
 
         K = len(top_bins)
-        print "Total top bins=" + str(K) + " total features=" + str(N)
+        T = len(self.transformations)
+        print "Total top bins=" + str(K) + " total features=" + str(N) + " total transformations=" + str(T)
         sys.stdout.flush()
 
         # for each file, we want to instantiatie its concrete bins -- based on the top bins
@@ -143,6 +144,8 @@ class Discretiser(object):
                     concrete_bin = PrecursorBin(k, np.asscalar(precursor_mass), f.rt, f.intensity, self.within_file_mass_tol, self.within_file_rt_tol)
                     concrete_bin.top_id = tb.bin_id
                     concrete_bin.origin = j
+                    concrete_bin.T = T
+                    concrete_bin.word_counts = np.zeros(T)
                     concrete_bins.append(concrete_bin)
                     k += 1
 
