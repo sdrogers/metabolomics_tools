@@ -6,6 +6,14 @@ from numpy.random import RandomState
 import sys
 import pylab as plt
 
+import cPickle
+import gzip
+import os
+import re
+import sys
+import time
+import timeit
+
 import multifile_utils as utils
 
 class MultifileLDA(object):
@@ -18,9 +26,34 @@ class MultifileLDA(object):
         else:
             self.random_state = random_state    
 
-        self.blowup = 10
-    
-    def _load_data(self, f, fragment_filename, neutral_loss_filename, ms1_filename, ms2_filename):
+    def load_all(self, input_set, scaling_factor=100, normalise=0):
+
+        self.F = len(input_set)
+        self.dfs = {}
+        self.ms1s = {}
+        self.ms2s = {}
+        self.Ds = {}
+        self.vocab = None
+
+        for f in range(self.F):        
+            
+            entry = input_set[f]
+            
+            fragment_filename, neutral_loss_filename, ms1_filename, ms2_filename = entry
+            df, vocab, ms1, ms2 = self._load_data(f, fragment_filename, neutral_loss_filename, 
+                                                  ms1_filename, ms2_filename, 
+                                                  scaling_factor, normalise)
+            nrow, ncol = df.shape
+            assert nrow == len(ms1)
+            assert ncol == len(vocab)
+
+            self.Ds[f] = nrow
+            self.dfs[f] = df
+            self.ms1s[f] = ms1
+            self.ms2s[f] = ms2
+            self.vocab = vocab
+            
+    def _load_data(self, f, fragment_filename, neutral_loss_filename, ms1_filename, ms2_filename, scaling_factor, normalise):
     
         print "Loading file " + str(f),
         fragment_data = pd.read_csv(fragment_filename, index_col=0)
@@ -30,14 +63,12 @@ class MultifileLDA(object):
         ms2 = pd.read_csv(ms2_filename, index_col=0)        
         ms2['fragment_bin_id'] = ms2['fragment_bin_id'].astype(str)
         ms2['loss_bin_id'] = ms2['loss_bin_id'].astype(str)
-    
-        data = pd.DataFrame()
-    
-        # discretise the fragment and neutral loss intensities values by converting it to 0 .. blowup
-        fragment_data *= self.blowup
-        data = data.append(fragment_data)
-        neutral_loss_data *= self.blowup
-        data = data.append(neutral_loss_data)
+
+        # discretise the fragment and neutral loss intensities values
+        if normalise == 1:
+            data = self._normalise_1(scaling_factor, fragment_data, neutral_loss_data)
+        elif normalise == 2:
+            data = self._normalise_2(scaling_factor, fragment_data, neutral_loss_data, ms1)
                 
         # get rid of NaNs, transpose the data and floor it
         data = data.replace(np.nan,0)
@@ -52,33 +83,36 @@ class MultifileLDA(object):
     
         # vocab is just a string of the column names
         vocab = data.columns.values
-        
+                
         return df, vocab, ms1, ms2
+
+    def _normalise_1(self, scaling_factor, fragment_data, neutral_loss_data):
+        
+        # converting it to 0 .. scaling_factor
+        fragment_data *= scaling_factor
+        neutral_loss_data *= scaling_factor
+        data = pd.DataFrame()
+        data = data.append(fragment_data)
+        data = data.append(neutral_loss_data)
+        return data
     
-    def load_all(self, input_set):
+    def _normalise_2(self, scaling_factor, fragment_data, neutral_loss_data, ms1):
 
-        self.F = len(input_set)
-        self.dfs = {}
-        self.ms1s = {}
-        self.ms2s = {}
-        self.Ds = {}
-        self.vocab = None
-
-        for f in range(self.F):        
-            
-            entry = input_set[f]
-            
-            fragment_filename, neutral_loss_filename, ms1_filename, ms2_filename = entry
-            df, vocab, ms1, ms2 = self._load_data(f, fragment_filename, neutral_loss_filename, ms1_filename, ms2_filename)
-            nrow, ncol = df.shape
-            assert nrow == len(ms1)
-            assert ncol == len(vocab)
-
-            self.Ds[f] = nrow
-            self.dfs[f] = df
-            self.ms1s[f] = ms1
-            self.ms2s[f] = ms2
-            self.vocab = vocab
+        # same as method 0, but with additional normalisation by of the parent MS1 intensities ratio
+        fragment_data *= scaling_factor
+        neutral_loss_data *= scaling_factor
+        data = pd.DataFrame()
+        data = data.append(fragment_data)
+        data = data.append(neutral_loss_data)        
+        
+        intensities = ms1['intensity'].values
+        intensity_ratios = intensities/np.max(intensities)
+        n = 0
+        for col in data.columns:
+            data[col] *= intensity_ratios[n]
+            n += 1
+        
+        return data            
             
     def run(self, K, alpha, beta, n_burn=100, n_samples=200, n_thin=0):
         
@@ -109,7 +143,7 @@ class MultifileLDA(object):
         for f in range(self.F):
             print " - file " + str(f) + " ",
             for d in range(self.Ds[f]):
-                if d%10==0:
+                if d%100==0:
                     sys.stdout.write('.')
                     sys.stdout.flush()
                 document = self.dfs[f].iloc[[d]]
@@ -158,7 +192,7 @@ class MultifileLDA(object):
             print('Topic {}: {}'.format(i, ' '.join(topic_words)))        
                 
     def plot_e_alphas(self):
-        plt.figure()
+        plt.figure(figsize=(20, 5))
         ax = None
         for f in range(self.F):
             if ax is None:
@@ -167,28 +201,108 @@ class MultifileLDA(object):
                 plt.subplot(1, self.F, f+1, sharey=ax)                
             post_alpha = self.posterior_alphas[f]
             e_alpha = post_alpha / np.sum(post_alpha)
-            print e_alpha
             ind = range(len(e_alpha))
             plt.bar(ind, e_alpha, 0.5)        
             plt.title('File ' + str(f))
         plt.suptitle('Topic prevalence')
         plt.show()
-        
-    def plot_topic_word(self):
-        plt.figure()
-        plt.matshow(self.topic_word_)
-        plt.colorbar()
-        plt.title('Topic - word')
-        plt.show()
-
-    def plot_doc_topic(self):
-        for doc_topic in self.doc_topic_:
-            plt.figure()
-            plt.matshow(doc_topic)
-            plt.colorbar()
-            plt.title('Doc - topic')
-            plt.show()
             
+#     @classmethod
+#     def resume_from(cls, project_in):
+#         start = timeit.default_timer()        
+#         with gzip.GzipFile(project_in, 'rb') as f:
+#             obj = cPickle.load(f)
+#             stop = timeit.default_timer()
+#             print "Project loaded from " + project_in + " time taken = " + str(stop-start)
+#             print " - input_filenames = "
+#             for fname in obj.input_filenames:
+#                 print "\t" + fname
+#             print " - df.shape = " + str(obj.df.shape)
+#             if hasattr(obj, 'model'):
+#                 print " - K = " + str(obj.model.K)
+#                 print " - alpha = " + str(obj.model.alpha[0])
+#                 print " - beta = " + str(obj.model.beta[0])
+#                 print " - number of samples stored = " + str(len(obj.model.samples))
+#             else:
+#                 print " - No LDA model found"
+#             print " - last_saved_timestamp = " + str(obj.last_saved_timestamp)  
+#             if hasattr(obj, 'message'):
+#                 print " - message = " + str(obj.message)  
+#             return obj  
+#         
+#     def save_project(self, project_out, message=None):
+#         start = timeit.default_timer()        
+#         self.last_saved_timestamp = str(time.strftime("%c"))
+#         self.message = message
+#         with gzip.GzipFile(project_out, 'wb') as f:
+#             cPickle.dump(self, f, protocol=cPickle.HIGHEST_PROTOCOL)
+#             stop = timeit.default_timer()
+#             print "Project saved to " + project_out + " time taken = " + str(stop-start)    
+#             
+#     def do_thresholding(self, th_doc_topic=0.05, th_topic_word=0.0):
+# 
+#         # save the thresholding values used for visualisation later
+#         self.th_doc_topic = th_doc_topic
+#         self.th_topic_word = th_topic_word
+#                     
+#         # get rid of small values in the matrices of the results
+#         # if epsilon > 0, then the specified value will be used for thresholding
+#         # otherwise, the smallest value for each row in the matrix is used instead
+#         self.thresholded_topic_word = utils.threshold_matrix(self.topic_word_, epsilon=th_topic_word)
+#         self.thresholded_doc_topic = []
+#         for f in range(len(self.doc_topic_)):
+#             self.thresholded_doc_topic.append(utils.threshold_matrix(self.doc_topic_[f], epsilon=th_doc_topic))
+#         
+#         self.topic_names = []
+#         for i, topic_dist in enumerate(self.thresholded_topic_word):
+#             topic_name = 'M2M_{}'.format(i)                    
+#             self.topic_names.append(topic_name)
+#         
+#         # create document-topic output file        
+#         masses = np.array(self.df.transpose().index)
+#         d = {}
+#         for i in np.arange(self.n_topics):
+#             topic_name = self.topic_names[i]
+#             topic_series = pd.Series(self.topic_word[i], index=masses)
+#             d[topic_name] = topic_series
+#         self.topicdf = pd.DataFrame(d)
+#         
+#         # make sure that columns in topicdf are in the correct order
+#         # because many times we'd index the columns in the dataframes directly by their positions
+#         cols = self.topicdf.columns.tolist()
+#         sorted_cols = self._natural_sort(cols)
+#         self.topicdf = self.topicdf[sorted_cols]        
+#     
+#         # create topic-docs output file
+#         self.docdfs = []
+#         for f in range(len(self.thresholded_doc_topic)):        
+#             (n_doc, a) = self.thresholded_doc_topic[f].shape
+#             topic_index = np.arange(self.n_topics)
+#             doc_names = np.array(self.df.index)
+#             d = {}
+#             for i in np.arange(n_doc):
+#                 doc_name = doc_names[i]
+#                 doc_series = pd.Series(self.doc_topic[i], index=topic_index)
+#                 d[doc_name] = doc_series
+#             self.docdf = pd.DataFrame(d)
+#             
+#             # sort columns by mass_rt values
+#             cols = self.docdf.columns.tolist()
+#             mass_rt = [(float(m.split('_')[0]),float(m.split('_')[1])) for m in cols]
+#             sorted_mass_rt = sorted(mass_rt,key=lambda m:m[0])
+#             ind = [mass_rt.index(i) for i in sorted_mass_rt]
+#             self.docdf = self.docdf[ind]
+#             # self.docdf.to_csv(outfile)se
+#     
+#     #         # threshold docdf to get rid of small values and also scale it
+#     #         for i, row in self.docdf.iterrows(): # iterate through the rows
+#     #             doc = self.docdf.ix[:, i]
+#     #             selected = doc[doc>0]
+#     #             count = len(selected.values)
+#     #             selected = selected * count
+#     #             self.docdf.ix[:, i] = selected
+#             self.docdf = self.docdf.replace(np.nan, 0)                
+    
 def main():    
     
     lda = MultifileLDA()
@@ -198,7 +312,7 @@ def main():
                  ('input/beer3pos_fragments_3.csv', 'input/beer3pos_losses_3.csv', 'input/beer3pos_ms1_3.csv','input/beer3pos_ms2_3.csv')
                  ]
     lda.load_all(input_set)    
-    lda.run(30, 0.01, 0.1, n_burn=0, n_samples=20, n_thin=1)
+    lda.run(300, 0.01, 0.1, n_burn=0, n_samples=20, n_thin=1)
     lda.plot_e_alphas()
     
 if __name__ == "__main__": main()
