@@ -33,16 +33,15 @@ class SharedBinMatching:
     
     def __init__(self, input_dir, database_file, transformation_file, hyperpars, 
                  synthetic=False, limit_n=-1, gt_file=None, verbose=False, seed=-1):
-        ''' 
-        Clusters bins by DP mixture model using variational inference
-        '''
+
         loader = FileLoader()
         self.hp = hyperpars
         print self.hp
         self.data_list = loader.load_model_input(input_dir, database_file, transformation_file, 
                                                  self.hp.within_file_mass_tol, self.hp.within_file_rt_tol,
-                                                 self.hp.across_file_mass_tol, synthetic=synthetic, 
+                                                 make_bins=False, synthetic=synthetic, 
                                                  limit_n=limit_n, verbose=verbose)
+
         sys.stdout.flush()
         self.file_list = loader.file_list
         self.input_dir = input_dir
@@ -52,7 +51,6 @@ class SharedBinMatching:
         self.verbose = verbose
         self.seed = seed
         self.num_cores = multiprocessing.cpu_count()
-        self.num_cores = 1
         self.annotations = {}
         
     def run(self, matching_mass_tol, matching_rt_tol, full_matching=False, show_singleton=False, show_plot=False):
@@ -114,28 +112,37 @@ class SharedBinMatching:
         
     def _first_stage_clustering(self):
         
-        # First stage clustering. 
-        # Here we cluster peak features by their precursor masses to the common bins shared across files.
+        # collect features from all files, sorted by mass ascending
+        all_features = []
+        for peak_data in self.data_list:
+            all_features.extend(peak_data.features)    
+        all_features = sorted(all_features, key = attrgetter('mass'))
 
-        any_transformations = self.data_list[0].transformations
-        tmap = self._get_transformation_map(any_transformations)
-        all_bins = []
-        posterior_bin_rts = []    
-        
-        file_bins = []
-        file_post_rts = []
+        # create abstract bins with the same across_file_mass_tol ppm
+        any_trans = self.data_list[0].transformations # since trans is the same across all files ...
+        any_tmap = self._get_transformation_map(any_trans)            
+        abstract_bins = self._create_abstract_bins(all_features, self.hp.across_file_mass_tol, any_trans)
 
-        print "Running first-stage clustering for all files"
-        all_clusterings = Parallel(n_jobs=self.num_cores, verbose=50)(delayed(_run_first_stage_clustering)(
-                                        j, self.data_list[j], self.hp) for j in range(len(self.data_list)))
+        # discretise each file and run precursor clustering
+        print "Discretising at within_file_mass_tol=" + str(self.hp.within_file_mass_tol) + \
+                    " and across_file_mass_tol=" + str(self.hp.across_file_mass_tol)
+        results = Parallel(n_jobs=self.num_cores, verbose=50)(delayed(_run_first_stage_clustering)(
+                                        j, self.data_list[j], self.data_list[j].transformations, 
+                                        abstract_bins, self.hp) for j in range(len(self.data_list)))
 
         # process the results
+        all_bins = []
+        posterior_bin_rts = []            
+        file_bins = []
+        file_post_rts = []
         for j in range(len(self.data_list)):
-        
+                    
             print "Processing first-stage clustering results for file " + str(j)
             sys.stdout.flush()
             peak_data = self.data_list[j]
-            precursor_clustering = all_clusterings[j]
+            res_tup = results[j]
+            precursor_clustering = res_tup[0]
+            peak_data.set_discrete_info(res_tup[1])
         
             # make some plots
             cp = ClusterPlotter(peak_data, precursor_clustering, threshold=self.hp.t)
@@ -174,7 +181,7 @@ class SharedBinMatching:
                     # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
                     bin_prob = precursor_clustering.Z[i, j]
                     trans_idx = precursor_clustering.possible[i, j]
-                    tran = tmap[trans_idx]
+                    tran = any_tmap[trans_idx]
                     msg = "{:s}@{:3.5f}({:.4f})".format(tran.name, bb.mass, bin_prob)            
                     self._annotate(f, msg)   
                     bin_id = bb.bin_id
@@ -201,12 +208,68 @@ class SharedBinMatching:
         # plotter.plot_bin_vs_bin(file_bins, file_post_rts)
         return all_bins, posterior_bin_rts
 
+    def _create_abstract_bins(self, all_features, mass_tol, transformations):
+                    
+        all_features = np.array(all_features) # convert list to np array for easy indexing
+
+        adduct_name = np.array([t.name for t in transformations])[:,None]      # A x 1
+        adduct_mul = np.array([t.mul for t in transformations])[:,None]        # A x 1
+        adduct_sub = np.array([t.sub for t in transformations])[:,None]        # A x 1
+        proton_pos = np.flatnonzero(np.array(adduct_name)=='M+H')              # index of M+H adduct
+                    
+        # create equally-spaced bins from start to end
+        feature_masses = np.array([f.mass for f in all_features])[:, None]              # N x 1
+        precursor_masses = (feature_masses - adduct_sub[proton_pos])/adduct_mul[proton_pos]        
+        min_val = np.min(precursor_masses)
+        max_val = np.max(precursor_masses)
+        
+        # iteratively find the bin centres
+        all_bins = []
+        bin_start, bin_end = utils.mass_range(min_val, mass_tol)
+        while bin_end < max_val:
+            # store the current bin centre
+            bin_centre = utils.mass_centre(bin_start, mass_tol)
+            all_bins.append(bin_centre)
+            # advance the bin
+            bin_start, bin_end = utils.mass_range(bin_centre, mass_tol)
+            bin_start = bin_end
+
+        N = len(all_features)
+        K = len(all_bins)
+        T = len(transformations)
+        print "Total abstract bins=" + str(K) + " total features=" + str(N) + " total transformations=" + str(T)
+
+        print "Populating abstract bins ",
+        abstract_bins = {}   
+        k = 0
+        for n in range(len(all_bins)):
+
+            if n%10000==0:                        
+                sys.stdout.write('.')
+                sys.stdout.flush()            
+
+            bin_centre = all_bins[n]
+            interval_from, interval_to = utils.mass_range(bin_centre, mass_tol)
+            matching_idx = np.where((precursor_masses>interval_from) & (precursor_masses<interval_to))[0]
+            
+            # if this abstract bin is not empty, then add features from all files that can fit here
+            if len(matching_idx)>0:
+                fs = all_features[matching_idx]
+                data = fs.tolist()
+                abstract_bins[k] = data
+                k += 1        
+        
+        print        
+        return abstract_bins
+
     def _second_stage_clustering(self, all_bins, posterior_bin_rts):
 
         # Second-stage clustering
         N = len(all_bins)
         assert N == len(posterior_bin_rts)
-        
+
+        print "Selecting non-empty concrete bins for second-stage clustering"     
+        sys.stdout.flush()   
         # get all the unique top ids of the non-empty concrete bins
         top_ids = [bb.top_id for bb in all_bins]
         top_ids = list(set(top_ids))
@@ -236,7 +299,8 @@ class SharedBinMatching:
 
             abstract_data[n] = (selected_rts, selected_word_counts, selected_origins, selected_bins)
 
-        print "Running second-stage clustering for all abstract bins"
+        print "Running second-stage clustering"
+        sys.stdout.flush()   
         file_matchings = Parallel(n_jobs=self.num_cores, verbose=50)(delayed(_run_second_stage_clustering)(
                                     n, top_ids[n], len(top_ids), abstract_data[n], self.hp, self.seed
                                     ) for n in range(len(top_ids)))

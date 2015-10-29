@@ -68,9 +68,8 @@ def _populate_matrices(j, N, K,
     
     for n in range(N):
         
-        if n%100 == 0:
-            # sys.stdout.write(str(j)+' ')                            
-            sys.stdout.write('.')
+        if n%1000 == 0:
+            sys.stdout.write(str(j)+' ')                            
             sys.stdout.flush()
 
         f = features[n]    
@@ -93,9 +92,7 @@ def _populate_matrices(j, N, K,
         possible_clusters = np.nonzero(possible[n, :])[1]
         assert len(possible_clusters) > 0, str(f) + " has no possible clusters"
         
-#     print(str(j)+'(finished)') 
-#     sys.stdout.flush()
-                                   
+    print                           
     return matRT, possible, transformed
             
 def _make_precursor_bin(bin_id, bin_mass, bin_RT, bin_intensity, mass_tol, rt_tol):

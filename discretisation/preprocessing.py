@@ -1,21 +1,14 @@
 import csv
 import glob
-from operator import attrgetter
 import os
 import sys
-import multiprocessing
-from joblib import Parallel, delayed  
 
 import numpy as np
 import scipy.io as sio
 import scipy.sparse as sp
 
-from interval_tree import IntervalTree
-from models import DiscreteInfo, PrecursorBin, PeakData, Feature, DatabaseEntry, Transformation
-from file_binner import _process_file, _make_precursor_bin
+from models import DiscreteInfo, PeakData, Feature, DatabaseEntry, Transformation
 import utils
-from __builtin__ import False
-
 
 class Discretiser(object):
 
@@ -75,83 +68,6 @@ class Discretiser(object):
         print "Total bins=" + str(K) + " total features=" + str(N)
         binning = DiscreteInfo(possible, transformed, matRT, bins, prior_masses, prior_rts)
         return binning         
-
-    def run_multiple(self, data_list):
-
-        print "Discretising at within_file_mass_tol=" + str(self.within_file_mass_tol) + \
-            " and across_file_mass_tol=" + str(self.across_file_mass_tol)
-        sys.stdout.flush()
-
-        # get all features from all files, sorted by mass in ascending order
-        all_features = []
-        for peak_data in data_list:
-            all_features.extend(peak_data.features)    
-        all_features = sorted(all_features, key = attrgetter('mass'))            
-
-        # create abstract bins with the same across_file_mass_tol ppm
-        abstract_bins = self._create_abstract_bins(all_features, self.across_file_mass_tol)
-
-        # for each file, we want to instantiate its concrete bins -- based on the abstract bins 
-        print "Building matrices for all files"
-        sys.stdout.flush()
-        num_cores = multiprocessing.cpu_count()
-        num_cores = 1
-        all_binning = Parallel(n_jobs=num_cores, verbose=50)(delayed(_process_file)(
-                                    j, data_list[j], abstract_bins, 
-                                    self.transformations, self.adduct_sub, self.adduct_mul, self.adduct_del, 
-                                    self.proton_pos, self.within_file_mass_tol, self.within_file_rt_tol
-                            ) for j in range(len(data_list)))
-        print
-        return all_binning     
-    
-    def _create_abstract_bins(self, all_features, mass_tol):
-                    
-        all_features = np.array(all_features) # convert list to np array for easy indexing
-                    
-        # create equally-spaced bins from start to end
-        feature_masses = np.array([f.mass for f in all_features])[:, None]              # N x 1
-        precursor_masses = (feature_masses - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]        
-        min_val = np.min(precursor_masses)
-        max_val = np.max(precursor_masses)
-        
-        # iteratively find the bin centres
-        all_bins = []
-        bin_start, bin_end = utils.mass_range(min_val, mass_tol)
-        while bin_end < max_val:
-            # store the current bin centre
-            bin_centre = utils.mass_centre(bin_start, mass_tol)
-            all_bins.append(bin_centre)
-            # advance the bin
-            bin_start, bin_end = utils.mass_range(bin_centre, mass_tol)
-            bin_start = bin_end
-
-        N = len(all_features)
-        K = len(all_bins)
-        T = len(self.transformations)
-        print "Total abstract bins=" + str(K) + " total features=" + str(N) + " total transformations=" + str(T)
-
-        print "Populating abstract bins ",
-        abstract_bins = {}   
-        k = 0
-        for n in range(len(all_bins)):
-
-            if n%10000==0:                        
-                sys.stdout.write('.')
-                sys.stdout.flush()            
-
-            bin_centre = all_bins[n]
-            interval_from, interval_to = utils.mass_range(bin_centre, mass_tol)
-            matching_idx = np.where((precursor_masses>interval_from) & (precursor_masses<interval_to))[0]
-            
-            # if this abstract bin is not empty, then add features from all files that can fit here
-            if len(matching_idx)>0:
-                fs = all_features[matching_idx]
-                data = fs.tolist()
-                abstract_bins[k] = data
-                k += 1        
-        
-        print        
-        return abstract_bins
         
     def _find_features(self, bb, features):
         masses = np.array([f.mass for f in features])
@@ -168,7 +84,7 @@ class Discretiser(object):
             
 class FileLoader:
         
-    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol, across_file_mass_tol=0,
+    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol,
                          make_bins=True, synthetic=False, limit_n=-1, verbose=False):
         """ Load everything that a clustering model requires """
 
@@ -210,21 +126,11 @@ class FileLoader:
                 all_features.extend(features)
                 data_list.append(data)
                 sys.stdout.flush()
-                
+            os.chdir(starting_dir)
+                                
             # bin the files if necessary
             if make_bins:
-                assert across_file_mass_tol > 0
-                discretiser = Discretiser(transformations, mass_tol, rt_tol, across_file_mass_tol=across_file_mass_tol, 
-                                          verbose=verbose)
-                # make common bins shared across files using all the features                   
-                discrete_infos = discretiser.run_multiple(data_list) 
-                assert len(data_list) == len(discrete_infos)
-                for j in range(len(data_list)):
-                    peak_data = data_list[j]
-                    common = discrete_infos[j]
-                    peak_data.set_discrete_info(common)
-                            
-            os.chdir(starting_dir)    
+                raise ValueError("Binning of multiple files is not supported by this method")               
             return data_list
                     
         else:   
