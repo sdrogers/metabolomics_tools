@@ -14,6 +14,7 @@ from interval_tree import IntervalTree
 from models import DiscreteInfo, PrecursorBin, PeakData, Feature, DatabaseEntry, Transformation
 from file_binner import _process_file, _make_precursor_bin
 import utils
+from __builtin__ import False
 
 
 class Discretiser(object):
@@ -77,79 +78,80 @@ class Discretiser(object):
 
     def run_multiple(self, data_list):
 
-        print "Discretising at within_file_mass_tol=" + str(self.within_file_mass_tol) + " and across_file_mass_tol " + str(self.across_file_mass_tol)
+        print "Discretising at within_file_mass_tol=" + str(self.within_file_mass_tol) + \
+            " and across_file_mass_tol=" + str(self.across_file_mass_tol)
+        sys.stdout.flush()
+
+        # get all features from all files, sorted by mass in ascending order
         all_features = []
         for peak_data in data_list:
             all_features.extend(peak_data.features)    
         all_features = sorted(all_features, key = attrgetter('mass'))            
-        N = len(all_features)        
-            
+
+        # create abstract bins with the same across_file_mass_tol ppm
+        abstract_bins = self._create_abstract_bins(all_features, self.across_file_mass_tol)
+
+        # for each file, we want to instantiate its concrete bins -- based on the abstract bins 
+        print "Building matrices for all files"
+        sys.stdout.flush()
+        num_cores = multiprocessing.cpu_count()
+        num_cores = 1
+        all_binning = Parallel(n_jobs=num_cores, verbose=50)(delayed(_process_file)(
+                                    j, data_list[j], abstract_bins, 
+                                    self.transformations, self.adduct_sub, self.adduct_mul, self.adduct_del, 
+                                    self.proton_pos, self.within_file_mass_tol, self.within_file_rt_tol
+                            ) for j in range(len(data_list)))
+        print
+        return all_binning     
+    
+    def _create_abstract_bins(self, all_features, mass_tol):
+                    
+        all_features = np.array(all_features) # convert list to np array for easy indexing
+                    
         # create equally-spaced bins from start to end
         feature_masses = np.array([f.mass for f in all_features])[:, None]              # N x 1
         precursor_masses = (feature_masses - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]        
         min_val = np.min(precursor_masses)
         max_val = np.max(precursor_masses)
         
-        # iteratively create bins
+        # iteratively find the bin centres
         all_bins = []
-        bin_start, bin_end = utils.mass_range(min_val, self.across_file_mass_tol)
+        bin_start, bin_end = utils.mass_range(min_val, mass_tol)
         while bin_end < max_val:
             # store the current bin centre
-            bin_centre = utils.mass_centre(bin_start, self.across_file_mass_tol)
+            bin_centre = utils.mass_centre(bin_start, mass_tol)
             all_bins.append(bin_centre)
             # advance the bin
-            bin_start, bin_end = utils.mass_range(bin_centre, self.across_file_mass_tol)
+            bin_start, bin_end = utils.mass_range(bin_centre, mass_tol)
             bin_start = bin_end
-        
-        top_bin_features = {}   
-        top_bins = []     
-        k = 0
-        for bin_centre in all_bins:
-            interval_from, interval_to = utils.mass_range(bin_centre, self.across_file_mass_tol)
-            matching_idx = np.where((precursor_masses>interval_from) & (precursor_masses<interval_to))[0].tolist()
-            if len(matching_idx)>0:
-                # this candidate top-level bin is not empty, add all the features that fit coming across all files
-                fs = []
-                for pos in matching_idx:
-                    fs.append(all_features[pos])
-                top_bin_features[k] = fs
-                # create the new top-level bin too
-                tb = self._create_top_level_bin(k, bin_centre, 0, 0, self.across_file_mass_tol, 0)
-                if self.verbose:
-                    print "\t" + str(tb)
-                sys.stdout.flush()
-                top_bins.append(tb)            
-                k += 1
 
-        K = len(top_bins)
+        N = len(all_features)
+        K = len(all_bins)
         T = len(self.transformations)
-        print "Total top bins=" + str(K) + " total features=" + str(N) + " total transformations=" + str(T)
-        sys.stdout.flush()
+        print "Total abstract bins=" + str(K) + " total features=" + str(N) + " total transformations=" + str(T)
 
-        # for each file, we want to instantiatie its concrete bins -- based on the top bins
+        print "Populating abstract bins ",
+        abstract_bins = {}   
+        k = 0
+        for n in range(len(all_bins)):
 
-        # process serially
-#         all_binning = []
-#         for j in range(len(data_list)):     
-#             file_binning = _process_file(peak_data, top_bins, top_bin_features,
-#                                          self.transformations, self.adduct_sub, 
-#                                          self.adduct_mul, self.adduct_del, self.proton_pos, 
-#                                          self.within_file_mass_tol, self.within_file_rt_tol, j)
-#             all_binning.append(file_binning)
+            if n%10000==0:                        
+                sys.stdout.write('.')
+                sys.stdout.flush()            
 
-        # in parallel
-        print "Building matrices for all files"
-        num_cores = multiprocessing.cpu_count()
-        all_binning = Parallel(n_jobs=num_cores)(delayed(_process_file)(j, data_list[j], top_bins, top_bin_features, 
-                                                                        self.transformations, self.adduct_sub, 
-                                                                        self.adduct_mul, self.adduct_del, 
-                                                                        self.proton_pos, 
-                                                                        self.within_file_mass_tol, self.within_file_rt_tol) for j in range(len(data_list)))      
-        print
-        return all_binning     
-    
-    def _create_top_level_bin(self, bin_id, bin_mass, bin_RT, bin_intensity, mass_tol, rt_tol):
-        return _make_precursor_bin(bin_id, bin_mass, bin_RT, bin_intensity, mass_tol, rt_tol)
+            bin_centre = all_bins[n]
+            interval_from, interval_to = utils.mass_range(bin_centre, mass_tol)
+            matching_idx = np.where((precursor_masses>interval_from) & (precursor_masses<interval_to))[0]
+            
+            # if this abstract bin is not empty, then add features from all files that can fit here
+            if len(matching_idx)>0:
+                fs = all_features[matching_idx]
+                data = fs.tolist()
+                abstract_bins[k] = data
+                k += 1        
+        
+        print        
+        return abstract_bins
         
     def _find_features(self, bb, features):
         masses = np.array([f.mass for f in features])
@@ -380,3 +382,26 @@ class FileLoader:
                 transformations.append(trans)
                 i = i + 1
         return transformations        
+    
+    
+def main(argv):    
+
+    loader = FileLoader()
+    input_file = '../alignment/input/std1_csv'
+    database_file = './database/std1_mols.csv'
+    transformation_file = './mulsubs/mulsub2.txt'
+    mass_tol = 2
+    rt_tol = 2
+    across_file_mass_tol = 4
+
+    import time
+    start = time.time()
+    data_list = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol, across_file_mass_tol)
+    end = time.time()
+    hours, rem = divmod(end-start, 3600)
+    minutes, seconds = divmod(rem, 60)
+    print("TIME TAKEN {:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))    
+    
+if __name__ == "__main__":
+   main(sys.argv[1:])
+

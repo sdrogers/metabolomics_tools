@@ -52,7 +52,7 @@ class SharedBinMatching:
         self.verbose = verbose
         self.seed = seed
         self.num_cores = multiprocessing.cpu_count()
-
+        self.num_cores = 1
         self.annotations = {}
         
     def run(self, matching_mass_tol, matching_rt_tol, full_matching=False, show_singleton=False, show_plot=False):
@@ -126,7 +126,8 @@ class SharedBinMatching:
         file_post_rts = []
 
         print "Running first-stage clustering for all files"
-        all_clusterings = Parallel(n_jobs=self.num_cores)(delayed(_run_first_stage_clustering)(j, self.data_list[j], self.hp) for j in range(len(self.data_list)))
+        all_clusterings = Parallel(n_jobs=self.num_cores, verbose=50)(delayed(_run_first_stage_clustering)(
+                                        j, self.data_list[j], self.hp) for j in range(len(self.data_list)))
 
         # process the results
         for j in range(len(self.data_list)):
@@ -236,10 +237,9 @@ class SharedBinMatching:
             abstract_data[n] = (selected_rts, selected_word_counts, selected_origins, selected_bins)
 
         print "Running second-stage clustering for all abstract bins"
-        file_matchings = Parallel(n_jobs=self.num_cores)(delayed(_run_second_stage_clustering)(
-                                                        n, top_ids[n], len(top_ids), 
-                                                        abstract_data[n], self.hp, self.seed
-                                                    ) for n in range(len(top_ids)))
+        file_matchings = Parallel(n_jobs=self.num_cores, verbose=50)(delayed(_run_second_stage_clustering)(
+                                    n, top_ids[n], len(top_ids), abstract_data[n], self.hp, self.seed
+                                    ) for n in range(len(top_ids)))
 
         matching_results = []
         for file_res in file_matchings:
