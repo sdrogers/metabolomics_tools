@@ -347,6 +347,8 @@ class SharedBinMatching:
             if n % 1000 == 0:
                 print "Processing aligned bins " + str(n) + "/" + str(len(sorted_list)) + "\tprob " + str(prob)
                 sys.stdout.flush()
+            if prob < 0.05: # discard the long tail
+                break
             # members is a tuple of bins so the features inside need to be matched
             matched_list = self._match_features(members, full_matching, matching_mass_tol, matching_rt_tol) 
             for features in matched_list:
