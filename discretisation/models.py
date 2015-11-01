@@ -100,6 +100,15 @@ class PeakData(object):
             self.prior_masses = discrete_info.prior_masses
             self.prior_rts = discrete_info.prior_rts            
             self.num_clusters = len(self.bins)
+
+    def remove_discrete_info(self):
+            del self.possible
+            del self.transformed
+            del self.matRT
+            del self.bins
+            del self.prior_masses
+            del self.prior_rts
+            del self.num_clusters
                 
 # Not sure whether want to keep this or not ...
 # Probably useful for identification and plotting later
