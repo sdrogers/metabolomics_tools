@@ -189,7 +189,6 @@ class DpMixtureGibbs:
                 if self.verbose:
                     print('\tSAMPLE\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))
                 self.Z = self._get_Z(self.N, K, current_ks)
-                self.ZZ_all = self.ZZ_all + self._get_ZZ(self.Z)
                 self.samples_obtained += 1
             
                 # construct the actual alignment here
@@ -206,7 +205,6 @@ class DpMixtureGibbs:
                         
         # end sample loop
         self.last_K = K        
-        self.ZZ_all = self.ZZ_all / self.samples_obtained
         if self.verbose:
             print "DONE!"
     

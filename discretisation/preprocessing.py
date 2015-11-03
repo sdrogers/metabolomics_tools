@@ -1,20 +1,14 @@
 import csv
 import glob
-from operator import attrgetter
 import os
 import sys
-import multiprocessing
-from joblib import Parallel, delayed  
 
 import numpy as np
 import scipy.io as sio
 import scipy.sparse as sp
 
-from interval_tree import IntervalTree
-from models import DiscreteInfo, PrecursorBin, PeakData, Feature, DatabaseEntry, Transformation
-from file_binner import _process_file, _make_precursor_bin
+from models import DiscreteInfo, PeakData, Feature, DatabaseEntry, Transformation
 import utils
-
 
 class Discretiser(object):
 
@@ -74,82 +68,6 @@ class Discretiser(object):
         print "Total bins=" + str(K) + " total features=" + str(N)
         binning = DiscreteInfo(possible, transformed, matRT, bins, prior_masses, prior_rts)
         return binning         
-
-    def run_multiple(self, data_list):
-
-        print "Discretising at within_file_mass_tol=" + str(self.within_file_mass_tol) + " and across_file_mass_tol " + str(self.across_file_mass_tol)
-        all_features = []
-        for peak_data in data_list:
-            all_features.extend(peak_data.features)    
-        all_features = sorted(all_features, key = attrgetter('mass'))            
-        N = len(all_features)        
-            
-        # create equally-spaced bins from start to end
-        feature_masses = np.array([f.mass for f in all_features])[:, None]              # N x 1
-        precursor_masses = (feature_masses - self.adduct_sub[self.proton_pos])/self.adduct_mul[self.proton_pos]        
-        min_val = np.min(precursor_masses)
-        max_val = np.max(precursor_masses)
-        
-        # iteratively create bins
-        all_bins = []
-        bin_start, bin_end = utils.mass_range(min_val, self.across_file_mass_tol)
-        while bin_end < max_val:
-            # store the current bin centre
-            bin_centre = utils.mass_centre(bin_start, self.across_file_mass_tol)
-            all_bins.append(bin_centre)
-            # advance the bin
-            bin_start, bin_end = utils.mass_range(bin_centre, self.across_file_mass_tol)
-            bin_start = bin_end
-        
-        top_bin_features = {}   
-        top_bins = []     
-        k = 0
-        for bin_centre in all_bins:
-            interval_from, interval_to = utils.mass_range(bin_centre, self.across_file_mass_tol)
-            matching_idx = np.where((precursor_masses>interval_from) & (precursor_masses<interval_to))[0].tolist()
-            if len(matching_idx)>0:
-                # this candidate top-level bin is not empty, add all the features that fit coming across all files
-                fs = []
-                for pos in matching_idx:
-                    fs.append(all_features[pos])
-                top_bin_features[k] = fs
-                # create the new top-level bin too
-                tb = self._create_top_level_bin(k, bin_centre, 0, 0, self.across_file_mass_tol, 0)
-                if self.verbose:
-                    print "\t" + str(tb)
-                sys.stdout.flush()
-                top_bins.append(tb)            
-                k += 1
-
-        K = len(top_bins)
-        T = len(self.transformations)
-        print "Total top bins=" + str(K) + " total features=" + str(N) + " total transformations=" + str(T)
-        sys.stdout.flush()
-
-        # for each file, we want to instantiatie its concrete bins -- based on the top bins
-
-        # process serially
-#         all_binning = []
-#         for j in range(len(data_list)):     
-#             file_binning = _process_file(peak_data, top_bins, top_bin_features,
-#                                          self.transformations, self.adduct_sub, 
-#                                          self.adduct_mul, self.adduct_del, self.proton_pos, 
-#                                          self.within_file_mass_tol, self.within_file_rt_tol, j)
-#             all_binning.append(file_binning)
-
-        # in parallel
-        print "Building matrices for all files"
-        num_cores = multiprocessing.cpu_count()
-        all_binning = Parallel(n_jobs=num_cores)(delayed(_process_file)(j, data_list[j], top_bins, top_bin_features, 
-                                                                        self.transformations, self.adduct_sub, 
-                                                                        self.adduct_mul, self.adduct_del, 
-                                                                        self.proton_pos, 
-                                                                        self.within_file_mass_tol, self.within_file_rt_tol) for j in range(len(data_list)))      
-        print
-        return all_binning     
-    
-    def _create_top_level_bin(self, bin_id, bin_mass, bin_RT, bin_intensity, mass_tol, rt_tol):
-        return _make_precursor_bin(bin_id, bin_mass, bin_RT, bin_intensity, mass_tol, rt_tol)
         
     def _find_features(self, bb, features):
         masses = np.array([f.mass for f in features])
@@ -166,7 +84,7 @@ class Discretiser(object):
             
 class FileLoader:
         
-    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol, across_file_mass_tol=0,
+    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol,
                          make_bins=True, synthetic=False, limit_n=-1, verbose=False):
         """ Load everything that a clustering model requires """
 
@@ -208,21 +126,11 @@ class FileLoader:
                 all_features.extend(features)
                 data_list.append(data)
                 sys.stdout.flush()
-                
+            os.chdir(starting_dir)
+                                
             # bin the files if necessary
             if make_bins:
-                assert across_file_mass_tol > 0
-                discretiser = Discretiser(transformations, mass_tol, rt_tol, across_file_mass_tol=across_file_mass_tol, 
-                                          verbose=verbose)
-                # make common bins shared across files using all the features                   
-                discrete_infos = discretiser.run_multiple(data_list) 
-                assert len(data_list) == len(discrete_infos)
-                for j in range(len(data_list)):
-                    peak_data = data_list[j]
-                    common = discrete_infos[j]
-                    peak_data.set_discrete_info(common)
-                            
-            os.chdir(starting_dir)    
+                raise ValueError("Binning of multiple files is not supported by this method")               
             return data_list
                     
         else:   
@@ -380,3 +288,26 @@ class FileLoader:
                 transformations.append(trans)
                 i = i + 1
         return transformations        
+    
+    
+def main(argv):    
+
+    loader = FileLoader()
+    input_file = '../alignment/input/std1_csv'
+    database_file = './database/std1_mols.csv'
+    transformation_file = './mulsubs/mulsub2.txt'
+    mass_tol = 2
+    rt_tol = 2
+    across_file_mass_tol = 4
+
+    import time
+    start = time.time()
+    data_list = loader.load_model_input(input_file, database_file, transformation_file, mass_tol, rt_tol, across_file_mass_tol)
+    end = time.time()
+    hours, rem = divmod(end-start, 3600)
+    minutes, seconds = divmod(rem, 60)
+    print("TIME TAKEN {:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))    
+    
+if __name__ == "__main__":
+   main(sys.argv[1:])
+
