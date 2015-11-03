@@ -169,7 +169,8 @@ class SharedBinMatching:
             self._cp_summary(possible, cluster_membership)
         
             # find the non-empty bins
-            bins = [peak_data.bins[a] for a in nnz_idx]
+            concrete_bins = discrete_info.bins
+            bins = [concrete_bins[a] for a in nnz_idx]
             all_bins.extend(bins)
         
             # find the non-empty bins' posterior RT values
@@ -195,7 +196,7 @@ class SharedBinMatching:
                 if cluster_membership[i, j] > 0:
                                     
                     f = peak_data.features[i]
-                    bb = peak_data.bins[j] # copy of the common bin specific to file j
+                    bb = concrete_bins[j] # copy of the common bin specific to file j
     
                     # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
                     bin_prob = precursor_clustering.Z[i, j]
@@ -299,7 +300,7 @@ class SharedBinMatching:
         
         print "Trans: count"
         for key in self.trans_map:
-            print self.trans_map[key].name + ": " + str((t==i).sum())
+            print self.trans_map[key].name + ": " + str((t==key).sum())
         
 
     def _match_precursor_bins(self, file_data, mass_tol, rt_tol):
