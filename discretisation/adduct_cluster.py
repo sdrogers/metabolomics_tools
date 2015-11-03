@@ -1,5 +1,7 @@
 import numpy as np
 import sys
+from mulsubs import transformation
+import pylab as plt
 
 class Peak(object):
 	def __init__(self,mass,rt,intensity):
@@ -34,13 +36,13 @@ class Cluster(object):
 		post_prec = self.prior_rt_precision + self.N*self.rt_precision
 		post_mean = (1.0/post_prec)*(self.prior_rt_precision*self.prior_rt_mean + self.rt_precision*self.rt_sum)
 		pred_prec = (1.0/(1.0/post_prec + 1.0/self.rt_precision))
-		return -0.5*np.log(2*np.pi) + 0.5*np.log(pred_perc) - 0.5*pred_prec*(rt-post_mean)**2
+		return -0.5*np.log(2*np.pi) + 0.5*np.log(pred_prec) - 0.5*pred_prec*(rt-post_mean)**2
 
 	def compute_mass_like(self,mass):
 		post_prec = self.prior_mass_precision + self.N*self.mass_precision
 		post_mean = (1.0/post_prec)*(self.prior_mass_precision*self.prior_mass_mean + self.mass_precision*self.mass_sum)
 		pred_prec = (1.0/(1.0/post_prec + 1.0/self.mass_precision))
-		return -0.5*np.log(2*np.pi) + 0.5*np.log(pred_perc) - 0.5*pred_prec*(mass-post_mean)**2
+		return -0.5*np.log(2*np.pi) + 0.5*np.log(pred_prec) - 0.5*pred_prec*(mass-post_mean)**2
 
 
 class Possible(object):
@@ -62,7 +64,7 @@ class Transformation(object):
 		return (peak.mass - self.sub)/self.mul + self.de
 
 class AdductCluster(object):
-	def __init__(self,rt_tol = 5,mass_tol = 1,transformation_file = 'mulsubs/mulsub2.txt',
+	def __init__(self,rt_tol = 5,mass_tol = 1,transformation_file = 'mulsubs/pos_transformations.yml',
 				alpha = 1,verbose = 0, mh_biggest = True):
 		self.mass_tol = mass_tol
 		self.rt_tol = rt_tol
@@ -76,19 +78,24 @@ class AdductCluster(object):
 
 
 	def load_transformations(self):
-		self.transformations = []
-		with open(self.transformation_file,'r') as tf:
-			for line in tf:
-				line = line.split(',')
-				name = line[0]
-				sub = float(line[1])
-				mul = float(line[2])
-				de = float(line[3])
-				t = Transformation(name,mul,sub,de)
-				self.transformations.append(t)
-				if name == "M+H":
-					self.MH = t
-		print "Loaded {} transformations from {}".format(len(self.transformations),self.transformation_file)
+		# self.transformations = []
+		# with open(self.transformation_file,'r') as tf:
+		# 	for line in tf:
+		# 		line = line.split(',')
+		# 		name = line[0]
+		# 		sub = float(line[1])
+		# 		mul = float(line[2])
+		# 		de = float(line[3])
+		# 		t = Transformation(name,mul,sub,de)
+		# 		self.transformations.append(t)
+		# 		if name == "M+H":
+		# 			self.MH = t
+		# print "Loaded {} transformations from {}".format(len(self.transformations),self.transformation_file)
+		self.transformations = transformation.load_from_file(self.transformation_file)
+		self.MH = None
+		for t in self.transformations:
+			if t.name=="M+H":
+				self.MH = t
 		
 
 	def init_from_file(self,filename):
@@ -291,12 +298,17 @@ class AdductCluster(object):
 			return None
 
 	def map_assign(self):
-		# Assigns all peaks to their most likeliy cluster
+		# Assigns all peaks to their most likely cluster
+		# This is a bit odd for the VB inference
+		for c in self.clusters:
+			c.N = 0
+			c.rt_sum = 0
+			c.mass_sum = 0
 		for p in self.peaks:
 			possible_clusters = self.possible[p]
-			self.Z[p].cluster.N -= 1
-			self.Z[p].cluster.rt_sum -= p.rt
-			self.Z[p].cluster.mass_sum -= self.Z[p].transformed_mass
+			# self.Z[p].cluster.N -= 1
+			# self.Z[p].cluster.rt_sum -= p.rt
+			# self.Z[p].cluster.mass_sum -= self.Z[p].transformed_mass
 			if len(possible_clusters) == 1:
 				self.Z[p] = possible_clusters[0]
 			else:
@@ -309,8 +321,47 @@ class AdductCluster(object):
 			self.Z[p].cluster.rt_sum += p.rt
 			self.Z[p].cluster.mass_sum += self.Z[p].transformed_mass
 
+	def cluster_plot(self,cluster):
+		# Find the members and possible objects
+		members = []
+		possibles = []
+		trans = []
+		for p in self.peaks:
+			if self.Z[p].cluster is cluster:
+				members.append(p)
+				possibles.append(self.Z[p])
+				trans.append(self.Z[p].transformation)
 
-	
+		print "CLUSTER {}".format(cluster.id)
+		max_intensity = 0
+		for p in range(len(members)):
+			print "Peak: {},{} -> {},{} (p={})".format(members[p].mass,members[p].rt,
+												possibles[p].transformation.name,
+												possibles[p].transformed_mass,
+												possibles[p].prob)
+			if members[p].intensity > max_intensity:
+				max_intensity = members[p].intensity
+
+		plt.figure()
+		for p_ind in range(len(members)):
+			p = members[p_ind]
+			po = possibles[p_ind]
+			plt.plot((p.mass,p.mass),(0,p.intensity/max_intensity),'k-')
+			plt.annotate(po.transformation.name,(p.mass,p.intensity/max_intensity),
+						(p.mass,0.1+p.intensity/max_intensity),
+						arrowprops=dict(arrowstyle='->'),
+						textcoords='data')
+
+		
+		trans_names = [i.name for i in trans]
+		all_trans_names = [i.name for i in self.transformations]
+		for this_name in all_trans_names:
+			r = (this_name,this_name + " [C13]")
+			if r[0] in trans_names and r[1] in trans_names:
+				pos_0 = trans_names.index(r[0])
+				pos_1 = trans_names.index(r[1])
+				print "{}/{} = {}".format(r[0],r[1],members[pos_0].intensity/members[pos_1].intensity)
+		
 
 
 
