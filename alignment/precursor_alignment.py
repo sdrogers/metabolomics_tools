@@ -27,6 +27,8 @@ def get_options(argv):
     parser.set_defaults(gt_file=None)
     parser.add_argument('-v', dest='verbose', action='store_true', help='Be verbose')
     parser.set_defaults(verbose=False)
+    parser.add_argument('-full', dest='full_matching', action='store_true', help='Do full matching')
+    parser.set_defaults(full_matching=False)
     parser.add_argument('-seed', help='random seed. Set this to get the same results each time.', type=float)
     parser.set_defaults(seed=-1) # default is not seeded
 
@@ -73,11 +75,12 @@ def main(argv):
     transformation_file = options.transformation_file
     gt_file = options.gt_file
     output_path = options.output_path
+    full_matching = options.full_matching
 
     alignment_hp.within_file_mass_tol = options.within_file_mass_tol
     alignment_hp.within_file_rt_tol = options.within_file_rt_tol
     alignment_hp.within_file_rt_sd = options.within_file_rt_sd
-    alignment_hp.within_file_mass_sd = 1.0/10 # for continuousVB mass clustering
+    alignment_hp.within_file_mass_sd = 0.1 # for continuousVB mass clustering
     
     alignment_hp.across_file_mass_tol = options.across_file_mass_tol
     alignment_hp.across_file_rt_tol = options.across_file_rt_tol
@@ -95,7 +98,7 @@ def main(argv):
                            alignment_hp, synthetic=True, gt_file=gt_file, 
                            verbose=options.verbose, seed=options.seed)
     sb.run(alignment_hp.across_file_mass_tol, alignment_hp.across_file_rt_tol, 
-           full_matching=False, show_singleton=True)
+           full_matching=full_matching, show_singleton=False)
     sb.save_output(output_path)
     
 if __name__ == "__main__":
