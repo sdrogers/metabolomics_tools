@@ -1,12 +1,15 @@
 import os
 import sys
 
+import numpy as np
+
+
 from discretisation.discrete_mass_clusterer import DiscreteVB
 from discretisation.continuous_mass_clusterer import ContinuousVB
 from discretisation.file_binner import _process_file
 from discretisation.models import HyperPars
 from discretisation.preprocessing import Discretiser
-import numpy as np
+
 from second_stage_clusterer import DpMixtureGibbs
 
 
@@ -14,16 +17,9 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 
 
-def _run_first_stage_clustering(j, peak_data, transformations, abstract_bins, hp, full_matching):
+def _run_first_stage_clustering(j, peak_data, trans_list, MH, abstract_bins, hp, full_matching):
 
-    adduct_name = np.array([t.name for t in transformations])[:,None]      # A x 1
-    adduct_mul = np.array([t.mul for t in transformations])[:,None]        # A x 1
-    adduct_sub = np.array([t.sub for t in transformations])[:,None]        # A x 1
-    adduct_del = np.array([t.iso for t in transformations])[:,None]        # A x 1
-    proton_pos = np.flatnonzero(np.array(adduct_name)=='M+H')              # index of M+H adduct
-    
-    binning = _process_file(j, peak_data, abstract_bins, transformations, 
-                             adduct_sub, adduct_mul, adduct_del, proton_pos, 
+    binning = _process_file(j, peak_data, abstract_bins, trans_list, MH,
                              hp.within_file_mass_tol, hp.within_file_rt_tol)
     peak_data.set_discrete_info(binning)
             
@@ -52,6 +48,7 @@ def _run_first_stage_clustering(j, peak_data, transformations, abstract_bins, hp
     print precursor_clustering
     precursor_clustering.run()
     
+    peak_data.remove_discrete_info()    
     return precursor_clustering, binning
 
 def _run_second_stage_clustering(n, top_id, total_topids, data, hp, seed):

@@ -5,12 +5,11 @@ import sys
 import utils
 from models import DiscreteInfo, PrecursorBin
 
-def _process_file(j, peak_data, abstract_bins, transformations, 
-                  adduct_sub, adduct_mul, adduct_del, proton_pos, 
+def _process_file(j, peak_data, abstract_bins, trans_list, MH,
                   within_file_mass_tol, within_file_rt_tol):
 
-    concrete_bins = _create_concrete_bins_of_file(j, abstract_bins, transformations, 
-                                                  adduct_sub, adduct_mul, adduct_del, proton_pos, 
+    concrete_bins = _create_concrete_bins_of_file(j, abstract_bins, 
+                                                  trans_list, MH, 
                                                   within_file_mass_tol, within_file_rt_tol)
     N = len(peak_data.features)     
     K = len(concrete_bins)
@@ -23,19 +22,18 @@ def _process_file(j, peak_data, abstract_bins, transformations,
     # build the matrices for this file    
     matRT, possible, transformed = _populate_matrices(j, N, K, 
                                                       prior_masses, prior_rts, prior_intensities,
-                                                      features, transformations, 
-                                                      adduct_sub, adduct_mul, adduct_del, 
+                                                      features, trans_list, 
                                                       within_file_mass_tol, within_file_rt_tol)                
 
     binning = DiscreteInfo(possible, transformed, matRT, concrete_bins, prior_masses, prior_rts)
     return binning
 
-def _create_concrete_bins_of_file(j, abstract_bins, transformations, 
-                  adduct_sub, adduct_mul, adduct_del, proton_pos, 
+def _create_concrete_bins_of_file(j, abstract_bins, 
+                                  trans_list, MH,
                   within_file_mass_tol, within_file_rt_tol):
 
     # initialise the 'concrete' realisations of the abstract bins in this file
-    T = len(transformations)
+    T = len(trans_list)
     concrete_bins = []
     k = 0
     for bin_id in abstract_bins:
@@ -44,8 +42,8 @@ def _create_concrete_bins_of_file(j, abstract_bins, transformations,
         features = abstract_bins[bin_id]
         for f in features:
             # and make a new concrete bin from the feature based on mass and RT
-            precursor_mass = (f.mass - adduct_sub[proton_pos])/adduct_mul[proton_pos]                        
-            concrete_bin = PrecursorBin(k, np.asscalar(precursor_mass), f.rt, f.intensity, 
+            precursor_mass = MH.transform(f)
+            concrete_bin = PrecursorBin(k, precursor_mass, f.rt, f.intensity, 
                                         within_file_mass_tol, within_file_rt_tol)
             concrete_bin.top_id = bin_id
             concrete_bin.origin = j
@@ -58,8 +56,7 @@ def _create_concrete_bins_of_file(j, abstract_bins, transformations,
             
 def _populate_matrices(j, N, K, 
                        prior_masses, prior_rts, prior_intensities,
-                       features, transformations, 
-                       adduct_sub, adduct_mul, adduct_del, 
+                       features, trans_list,
                        within_file_mass_tol, within_file_rt_tol):
 
     matRT = sp.lil_matrix((N, K), dtype=np.float)       # N x K, RTs of f n in bin k
@@ -74,11 +71,16 @@ def _populate_matrices(j, N, K,
 
         f = features[n]    
         current_mass, current_rt, current_intensity = f.mass, f.rt, f.intensity
-        transformed_masses = (current_mass - adduct_sub)/adduct_mul + adduct_del
+
+        transformed_masses = []
+        for trans in trans_list:
+            t_mass = trans.transform(f)
+            transformed_masses.append(t_mass)
+        transformed_masses = np.array(transformed_masses)
 
         rt_ok = utils.rt_match(current_rt, prior_rts, within_file_rt_tol)
         intensity_ok = (current_intensity <= prior_intensities)
-        for t in np.arange(len(transformations)):
+        for t in np.arange(len(trans_list)):
             # fill up the target bins that this transformation allows
             mass_ok = utils.mass_match(transformed_masses[t], prior_masses, within_file_mass_tol)
             check = mass_ok*rt_ok*intensity_ok

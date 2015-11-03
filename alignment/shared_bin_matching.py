@@ -26,6 +26,7 @@ import pylab as plt
 from second_stage_clusterer import DpMixtureGibbs
 import shared_bin_matching_plotter as plotter
 from clustering_calls import _run_first_stage_clustering, _run_second_stage_clustering
+from discretisation.mulsubs import transformation
 
 
 AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
@@ -38,7 +39,7 @@ class SharedBinMatching:
         loader = FileLoader()
         self.hp = hyperpars
         print self.hp
-        self.data_list = loader.load_model_input(input_dir, database_file, transformation_file, 
+        self.data_list = loader.load_model_input(input_dir, database_file, 
                                                  self.hp.within_file_mass_tol, self.hp.within_file_rt_tol,
                                                  make_bins=False, synthetic=synthetic, 
                                                  limit_n=limit_n, verbose=verbose)
@@ -52,7 +53,18 @@ class SharedBinMatching:
         self.verbose = verbose
         self.seed = seed
         self.num_cores = multiprocessing.cpu_count()
+        # self.num_cores = 1
         self.annotations = {}
+        
+        self.trans_list = transformation.load_from_file(transformation_file)
+        self.trans_map = self._get_transformation_map(self.trans_list)            
+        self.MH = None
+        for t in self.trans_list:
+            if t.name=="M+H":
+                self.MH = t
+                break
+        print self.trans_list
+
         
     def run(self, matching_mass_tol, matching_rt_tol, full_matching=False, show_singleton=False):
 
@@ -123,15 +135,13 @@ class SharedBinMatching:
         all_features = sorted(all_features, key = attrgetter('mass'))
 
         # create abstract bins with the same across_file_mass_tol ppm
-        any_trans = self.data_list[0].transformations # since trans is the same across all files ...
-        any_tmap = self._get_transformation_map(any_trans)            
-        abstract_bins = self._create_abstract_bins(all_features, self.hp.across_file_mass_tol, any_trans)
+        abstract_bins = self._create_abstract_bins(all_features, self.hp.across_file_mass_tol, self.trans_list, self.MH)
 
         # discretise each file and run precursor clustering
         print "Discretising at within_file_mass_tol=" + str(self.hp.within_file_mass_tol) + \
                     " and across_file_mass_tol=" + str(self.hp.across_file_mass_tol)
         results = Parallel(n_jobs=self.num_cores, verbose=50)(delayed(_run_first_stage_clustering)(
-                                        j, self.data_list[j], self.data_list[j].transformations, 
+                                        j, self.data_list[j], self.trans_list, self.MH,
                                         abstract_bins, self.hp, full_matching) for j in range(len(self.data_list)))
 
         # process the results
@@ -146,18 +156,17 @@ class SharedBinMatching:
             peak_data = self.data_list[j]
             res_tup = results[j]
             precursor_clustering = res_tup[0]
-            peak_data.set_discrete_info(res_tup[1])
-        
-            # make some plots
-            cp = ClusterPlotter(peak_data, precursor_clustering, threshold=self.hp.t)
-            cp.summary(file_idx=j)
-            # cp.plot_biggest(3)        
+            discrete_info = res_tup[1]
         
             # pick the non-empty bins for the second stage clustering
             cluster_membership = (precursor_clustering.Z>self.hp.t)
             s = cluster_membership.sum(0)
             nnz_idx = s.nonzero()[1]  
             nnz_idx = np.squeeze(np.asarray(nnz_idx)) # flatten the thing
+
+            # print summary
+            possible = discrete_info.possible
+            self._cp_summary(possible, cluster_membership)
         
             # find the non-empty bins
             bins = [peak_data.bins[a] for a in nnz_idx]
@@ -191,7 +200,7 @@ class SharedBinMatching:
                     # annotate each feature by its precursor mass & adduct type probabilities, for reporting later
                     bin_prob = precursor_clustering.Z[i, j]
                     trans_idx = precursor_clustering.possible[i, j]
-                    tran = any_tmap[trans_idx]
+                    tran = self.trans_map[trans_idx]
                     msg = "{:s}@{:3.5f}({:.4f})".format(tran.name, bb.mass, bin_prob)            
                     self._annotate(f, msg)   
                     bin_id = bb.bin_id
@@ -205,9 +214,9 @@ class SharedBinMatching:
     
                     # track the word counts too for each transformation
                     tidx = trans_idx-1  # we use trans_idx-1 because the value of trans goes from 1 .. T
-                    bb.word_counts[tidx] += math.floor(bin_prob*100)
+                    # bb.word_counts[tidx] += math.floor(bin_prob*100)
+                    bb.word_counts[tidx] += 1
 
-            peak_data.remove_discrete_info()            
             print
 
 #             for bb in bins:
@@ -219,18 +228,16 @@ class SharedBinMatching:
         # plotter.plot_bin_vs_bin(file_bins, file_post_rts)
         return all_bins, posterior_bin_rts, posterior_bin_masses, file_data
 
-    def _create_abstract_bins(self, all_features, mass_tol, transformations):
+    def _create_abstract_bins(self, all_features, mass_tol, trans_list, MH):
                     
         all_features = np.array(all_features) # convert list to np array for easy indexing
-
-        adduct_name = np.array([t.name for t in transformations])[:,None]      # A x 1
-        adduct_mul = np.array([t.mul for t in transformations])[:,None]        # A x 1
-        adduct_sub = np.array([t.sub for t in transformations])[:,None]        # A x 1
-        proton_pos = np.flatnonzero(np.array(adduct_name)=='M+H')              # index of M+H adduct
                     
         # create equally-spaced bins from start to end
-        feature_masses = np.array([f.mass for f in all_features])[:, None]              # N x 1
-        precursor_masses = (feature_masses - adduct_sub[proton_pos])/adduct_mul[proton_pos]        
+        precursor_mass_list = []
+        for f in all_features:
+            pm = MH.transform(f)
+            precursor_mass_list.append(pm) 
+        precursor_masses = np.array(precursor_mass_list)
         min_val = np.min(precursor_masses)
         max_val = np.max(precursor_masses)
         
@@ -247,7 +254,7 @@ class SharedBinMatching:
 
         N = len(all_features)
         K = len(all_bins)
-        T = len(transformations)
+        T = len(trans_list)
         print "Total abstract bins=" + str(K) + " total features=" + str(N) + " total transformations=" + str(T)
 
         print "Populating abstract bins ",
@@ -272,6 +279,28 @@ class SharedBinMatching:
         
         print        
         return abstract_bins
+    
+    def _cp_summary(self, possible, cluster_membership):
+        
+        print "Cluster output"
+        s = cluster_membership.sum(0)
+        nnz = (s>0).sum()
+        
+        print "Number of non-empty clusters: " + str(nnz) + " (of " + str(s.size) + ")"
+        si = (cluster_membership).sum(0)
+        print
+        
+        print "Size: count"
+        for i in np.arange(0,si.max()+1):
+            print str(i) + ": " + str((si==i).sum())
+        t = (possible.multiply(cluster_membership)).data
+        t -= 1
+        print
+        
+        print "Trans: count"
+        for key in self.trans_map:
+            print self.trans_map[key].name + ": " + str((t==i).sum())
+        
 
     def _match_precursor_bins(self, file_data, mass_tol, rt_tol):
 
