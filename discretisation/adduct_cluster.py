@@ -138,6 +138,7 @@ class AdductCluster(object):
 
 		for n in range(len(peak_list)):
 
+			p = peak_list[n]
 			if n%500==0:
 				print "Assigning possible transformations %d/%d" % (n, len(peak_list))
 				sys.stdout.flush()
