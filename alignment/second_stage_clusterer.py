@@ -26,7 +26,6 @@ class DpMixtureGibbs:
         self.W = len(self.word_counts_list[0])
         self.origins = data[2]
         self.N = len(self.rts)
-        assert self.N == len(self.rts)
         assert self.N == len(self.word_counts_list)
         assert self.N == len(self.origins)
         
@@ -43,8 +42,8 @@ class DpMixtureGibbs:
         else:
             self.random_state = RandomState()        
         
-        self.Z = None
-        self.ZZ_all = sp.lil_matrix((self.N, self.N),dtype=np.float)
+        # self.Z = None
+        # self.ZZ_all = sp.lil_matrix((self.N, self.N),dtype=np.float)
         self.cluster_rt_mean = None
         self.cluster_rt_prec = None
         self.matching_results = []
@@ -188,7 +187,7 @@ class DpMixtureGibbs:
             
                 if self.verbose:
                     print('\tSAMPLE\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))
-                self.Z = self._get_Z(self.N, K, current_ks)
+                # self.Z = self._get_Z(self.N, K, current_ks)
                 self.samples_obtained += 1
             
                 # construct the actual alignment here
@@ -219,15 +218,15 @@ class DpMixtureGibbs:
         current_ks[pos] = current_ks[pos] - 1
         return current_ks
     
-    def _get_Z(self, N, K, current_ks):
-        Z = sp.lil_matrix((N, K))
-        for n in range(len(current_ks)):
-            k = current_ks[n]
-            Z[n, k] = 1
-        return Z
-    
-    def _get_ZZ(self, Z):
-        return Z.tocsr() * Z.tocsr().transpose()
+#     def _get_Z(self, N, K, current_ks):
+#         Z = sp.lil_matrix((N, K))
+#         for n in range(len(current_ks)):
+#             k = current_ks[n]
+#             Z[n, k] = 1
+#         return Z
+#     
+#     def _get_ZZ(self, Z):
+#         return Z.tocsr() * Z.tocsr().transpose()
     
     def __repr__(self):
         return "Gibbs sampling for DP mixture model\n" + self.hyperpars.__repr__() + \
