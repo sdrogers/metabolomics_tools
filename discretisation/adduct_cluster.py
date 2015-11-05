@@ -99,7 +99,7 @@ class AdductCluster(object):
 		
 
 	def init_from_file(self,filename):
-		self.peaks = []
+		peak_list = []
 		with open(filename,'r') as f:
 			heads = f.readline()
 			for line in f:
@@ -107,17 +107,22 @@ class AdductCluster(object):
 				mass = float(line[0]);
 				rt = float(line[1]);
 				intensity = float(line[2]);
-				self.peaks.append(Peak(mass,rt,intensity))
+				peak_list.append(Peak(mass,rt,intensity))
 
-		print "Loaded {} peaks from {}".format(len(self.peaks),filename);
+		print "Loaded {} peaks from {}".format(len(peak_list),filename);
+		self.init_from_list(peak_list)
+		
+	def init_from_list(self,peak_list):
 
+		self.peaks = []
 		self.clusters = []
 		self.possible = {}
 		self.Z = {}
 		self.todo = []
 		self.clus_poss = {}
 		current_id = 0
-		for p in self.peaks:
+		for p in peak_list:
+			self.peaks.append(p)
 			c = Cluster(p,self.MH.transform(p),current_id,
 				mass_tol = self.mass_tol,rt_tol = self.rt_tol)
 			current_id += 1
@@ -131,7 +136,7 @@ class AdductCluster(object):
 		print "Created {} clusters".format(len(self.clusters))
 		self.K = len(self.clusters)
 
-		for p in self.peaks:
+		for p in peak_list:
 			for c in self.clusters:
 				if p is c.mHPeak:
 					continue
@@ -145,7 +150,7 @@ class AdductCluster(object):
 						self.clus_poss[c].append(poss)
 
 
-		for p in self.peaks:
+		for p in peak_list:
 			if len(self.possible[p])>1:
 				self.todo.append(p)
 
