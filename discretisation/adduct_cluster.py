@@ -136,7 +136,12 @@ class AdductCluster(object):
 		print "Created {} clusters".format(len(self.clusters))
 		self.K = len(self.clusters)
 
-		for p in peak_list:
+		for n in range(len(peak_list)):
+
+			if n%500==0:
+				print "Assigning possible transformations %d/%d" % (n, len(peak_list))
+				sys.stdout.flush()
+				
 			for c in self.clusters:
 				if p is c.mHPeak:
 					continue
