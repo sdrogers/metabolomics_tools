@@ -28,10 +28,12 @@ class DpMixtureGibbs:
         self.N = len(self.rts)
         assert self.N == len(self.word_counts_list)
         assert self.N == len(self.origins)
-        
+
+        delta = hyperpars.across_file_rt_tol
+        var = (delta/3.0)**2 # assume 1 delta is 3 standard deviations
+        self.rt_prec = 1.0/var
+        self.rt_prior_prec = 5E-6
         self.mu_zero = np.mean(self.rts)
-        self.rt_prec = float(hyperpars.rt_prec)
-        self.rt_prior_prec = float(hyperpars.rt_prior_prec)
         self.alpha = float(hyperpars.dp_alpha)
         self.beta = float(hyperpars.beta)
         self.nsamps = hyperpars.rt_clustering_nsamps

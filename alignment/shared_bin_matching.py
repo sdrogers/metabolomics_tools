@@ -32,7 +32,8 @@ class SharedBinMatching:
         loader = FileLoader()
         self.hp = hyperpars
         print self.hp
-        self.data_list = loader.load_model_input(input_dir, None, 0, 0, make_bins=False, synthetic=synthetic, limit_n=limit_n, verbose=verbose)
+        self.data_list = loader.load_model_input(input_dir, None, 0, 0, make_bins=False, synthetic=synthetic, 
+                                                 limit_n=limit_n, verbose=verbose)
 
         sys.stdout.flush()
         self.file_list = loader.file_list
@@ -43,7 +44,7 @@ class SharedBinMatching:
         self.verbose = verbose
         self.seed = seed
 
-        multicore = False
+        multicore = True
         if multicore:
             self.num_cores = multiprocessing.cpu_count()
         else:
@@ -59,7 +60,7 @@ class SharedBinMatching:
                 self.MH = t
                 break
         
-    def run(self, matching_mass_tol, matching_rt_tol, full_matching=False, show_singleton=False):
+    def run(self, full_matching=False, show_singleton=False):
 
         start_time = time.time()
         clustering_results = self._first_stage_clustering()            
@@ -72,15 +73,14 @@ class SharedBinMatching:
             file_clusters = ac.clusters
 
             # initialise some attributes during runtime -- because we don't want to change the object            
-            for fc in file_clusters:
-                fc.members = []
-                fc.origin = j                    
-                fc.word_counts = np.zeros(self.T)
+            for cluster in file_clusters:
+                cluster.members = []
+                cluster.origin = j                    
+                cluster.word_counts = np.zeros(self.T)
             
             # assign peaks above the threshold to this cluster
             for peak in ac.peaks:
                 for poss in ac.possible[peak]:
-                    print "\t {} {}".format(poss.transformation.name, poss.prob)
                     if poss.prob > self.hp.t:
                         msg = "{:s}@{:3.5f}({:.4f})".format(poss.transformation.name, poss.cluster.mu_mass, poss.prob)            
                         self._annotate(peak, msg)   
@@ -91,14 +91,14 @@ class SharedBinMatching:
             print "File %d clusters assignment " % j
             selected = []
             for cluster in file_clusters:
-                if len(fc.members) > 0:
-                    print "Cluster ID %d" % fc.id
-                    for peak, poss in fc.members:                    
+                if len(cluster.members) > 0:
+                    print "Cluster ID %d" % cluster.id
+                    for peak, poss in cluster.members:                    
                         print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
                                                            poss.transformation.name, poss.prob)
                         # update the binary flag for this transformation in the cluster
                         tidx = self.trans_idx[poss.transformation.name]
-                        fc.word_counts[tidx] += 1
+                        cluster.word_counts[tidx] += 1
                     selected.append(cluster)
 
             all_nonempty_clusters.extend(selected) # collect across all files
@@ -106,8 +106,8 @@ class SharedBinMatching:
         
         # perform alignment here
         if full_matching:            
-            matching_mass_tol = self.hp.across_file_mass_tol, 
-            matching_rt_tol = self.hp.across_file_rt_tol            
+            matching_mass_tol = self.hp.across_file_mass_tol
+            matching_rt_tol = self.hp.across_file_rt_tol
             alignment_results = self._match_precursor_bins(file_data, matching_mass_tol, matching_rt_tol)
         else:
             matching_results, samples_obtained = self._second_stage_clustering(all_nonempty_clusters)
@@ -167,7 +167,7 @@ class SharedBinMatching:
         # run precursor clustering for each file
         print "First stage clustering -- within_file_mass_tol=%.2ff, within_file_rt_tol=%.2f, alpha=%.2f" % (self.hp.within_file_mass_tol, self.hp.within_file_rt_tol, self.hp.alpha_mass)
         sys.stdout.flush()
-        clustering_results = Parallel(n_jobs=self.num_cores, verbose=50)(delayed(_run_first_stage_clustering)(
+        clustering_results = Parallel(n_jobs=self.num_cores, verbose=10)(delayed(_run_first_stage_clustering)(
                                         j, self.data_list[j], self.hp, self.transformation_file) for j in range(len(self.data_list)))
         assert len(clustering_results) == len(self.data_list)        
         return clustering_results
@@ -335,7 +335,7 @@ class SharedBinMatching:
 
         print "Running second-stage clustering"
         sys.stdout.flush()   
-        file_matchings = Parallel(n_jobs=self.num_cores, verbose=50)(delayed(_run_second_stage_clustering)(
+        file_matchings = Parallel(n_jobs=self.num_cores, verbose=10)(delayed(_run_second_stage_clustering)(
                                     n, all_groups[n], self.hp, self.seed) for n in range(len(all_groups)))
 
         matching_results = []

@@ -7,26 +7,18 @@ class HyperPars(object):
 
     def __init__(self):
 
-        self.within_file_mass_tol = 2.0             # mass tolerance in ppm when binning within the same file
-        self.within_file_rt_tol = 2.0               # rt tolerance in seconds when binning within the same file
-        self.within_file_mass_sd = 3.0              # standard deviation for mass when clustering by precursor masses within the same file
-        self.within_file_rt_sd = 2.5                # standard deviation for rt when clustering by precursor masses within the same file
+        self.within_file_mass_tol = 1.0
+        self.within_file_rt_tol = 5.0
+        self.t = 0.10
+        self.alpha_mass = 1.0
+        self.mass_clustering_n_iterations = 200
 
-        self.across_file_mass_tol = 4.0             # mass tolerance in ppm when binning across files
-        self.across_file_rt_tol = 30.0              # rt tolerance in seconds when matching peak features across bins in the same cluster but coming from different files
-        self.across_file_rt_sd = 15.0               # standard deviation of mixture component when clustering bins by posterior RT across files
-
-        self.t = 0.0                                # threshold for cluster membership for precursor mass clustering
-        self.alpha_mass = 100.0                     # Dirichlet parameter for precursor mass clustering
-
-        self.dp_alpha = 1.0                         # Dirichlet Process concentration parameter when clustering concrete bins together
-        self.rt_prec = 1.0/(self.across_file_rt_sd**2) # precision on the RT components when clustering concrete bins
-        self.rt_prior_prec = 5E-6                   # prior precision on the RT components
-        self.beta = 0.1                             # Dirichlet parameter for multinomial clustering on the adduct words of concrete bins
-
-        self.mass_clustering_n_iterations = 200     # no. of iterations for VB precursor clustering
-        self.rt_clustering_nsamps = 200             # no. of total samples for Gibbs RT clustering
-        self.rt_clustering_burnin = 100             # no. of burn-in samples for Gibbs RT clustering
+        self.across_file_mass_tol = 4.0
+        self.across_file_rt_tol = 10.0
+        self.beta = 0.1
+        self.dp_alpha = 100.0
+        self.rt_clustering_nsamps = 200
+        self.rt_clustering_burnin = 100
         
     def __repr__(self):
         return "Hyperparameters " + utils.print_all_attributes(self)
