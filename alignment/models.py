@@ -2,6 +2,7 @@ from collections import namedtuple
 import csv
 import os
 from discretisation import utils
+import numpy as np
 
 class HyperPars(object):
 
@@ -25,7 +26,7 @@ class HyperPars(object):
 
 class Feature(object):
         
-    def __init__(self, new_peak_id, new_mass, new_charge, new_intensity, new_rt, parent_file):
+    def __init__(self, new_peak_id, new_mass, new_charge, new_intensity, new_rt, parent_file, fingerprint=None):
         self.peak_id = int(new_peak_id)
         # normalise to 1
         self.mass = float(new_mass) / float(new_charge)
@@ -33,6 +34,7 @@ class Feature(object):
         self.intensity = float(new_intensity)
         self.rt = float(new_rt)
         self.parent_file = parent_file
+        self.fingerprint = fingerprint
         
     def _get_key(self):
         return (self.peak_id, self.parent_file)
@@ -104,6 +106,13 @@ class AlignmentRow(object):
         for feature in self.features:
             total_intensity = total_intensity + feature.intensity
         return total_intensity / len(self.features)    
+    
+    def get_average_fingerprint(self):
+        '''Computes the average fingerprint'''
+        total_fingerprint = np.zeros_like(self.features[0].fingerprint)
+        for feature in self.features:
+            total_fingerprint = total_fingerprint + feature.fingerprint
+        return total_fingerprint / len(self.features)    
     
     def is_within_tolerance(self, another_row, dmz, drt, absolute_mass_tolerance=True):
         if another_row.aligned == True:

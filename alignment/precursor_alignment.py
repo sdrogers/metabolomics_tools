@@ -30,8 +30,8 @@ def get_options(argv):
     parser.set_defaults(gt_file=None)
     parser.add_argument('-v', dest='verbose', action='store_true', help='Be verbose')
     parser.set_defaults(verbose=False)
-    parser.add_argument('-full', dest='full_matching', action='store_true', help='Do full matching')
-    parser.set_defaults(full_matching=False)
+    parser.add_argument('-match_mode', dest='match_mode', help='Matching mode', type=int)
+    parser.set_defaults(match_mode=0)
     parser.add_argument('-seed', help='random seed. Set this to get the same results each time.', type=float)
     parser.set_defaults(seed=-1) # default is not seeded
 
@@ -74,7 +74,7 @@ def main(argv):
     transformation_file = options.transformation_file
     gt_file = options.gt_file
     output_path = options.output_path
-    full_matching = options.full_matching
+    match_mode = options.match_mode
 
     alignment_hp.within_file_mass_tol = options.within_file_mass_tol
     alignment_hp.within_file_rt_tol = options.within_file_rt_tol    
@@ -90,7 +90,7 @@ def main(argv):
     sb = SharedBinMatching(input_dir, database_file, transformation_file, 
                            alignment_hp, synthetic=True, gt_file=gt_file, 
                            verbose=options.verbose, seed=options.seed)
-    sb.run(full_matching=full_matching, show_singleton=False)
+    sb.run(match_mode, show_singleton=False)
     sb.save_output(output_path)
     
 if __name__ == "__main__":
