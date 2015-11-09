@@ -2,6 +2,10 @@ import sys
 import os
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
+import timeit
+import gzip
+import cPickle
+
 from collections import namedtuple
 import csv
 from operator import attrgetter
@@ -27,7 +31,7 @@ AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 class SharedBinMatching:
     
     def __init__(self, input_dir, database_file, transformation_file, hyperpars, 
-                 synthetic=False, limit_n=-1, gt_file=None, verbose=False, seed=-1):
+                 synthetic=False, limit_n=-1, gt_file=None, verbose=False, seed=-1, parallel=True):
 
         loader = FileLoader()
         self.hp = hyperpars
@@ -44,8 +48,7 @@ class SharedBinMatching:
         self.verbose = verbose
         self.seed = seed
 
-        multicore = True
-        if multicore:
+        if parallel:
             self.num_cores = multiprocessing.cpu_count()
         else:
             self.num_cores = 1
@@ -74,8 +77,6 @@ class SharedBinMatching:
             alignment_results = self._match_peak_features(file_data, matching_mass_tol, matching_rt_tol)
             
         elif match_mode == 1: # matching based on the MAP of precursor clustering
-
-            print "Why go here?"
 
             # do first-stage precursor clustering        
             clustering_results = self._first_stage_clustering()        
@@ -127,6 +128,8 @@ class SharedBinMatching:
             matching_mass_tol = self.hp.across_file_mass_tol
             matching_rt_tol = self.hp.across_file_rt_tol
             alignment_results = self._match_precursor_bins(file_data, matching_mass_tol, matching_rt_tol)
+            self.clustering_results = clustering_results
+            self.file_data = file_data
 
         elif match_mode == 2: # match with DP clustering
 
@@ -171,6 +174,8 @@ class SharedBinMatching:
             
             matching_results, samples_obtained = self._second_stage_clustering(all_nonempty_clusters)
             alignment_results = self._construct_alignment(matching_results, samples_obtained)
+            self.clustering_results = clustering_results
+            self.all_nonempty_clusters = all_nonempty_clusters
          
         # for any matching mode, we should get the same alignment results back
         self._print_report(alignment_results, show_singleton=show_singleton)
@@ -183,6 +188,23 @@ class SharedBinMatching:
         if self.gt_file is not None:           
             print "Evaluating performance"
             self._evaluate_performance()
+        
+    def save_project(self, project_out):
+        start = timeit.default_timer()        
+        self.last_saved_timestamp = str(time.strftime("%c"))
+        with gzip.GzipFile(project_out, 'wb') as f:
+            cPickle.dump(self, f, protocol=cPickle.HIGHEST_PROTOCOL)
+            stop = timeit.default_timer()
+            print "Project saved to " + project_out + " time taken = " + str(stop-start)
+
+    @classmethod
+    def resume_from(cls, project_in):
+        start = timeit.default_timer()        
+        with gzip.GzipFile(project_in, 'rb') as f:
+            obj = cPickle.load(f)
+            stop = timeit.default_timer()
+            print "Project loaded from " + project_in + " time taken = " + str(stop-start)
+            return obj
         
     def save_output(self, output_path):
         
@@ -230,7 +252,7 @@ class SharedBinMatching:
     def _first_stage_clustering(self):
         
         # run precursor clustering for each file
-        print "First stage clustering -- within_file_mass_tol=%.2ff, within_file_rt_tol=%.2f, alpha=%.2f" % (self.hp.within_file_mass_tol, self.hp.within_file_rt_tol, self.hp.alpha_mass)
+        print "First stage clustering -- within_file_mass_tol=%.2f, within_file_rt_tol=%.2f, alpha=%.2f" % (self.hp.within_file_mass_tol, self.hp.within_file_rt_tol, self.hp.alpha_mass)
         sys.stdout.flush()
         clustering_results = Parallel(n_jobs=self.num_cores, verbose=10)(delayed(_run_first_stage_clustering)(
                                         j, self.data_list[j], self.hp, self.transformation_file) for j in range(len(self.data_list)))
@@ -374,6 +396,9 @@ class SharedBinMatching:
                 rt = file_post_rts[n]
                 fingerprint = file_post_fingerprints[n]
 
+                if j == 1 and cluster.id == 1326:
+                    print "Stop here"
+
                 # initialise alignment feature
                 alignment_feature = Feature(peak_id, mass, 1, 1, rt, this_file, fingerprint=fingerprint)
                 alignment_feature_to_precursor_cluster[alignment_feature] = cluster
@@ -406,6 +431,11 @@ class SharedBinMatching:
             temp = []
             for alignment_feature in row.features:
                 cluster = alignment_feature_to_precursor_cluster[alignment_feature]
+                if cluster.id == 1326:
+                    print "FOUND"
+                    print "Cluster %d %.4f %.2f" % (cluster.id, cluster.mu_mass, cluster.mu_rt)
+                    for f, poss in cluster.members:
+                        print "- id %s mass %.4f rt %.2f" % ((f._get_key(), f.mass, f.rt))                    
                 temp.append(cluster)
             tup = tuple(temp)
             results.append(tup)
@@ -567,26 +597,22 @@ class SharedBinMatching:
         return results
 
     def _simple_matching(self, group):
-        
-        # enumerate all the different adduct types
-        adducts_list = [item[1].transformation.name for cluster in group for item in cluster.members]
-        adducts = set(adducts_list)
-        
-        # match peak features by each adduct type
-        results = []
-        for trans_to_collect in adducts:
 
-            temp_res = []
-            for cluster in group: # within each precursor cluster
-                for peak, poss in cluster.members:
-                    trans_name = poss.transformation.name
-                    trans_prob = poss.prob # unused
-                    # add feature with the right transition into the result
-                    if trans_name == trans_to_collect:
-                        temp_res.append(peak)
-            tup = tuple(temp_res)
+        # combine everything of the same type together
+        adducts = {}
+        for cluster in group:
+            for peak, poss in cluster.members:
+                trans_name = poss.transformation.name
+                if trans_name in adducts:
+                    adducts[trans_name].append(peak)
+                else:
+                    adducts[trans_name] = [peak]
+
+        # all the values of the same type are now aligned
+        results = []
+        for trans_name in adducts:
+            tup = tuple(adducts[trans_name])
             results.append(tup)
-                  
         return results
         
     def _evaluate_performance(self):

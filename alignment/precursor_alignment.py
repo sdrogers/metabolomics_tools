@@ -92,6 +92,7 @@ def main(argv):
                            verbose=options.verbose, seed=options.seed)
     sb.run(match_mode, show_singleton=False)
     sb.save_output(output_path)
+    sb.save_project(output_path + ".project")
     
 if __name__ == "__main__":
    main(sys.argv[1:])
