@@ -68,7 +68,7 @@ class Feature(object):
         return hash(self._get_key())    
         
     def __repr__(self):
-        return "Feature " + utils.print_all_attributes(self)
+        return "id=(%d,%d) mass=%.4f rt=%.2f int=%.2f" % (self.feature_id, self.file_id, self.mass, self.rt, self.intensity)
 
 Transformation = namedtuple('Transformation', ['trans_id', 'name', 'sub', 'mul', 'iso'])
 DiscreteInfo = namedtuple('DiscreteInfo', ['possible', 'transformed', 'matRT', 'bins', 'prior_masses', 'prior_rts'])

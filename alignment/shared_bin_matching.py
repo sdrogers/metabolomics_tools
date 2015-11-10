@@ -150,10 +150,9 @@ class SharedBinMatching:
                 # assign peaks above the threshold to this cluster
                 for peak in ac.peaks:
                     for poss in ac.possible[peak]:
-                        if poss.prob > self.hp.t:
-                            msg = "{:s}@{:3.5f}({:.4f})".format(poss.transformation.name, poss.cluster.mu_mass, poss.prob)            
-                            self._annotate(peak, msg)   
-                            poss.cluster.members.append((peak, poss))        
+                        msg = "{:s}@{:3.5f}({:.4f})".format(poss.transformation.name, poss.cluster.mu_mass, poss.prob)            
+                        self._annotate(peak, msg)   
+                        poss.cluster.members.append((peak, poss))        
     
                 # keep track of the non-empty clusters                            
                 print
@@ -172,10 +171,11 @@ class SharedBinMatching:
     
                 all_nonempty_clusters.extend(selected) # collect across all files
             
-            matching_results, samples_obtained = self._second_stage_clustering(all_nonempty_clusters)
+            matching_results, samples_obtained, all_groups = self._second_stage_clustering(all_nonempty_clusters)
             alignment_results = self._construct_alignment(matching_results, samples_obtained)
             self.clustering_results = clustering_results
             self.all_nonempty_clusters = all_nonempty_clusters
+            self.all_groups = all_groups
          
         # for any matching mode, we should get the same alignment results back
         self._print_report(alignment_results, show_singleton=show_singleton)
@@ -259,56 +259,40 @@ class SharedBinMatching:
         assert len(clustering_results) == len(self.data_list)        
         return clustering_results
 
+    def _find_matching(self, precursor_mass_list, lower, upper):
+        results = []
+        for i in range(len(precursor_mass_list)):
+            mass, processed, cluster = precursor_mass_list[i]            
+            if processed:
+                continue
+            if mass >= lower and mass <= upper:
+                results.append((i, cluster)) 
+        return results
+
     def _create_abstract_bins(self, cluster_list, mass_tol):
                     
-        all_features = np.array(cluster_list)
-                    
-        # create equally-spaced bins from start to end
+        # group precursor clusters by mass tol                    
         precursor_mass_list = []
         for cl in cluster_list:
             pm = cl.mu_mass
-            precursor_mass_list.append(pm) 
-        precursor_masses = np.array(precursor_mass_list)
-        min_val = np.min(precursor_masses)
-        max_val = np.max(precursor_masses)
-        
-        # iteratively find the bin centres
-        all_bins = []
-        bin_start, bin_end = utils.mass_range(min_val, mass_tol)
-        while bin_end < max_val:
-            # find all clusters that fit here
-            matching_idx = np.where((precursor_masses>=bin_start) & (precursor_masses<=bin_end))[0]            
-            # store the current bin centre
-            bin_centre = utils.mass_centre(bin_start, mass_tol)
-            all_bins.append(bin_centre)
-            # advance the bin
-            bin_start, bin_end = utils.mass_range(bin_centre, mass_tol)
-            bin_start = bin_end
+            precursor_mass_list.append([pm, False, cl]) 
 
-        print "Populating abstract bins ",
         abstract_bins = {}   
         k = 0
-        for n in range(len(all_bins)):
-
-            if n%10000==0:                        
-                sys.stdout.write('.')
-                sys.stdout.flush()            
-
-            bin_centre = all_bins[n]
-            interval_from, interval_to = utils.mass_range(bin_centre, mass_tol)
-            matching_idx = np.where((precursor_masses>interval_from) & (precursor_masses<interval_to))[0]
-            
-            # if this abstract bin is not empty, then add features from all files that can fit here
-            if len(matching_idx)>0:
-                fs = all_features[matching_idx]
-                data = fs.tolist()
-                abstract_bins[k] = data
-                k += 1        
-        
-        print        
+        for mass, processed, cluster in precursor_mass_list:
+            if processed:
+                continue
+            lower, upper = utils.mass_range(mass, mass_tol)            
+            matches = self._find_matching(precursor_mass_list, lower, upper)
+            data = []
+            for index, match in matches:
+                precursor_mass_list[index][1] = True # processed
+                data.append(match)
+            abstract_bins[k] = data
+            k += 1        
 
         K = len(abstract_bins)
-        N = len(all_features)        
+        N = len(cluster_list)        
         print "Total abstract bins=" + str(K) + " total features=" + str(N)
         return abstract_bins
     
@@ -469,7 +453,7 @@ class SharedBinMatching:
             matching_results.extend(file_res)
         samples_obtained = self.hp.rt_clustering_nsamps - self.hp.rt_clustering_burnin
                     
-        return matching_results, samples_obtained
+        return matching_results, samples_obtained, all_groups
 
     def _construct_alignment(self, matching_results, samples_obtained, show_plot=False):
         

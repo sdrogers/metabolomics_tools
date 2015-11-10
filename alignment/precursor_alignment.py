@@ -2,6 +2,7 @@
 
 import sys
 import argparse
+import time
 
 from shared_bin_matching import SharedBinMatching
 from models import HyperPars as AlignmentHyperPars
@@ -93,6 +94,8 @@ def main(argv):
     sb.run(match_mode, show_singleton=False)
     sb.save_output(output_path)
     sb.save_project(output_path + ".project")
+    print"Ending program in 5 seconds ..."
+    time.sleep(5)
     
 if __name__ == "__main__":
    main(sys.argv[1:])

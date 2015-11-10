@@ -26,6 +26,9 @@ def _run_first_stage_clustering(j, peak_data, hp, trans_filename):
 
 def _run_second_stage_clustering(n, cluster_list, hp, seed):
     
+    if seed == -1:
+        seed = 1234567890
+    
     rts = []
     word_counts = []
     origins = []
