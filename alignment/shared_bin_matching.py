@@ -152,7 +152,10 @@ class SharedBinMatching:
                     for poss in ac.possible[peak]:
                         msg = "{:s}@{:3.5f}({:.4f})".format(poss.transformation.name, poss.cluster.mu_mass, poss.prob)            
                         self._annotate(peak, msg)   
-                        poss.cluster.members.append((peak, poss))        
+                        poss.cluster.members.append((peak, poss))    
+                        poss.cluster.N += 1
+                        poss.cluster.rt_sum += peak.rt
+                        poss.cluster.mass_sum += poss.transformed_mass                            
     
                 # keep track of the non-empty clusters                            
                 print
