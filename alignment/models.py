@@ -223,6 +223,10 @@ class AlignmentFile(object):
             if candidate.is_within_tolerance(reference_row, dmz, drt):
                 candidates.append(candidate)
         return candidates
+
+    def reset_aligned_status(self):
+        for row in self.rows:
+            row.aligned = False
     
     def get_unaligned_rows(self):
         unaligned = []
@@ -240,4 +244,9 @@ class AlignmentFile(object):
                 if candidate.is_within_tolerance(reference_row, -1, drt):
                     candidates.append(candidate)
         return candidates
-        
+      
+    def get_all_features(self):
+        features = []
+        for row in self.rows:
+            features.extend(row.features)
+        return features 

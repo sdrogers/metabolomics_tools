@@ -326,6 +326,7 @@ class SharedBinMatching:
         sys.stdout.flush()
 
         alignment_files = []
+        input_features_count = 0
         for j in range(len(file_data)):
 
             features = file_data[j].features
@@ -337,6 +338,7 @@ class SharedBinMatching:
                 alignment_row.features.append(f)
                 row_id = row_id + 1
                 this_file.rows.append(alignment_row)
+                input_features_count += 1
             alignment_files.append(this_file)
             
         # do the matching
@@ -346,16 +348,29 @@ class SharedBinMatching:
                              verbose = self.verbose)
         matched_results = AlignmentFile("", True)
         num_files = len(alignment_files)        
+        input_count = 0
+        output_count = 0
         for i in range(num_files):
+            print "Processing file %d" % i
             alignment_file = alignment_files[i]
+            input_count += len(alignment_file.get_all_features()) + len(matched_results.get_all_features())
+            matched_results.reset_aligned_status()
+            alignment_file.reset_aligned_status()
             matcher = MaxWeightedMatching(matched_results, alignment_file, my_options)
             matched_results = matcher.do_matching()      
+            output_count += len(matched_results.get_all_features())
+            assert input_count == output_count, "input %d output %d" % (input_count, output_count)
             
         # produce alignment results
+        output_features_count = 0
         alignment_results = []
         for row in matched_results.rows:
+            for f in row.features:
+                output_features_count += 1
             res = AlignmentResults(peakset=row.features, prob=1.0)
             alignment_results.append(res)            
+            
+        assert input_features_count == output_features_count, "input %d output %d" % (input_features_count, output_features_count)
         return alignment_results
         
     def _match_precursor_bins(self, file_data, mass_tol, rt_tol):
@@ -383,9 +398,6 @@ class SharedBinMatching:
                 rt = file_post_rts[n]
                 fingerprint = file_post_fingerprints[n]
 
-                if j == 1 and cluster.id == 1326:
-                    print "Stop here"
-
                 # initialise alignment feature
                 alignment_feature = Feature(peak_id, mass, 1, 1, rt, this_file, fingerprint=fingerprint)
                 alignment_feature_to_precursor_cluster[alignment_feature] = cluster
@@ -403,14 +415,22 @@ class SharedBinMatching:
         # do the matching
         Options = namedtuple('Options', 'dmz drt exact_match use_fingerprint verbose')
         my_options = Options(dmz = mass_tol, drt = rt_tol, 
-                             exact_match = False, use_fingerprint = False,
+                             exact_match = False, use_fingerprint = True,
                              verbose = self.verbose)
         matched_results = AlignmentFile("", True)
         num_files = len(alignment_files)        
+        input_count = 0
+        output_count = 0
         for i in range(num_files):
+            print "Processing file %d" % i
             alignment_file = alignment_files[i]
+            input_count += len(alignment_file.get_all_features()) + len(matched_results.get_all_features())
+            matched_results.reset_aligned_status()
+            alignment_file.reset_aligned_status()
             matcher = MaxWeightedMatching(matched_results, alignment_file, my_options)
             matched_results = matcher.do_matching()      
+            output_count += len(matched_results.get_all_features())
+            assert input_count == output_count, "input %d output %d" % (input_count, output_count)
             
         # map the results back to the original bin objects
         results = []
