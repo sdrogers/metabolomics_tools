@@ -196,8 +196,8 @@ class DpMixtureGibbs:
                 for k in range(K):
                     pos = np.flatnonzero(current_ks==k)
                     memberstup = tuple(pos.tolist())
-                    if self.verbose:
-                        print "\t\tsample=" + str(s) + " k=" + str(k) + " memberstup=" + str(memberstup)                    
+                    # if self.verbose:
+                    #    print "\t\tsample=" + str(s) + " k=" + str(k) + " memberstup=" + str(memberstup)                    
                     self.matching_results.append(memberstup)
             else:
                 if self.verbose:

@@ -11,7 +11,7 @@ def _run_first_stage_clustering(j, peak_data, hp, trans_filename):
 
     sys.stdout.flush()
     ac = AdductCluster(mass_tol=hp.within_file_mass_tol, rt_tol=hp.within_file_rt_tol, 
-                       alpha=hp.alpha_mass, mh_biggest=True, transformation_file=trans_filename, verbose=2)
+                       alpha=hp.alpha_mass, mh_biggest=True, transformation_file=trans_filename, verbose=2, use_mass_likelihood=True)
 
     peak_list = peak_data.features
     ac.init_from_list(peak_list)
@@ -24,7 +24,7 @@ def _run_first_stage_clustering(j, peak_data, hp, trans_filename):
 
     return ac
 
-def _run_second_stage_clustering(n, cluster_list, hp, seed):
+def _run_second_stage_clustering(n, cluster_list, hp, seed, verbose=False):
     
     if seed == -1:
         seed = 1234567890
@@ -39,7 +39,7 @@ def _run_second_stage_clustering(n, cluster_list, hp, seed):
     data = (rts, word_counts, origins)
     
     # run dp clustering for each top id
-    dp = DpMixtureGibbs(data, hp, seed=seed)
+    dp = DpMixtureGibbs(data, hp, seed=seed, verbose=verbose)
     dp.nsamps = hp.rt_clustering_nsamps
     dp.burn_in = hp.rt_clustering_burnin
     dp.run() 
