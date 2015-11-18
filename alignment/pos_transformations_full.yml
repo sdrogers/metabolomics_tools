@@ -78,8 +78,8 @@ charges:
 fragments: [CO,H2O,CH2O2,CO2]
 # fragments: []
 
-isotopes: [C13]
-# isotopes: []
+# isotopes: [C13]
+isotopes: []
 
 masses: 
  H: 1.0078250319

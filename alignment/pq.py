@@ -1,26 +1,7 @@
-from Queue import Queue
-from heapq import heappush, heappop
-
-# from http://code.activestate.com/recipes/87369-priority-queue/
-class PriorityQueue(Queue):
-
-    # Initialize the queue representation
-    def _init(self, maxsize):
-        self.size = 0
-        self.maxsize = maxsize
-        self.queue = []
-
-    # Put a new item in the queue
-    def _put(self, item):
-        self.size = self.size + 1
-        return heappush(self.queue, item)
-
-    # Get an item from the queue
-    def _get(self):
-        self.size = self.size - 1
-        return heappop(self.queue)
+from Queue import PriorityQueue
 
 if __name__ == "__main__":
+
     q = PriorityQueue()
     q.put((2,"a"))
     q.put((0.6,"b"))
@@ -29,3 +10,33 @@ if __name__ == "__main__":
     q.put((0.19,"e"))
     while not q.empty():
         print q.get()
+
+    q = PriorityQueue()
+    q.put((110.0, None))
+    q.put((111.0, None))
+    q.put((102.0, None))
+    q.put((110.0, None))
+    q.put((101.0, None))
+    q.put((120.0, None))    
+    q.put((121.0, None))    
+    q.put((123.0, None))    
+    q.put((112.0, None))    
+    tol = 5
+    
+    groups = {}
+    k = 0
+    group = []
+    while not q.empty():
+        current = q.get()
+        group.append(current)
+        if len(q.queue) > 0:
+            head = q.queue[0]
+            if abs(current[0]-head[0])>tol:
+                groups[k] = group
+                group = []
+                k += 1
+        else:
+            groups[k] = group
+            
+    for key in groups:
+        print "Group %d members %s" % (key, groups[key])

@@ -1,29 +1,34 @@
-import sys
-import os
-sys.path.insert(1, os.path.join(sys.path[0], '..'))
-
-import timeit
-import gzip
 import cPickle
-
 from collections import namedtuple
 import csv
+import gzip
+from itertools import chain, combinations
+import multiprocessing
 from operator import attrgetter
 from operator import itemgetter
-import multiprocessing
-from joblib import Parallel, delayed  
+import os
+import sys
 import time
-from itertools import chain, combinations
+import timeit
+from Queue import PriorityQueue
 
+from joblib import Parallel, delayed  
+
+from clustering_calls import _run_first_stage_clustering, _run_second_stage_clustering
 from discretisation import utils
+from discretisation.mulsubs import transformation
 from discretisation.preprocessing import FileLoader
 from ground_truth import GroundTruth
 from matching import MaxWeightedMatching
 from models import AlignmentFile, Feature, AlignmentRow
 import numpy as np
 import shared_bin_matching_plotter as plotter
-from clustering_calls import _run_first_stage_clustering, _run_second_stage_clustering
-from discretisation.mulsubs import transformation
+
+
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+
+
+
 
 
 AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
@@ -141,21 +146,29 @@ class SharedBinMatching:
                 ac = clustering_results[j]
                 file_clusters = ac.clusters
     
-                # initialise some attributes during runtime -- because we don't want to change the object            
+                # initialise some attributes during runtime -- because we don't want to change adduct clusterer code ...
                 for cluster in file_clusters:
                     cluster.members = []
                     cluster.origin = j                    
                     cluster.word_counts = np.zeros(self.T)
-                
-                # assign peaks above the threshold to this cluster
-                for peak in ac.peaks:
-                    for poss in ac.possible[peak]:
-                        msg = "{:s}@{:3.5f}({:.4f})".format(poss.transformation.name, poss.cluster.mu_mass, poss.prob)            
+
+                if self.hp.t > 0: # assign peaks above threshold to clusters
+                    for peak in ac.peaks:
+                        for poss in ac.possible[peak]:
+                            if poss.prob > self.hp.t:
+                                msg = "{:s}@{:3.5f}({:.4f})".format(poss.transformation.name, poss.cluster.mu_mass, poss.prob)            
+                                self._annotate(peak, msg)   
+                                poss.cluster.members.append((peak, poss))    
+                                poss.cluster.N += 1
+                                poss.cluster.rt_sum += peak.rt
+                                poss.cluster.mass_sum += poss.transformed_mass                            
+                else: # perform MAP assignment of peaks to their most likely cluster
+                    ac.map_assign()
+                    for peak in ac.peaks:
+                        best_poss = ac.Z[peak]
+                        msg = "{:s}@{:3.5f}({:.4f})".format(best_poss.transformation.name, best_poss.cluster.mu_mass, best_poss.prob)            
                         self._annotate(peak, msg)   
-                        poss.cluster.members.append((peak, poss))    
-                        poss.cluster.N += 1
-                        poss.cluster.rt_sum += peak.rt
-                        poss.cluster.mass_sum += poss.transformed_mass                            
+                        best_poss.cluster.members.append((peak, best_poss))        
     
                 # keep track of the non-empty clusters                            
                 print
@@ -167,9 +180,12 @@ class SharedBinMatching:
                         for peak, poss in cluster.members:                    
                             print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
                                                                poss.transformation.name, poss.prob)
-                            # update the binary flag for this transformation in the cluster
+                            # update the counts for this transformation in the cluster
                             tidx = self.trans_idx[poss.transformation.name]
+                            # use the binary count only
                             cluster.word_counts[tidx] += 1
+                            # use some dodgy scaling of the probabilities
+                            # cluster.word_counts[tidx] += round(poss.prob*100)
                         selected.append(cluster)
     
                 all_nonempty_clusters.extend(selected) # collect across all files
@@ -262,42 +278,41 @@ class SharedBinMatching:
         assert len(clustering_results) == len(self.data_list)        
         return clustering_results
 
-    def _find_matching(self, precursor_mass_list, lower, upper):
-        results = []
-        for i in range(len(precursor_mass_list)):
-            mass, processed, cluster = precursor_mass_list[i]            
-            if processed:
-                continue
-            if mass >= lower and mass <= upper:
-                results.append((i, cluster)) 
-        return results
-
     def _create_abstract_bins(self, cluster_list, mass_tol):
-                    
-        # group precursor clusters by mass tol                    
-        precursor_mass_list = []
+                            
+        q = PriorityQueue()
         for cl in cluster_list:
             pm = cl.mu_mass
-            precursor_mass_list.append([pm, False, cl]) 
+            q.put([pm, cl])            
 
-        abstract_bins = {}   
+        groups = {}
         k = 0
-        for mass, processed, cluster in precursor_mass_list:
-            if processed:
-                continue
-            lower, upper = utils.mass_range(mass, mass_tol)            
-            matches = self._find_matching(precursor_mass_list, lower, upper)
-            data = []
-            for index, match in matches:
-                precursor_mass_list[index][1] = True # processed
-                data.append(match)
-            abstract_bins[k] = data
-            k += 1        
+        group = []
+        while not q.empty():
+            
+            current_item = q.get()
+            current_mass = current_item[0]
+            current_cluster = current_item[1]
+            group.append(current_cluster)
 
-        K = len(abstract_bins)
+            # check if the next mass is outside tolerance            
+            if len(q.queue) > 0:
+                head = q.queue[0]
+                head_mass = head[0]
+                lower, upper = utils.mass_range(current_mass, mass_tol)                            
+                if head_mass > upper:
+                    # start a new group
+                    groups[k] = group
+                    group = []
+                    k += 1
+            else:
+                # no more item
+                groups[k] = group
+
+        K = len(groups)
         N = len(cluster_list)        
         print "Total abstract bins=" + str(K) + " total features=" + str(N)
-        return abstract_bins
+        return groups
     
     def _cp_summary(self, possible, cluster_membership):
         
@@ -415,7 +430,7 @@ class SharedBinMatching:
         # do the matching
         Options = namedtuple('Options', 'dmz drt exact_match use_fingerprint verbose')
         my_options = Options(dmz = mass_tol, drt = rt_tol, 
-                             exact_match = False, use_fingerprint = True,
+                             exact_match = False, use_fingerprint = False,
                              verbose = self.verbose)
         matched_results = AlignmentFile("", True)
         num_files = len(alignment_files)        
