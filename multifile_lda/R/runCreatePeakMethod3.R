@@ -2,10 +2,7 @@ source('cachedEic.R')
 source('cachedMsms.R')
 
 ### This is the peak detection workflow based on the RMassBank's script from Emma ###
-run_create_peak_method_3 <- function(config) {
-
-    MS1file <- config$input_files$input_file_forMS1peaks
-    fragmentation_file <- config$input_files$fragmentation_file_mzML
+run_create_peak_method_3_single <- function(MS1file, fragmentation_file, config) {
     
     # various tolerance parameters to configure
     dppm <- config$ms1_ms2_pairing_parameters$dppm
@@ -194,4 +191,25 @@ run_create_peak_method_3 <- function(config) {
     peaks <- peaks[-1, ] # delete first row of all NAs
     return(peaks)
     
+}
+
+run_create_peak_method_3 <- function(config) {
+  
+    MS1_input_dir <- config$input_files$input_file_forMS1peaks
+    fragmentation_input_dir <- config$input_files$fragmentation_file_mzML
+
+    MS1_files <- list.files(path=MS1_input_dir, pattern="*.mzXML", full.names=T, recursive=FALSE)
+    fragmentation_files <- list.files(path=fragmentation_input_dir, pattern="*.mzML", full.names=T, recursive=FALSE)
+
+    stopifnot(length(MS1_files) == length(fragmentation_files))
+
+    results <- list()
+    for (i in 1:length(MS1_files)) {
+        MS1_file <- MS1_files[i]
+        frag_file <- fragmentation_files[i]
+        res <- run_create_peak_method_3_single(MS1_file, frag_file, config)
+        results[[length(results)+1]] <- res
+    }
+    return(results)
+       
 }

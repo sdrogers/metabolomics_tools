@@ -14,6 +14,8 @@ import sys
 import time
 import timeit
 
+import seaborn as sns
+
 import multifile_utils as utils
 
 class MultifileLDA(object):
@@ -143,7 +145,7 @@ class MultifileLDA(object):
         for f in range(self.F):
             print " - file " + str(f) + " ",
             for d in range(self.Ds[f]):
-                if d%100==0:
+                if d%10==0:
                     sys.stdout.write('.')
                     sys.stdout.flush()
                 document = self.dfs[f].iloc[[d]]
@@ -185,124 +187,118 @@ class MultifileLDA(object):
                 self.F, self.Ds, self.N, self.K, self.document_indices,
                 self.alphas, self.beta, self.Z,
                 self.cdk, self.cd, self.ckn, self.ck)
+        
+    def do_thresholding(self, th_doc_topic=0.05, th_topic_word=0.1):
+ 
+        # save the thresholding values used for visualisation later
+        self.th_doc_topic = th_doc_topic
+        self.th_topic_word = th_topic_word
+                     
+        # get rid of small values in the matrices of the results
+        # if epsilon > 0, then the specified value will be used for thresholding
+        # otherwise, the smallest value for each row in the matrix is used instead
+        self.thresholded_topic_word = utils.threshold_matrix(self.topic_word_, epsilon=th_topic_word)
+        self.thresholded_doc_topic = []
+        for f in range(len(self.doc_topic_)):
+            self.thresholded_doc_topic.append(utils.threshold_matrix(self.doc_topic_[f], epsilon=th_doc_topic))        
                 
-    def print_top_words(self, n_words=10):
-        for i, topic_dist in enumerate(self.topic_word_):
-            topic_words = np.array(self.vocab)[np.argsort(topic_dist)][:-n_words:-1]
-            print('Topic {}: {}'.format(i, ' '.join(topic_words)))        
-                
-    def plot_e_alphas(self):
-        plt.figure(figsize=(20, 5))
-        ax = None
+    def print_top_words(self, with_probabilities=True, query=None):
+        
+        for i, topic_dist in enumerate(self.thresholded_topic_word):
+            
+            ordering = np.argsort(topic_dist)
+            topic_words = np.array(self.vocab)[ordering][::-1]
+            dist = topic_dist[ordering][::-1]        
+            topic_name = 'Mass2Motif {}:'.format(i)
+            
+            print topic_name,                    
+            for j in range(len(topic_words)):
+                if dist[j] > 0:
+                    if with_probabilities:
+                        print '%s (%.3f),' % (topic_words[j], dist[j]),
+                    else:
+                        print('{},'.format(topic_words[j])),                            
+                else:
+                    break
+            print
+            print
+            
+    def plot_motif_degrees(self, interesting=None):
+        
+        if interesting is None:
+            interesting = [k for k in range(self.K)]            
+
+        file_ids = []
+        topic_ids = []
+        degrees = []        
         for f in range(self.F):
-            if ax is None:
-                ax = plt.subplot(1, self.F, f+1)
-            else:
-                plt.subplot(1, self.F, f+1, sharey=ax)                
+
+            file_ids.extend([f for k in range(self.K)])
+            topic_ids.extend([k for k in range(self.K)])
+
+            doc_topic = self.thresholded_doc_topic[f]
+            columns = (doc_topic>0).sum(0)
+            assert len(columns) == self.K
+            degrees.extend(columns)
+
+        rows = []
+        for i in range(len(topic_ids)):            
+            topic_id = topic_ids[i]
+            if topic_id in interesting:
+                rows.append((file_ids[i], topic_id, degrees[i]))
+
+        df = pd.DataFrame(rows, columns=['file', 'M2M', 'degree'])
+        sns.barplot(x="M2M", y="degree", hue='file', data=df)
+                
+        return df
+                
+    def plot_e_alphas(self, interesting=None):
+
+        if interesting is None:
+            interesting = [k for k in range(self.K)]            
+
+        file_ids = []
+        topic_ids = []
+        alphas = []        
+        for f in range(self.F):
+
+            file_ids.extend([f for k in range(self.K)])
+            topic_ids.extend([k for k in range(self.K)])
+
             post_alpha = self.posterior_alphas[f]
             e_alpha = post_alpha / np.sum(post_alpha)
-            ind = range(len(e_alpha))
-            plt.bar(ind, e_alpha, 0.5)        
-            plt.title('File ' + str(f))
-        plt.suptitle('Topic prevalence')
-        plt.show()
+            assert len(e_alpha) == self.K
+            alphas.extend(e_alpha.tolist())
+
+        rows = []
+        for i in range(len(topic_ids)):            
+            topic_id = topic_ids[i]
+            if topic_id in interesting:
+                rows.append((file_ids[i], topic_id, alphas[i]))
+
+        df = pd.DataFrame(rows, columns=['file', 'M2M', 'alpha'])
+        sns.barplot(x="M2M", y="alpha", hue='file', data=df)
+                
+        return df
             
-#     @classmethod
-#     def resume_from(cls, project_in):
-#         start = timeit.default_timer()        
-#         with gzip.GzipFile(project_in, 'rb') as f:
-#             obj = cPickle.load(f)
-#             stop = timeit.default_timer()
-#             print "Project loaded from " + project_in + " time taken = " + str(stop-start)
-#             print " - input_filenames = "
-#             for fname in obj.input_filenames:
-#                 print "\t" + fname
-#             print " - df.shape = " + str(obj.df.shape)
-#             if hasattr(obj, 'model'):
-#                 print " - K = " + str(obj.model.K)
-#                 print " - alpha = " + str(obj.model.alpha[0])
-#                 print " - beta = " + str(obj.model.beta[0])
-#                 print " - number of samples stored = " + str(len(obj.model.samples))
-#             else:
-#                 print " - No LDA model found"
-#             print " - last_saved_timestamp = " + str(obj.last_saved_timestamp)  
-#             if hasattr(obj, 'message'):
-#                 print " - message = " + str(obj.message)  
-#             return obj  
-#         
-#     def save_project(self, project_out, message=None):
-#         start = timeit.default_timer()        
-#         self.last_saved_timestamp = str(time.strftime("%c"))
-#         self.message = message
-#         with gzip.GzipFile(project_out, 'wb') as f:
-#             cPickle.dump(self, f, protocol=cPickle.HIGHEST_PROTOCOL)
-#             stop = timeit.default_timer()
-#             print "Project saved to " + project_out + " time taken = " + str(stop-start)    
-#             
-#     def do_thresholding(self, th_doc_topic=0.05, th_topic_word=0.0):
-# 
-#         # save the thresholding values used for visualisation later
-#         self.th_doc_topic = th_doc_topic
-#         self.th_topic_word = th_topic_word
-#                     
-#         # get rid of small values in the matrices of the results
-#         # if epsilon > 0, then the specified value will be used for thresholding
-#         # otherwise, the smallest value for each row in the matrix is used instead
-#         self.thresholded_topic_word = utils.threshold_matrix(self.topic_word_, epsilon=th_topic_word)
-#         self.thresholded_doc_topic = []
-#         for f in range(len(self.doc_topic_)):
-#             self.thresholded_doc_topic.append(utils.threshold_matrix(self.doc_topic_[f], epsilon=th_doc_topic))
-#         
-#         self.topic_names = []
-#         for i, topic_dist in enumerate(self.thresholded_topic_word):
-#             topic_name = 'M2M_{}'.format(i)                    
-#             self.topic_names.append(topic_name)
-#         
-#         # create document-topic output file        
-#         masses = np.array(self.df.transpose().index)
-#         d = {}
-#         for i in np.arange(self.n_topics):
-#             topic_name = self.topic_names[i]
-#             topic_series = pd.Series(self.topic_word[i], index=masses)
-#             d[topic_name] = topic_series
-#         self.topicdf = pd.DataFrame(d)
-#         
-#         # make sure that columns in topicdf are in the correct order
-#         # because many times we'd index the columns in the dataframes directly by their positions
-#         cols = self.topicdf.columns.tolist()
-#         sorted_cols = self._natural_sort(cols)
-#         self.topicdf = self.topicdf[sorted_cols]        
-#     
-#         # create topic-docs output file
-#         self.docdfs = []
-#         for f in range(len(self.thresholded_doc_topic)):        
-#             (n_doc, a) = self.thresholded_doc_topic[f].shape
-#             topic_index = np.arange(self.n_topics)
-#             doc_names = np.array(self.df.index)
-#             d = {}
-#             for i in np.arange(n_doc):
-#                 doc_name = doc_names[i]
-#                 doc_series = pd.Series(self.doc_topic[i], index=topic_index)
-#                 d[doc_name] = doc_series
-#             self.docdf = pd.DataFrame(d)
-#             
-#             # sort columns by mass_rt values
-#             cols = self.docdf.columns.tolist()
-#             mass_rt = [(float(m.split('_')[0]),float(m.split('_')[1])) for m in cols]
-#             sorted_mass_rt = sorted(mass_rt,key=lambda m:m[0])
-#             ind = [mass_rt.index(i) for i in sorted_mass_rt]
-#             self.docdf = self.docdf[ind]
-#             # self.docdf.to_csv(outfile)se
-#     
-#     #         # threshold docdf to get rid of small values and also scale it
-#     #         for i, row in self.docdf.iterrows(): # iterate through the rows
-#     #             doc = self.docdf.ix[:, i]
-#     #             selected = doc[doc>0]
-#     #             count = len(selected.values)
-#     #             selected = selected * count
-#     #             self.docdf.ix[:, i] = selected
-#             self.docdf = self.docdf.replace(np.nan, 0)                
-    
+    @classmethod
+    def resume_from(cls, project_in):
+        start = timeit.default_timer()        
+        with gzip.GzipFile(project_in, 'rb') as f:
+            obj = cPickle.load(f)
+            stop = timeit.default_timer()
+            print "Project loaded from " + project_in + " time taken = " + str(stop-start)
+            return obj  
+         
+    def save_project(self, project_out, message=None):
+        start = timeit.default_timer()        
+        self.last_saved_timestamp = str(time.strftime("%c"))
+        self.message = message
+        with gzip.GzipFile(project_out, 'wb') as f:
+            cPickle.dump(self, f, protocol=cPickle.HIGHEST_PROTOCOL)
+            stop = timeit.default_timer()
+            print "Project saved to " + project_out + " time taken = " + str(stop-start)    
+                          
 def main():    
     
     lda = MultifileLDA()

@@ -23,7 +23,7 @@
 #     and peaklist2.csv, respectively]. The fragmentation file has to be in 
 #     .mzML format.
 
-create_peak_method: 1 # this seems to work well enough
+create_peak_method: 3 # this seems to work well enough
 
 input_files:
 
@@ -38,7 +38,7 @@ input_files:
     # For runCreatePeakMethod1.R
     # --------------------------------------------------------------------------
     # Input mzXML file of fragmentation experiment
-    fragmentation_file_m1: /home/joewandy/Dropbox/Project/justin_data/Test_multifile
+    fragmentation_file_m1: /home/joewandy/Dropbox/Project/justin_data/test_multifile_method_1
 
     # --------------------------------------------------------------------------
     # Only applicable for create_peak_method = 2
@@ -57,13 +57,12 @@ input_files:
     # Input file of full scan experiment
     # Can be either in mzXML format or in CSV format, where the columns are
     # masses (m/z), retention times (s) and intensities (cts/s)
-    # input_file_forMS1peaks: xxxx.csv
-    input_file_forMS1peaks: /home/joewandy/Dropbox/Project/justin_data/Dataset_for_PiMP/Beers_4Beers_compared/Positive/Samples/Beer_3_full1.mzXML
+    input_file_forMS1peaks: /home/joewandy/Dropbox/Project/justin_data/test_multifile_method_3/MS1
 
     # Input mzML (not mzXML!!) file of fragmentation experiment.
     # msconvert (http://proteowizard.sourceforge.net/tools/msconvert.html)
     # can be used to convert from RAW to either mzML and mzXML format.
-    fragmentation_file_mzML: /home/joewandy/Dropbox/Project/justin_data/Beer_3_T10_POS.mzML
+    fragmentation_file_mzML: /home/joewandy/Dropbox/Project/justin_data/test_multifile_method_3/frags
 
     # --------------------------------------------------------------------------
     # Only applicable if you're re-running LDA with fixed topics, otherwise
