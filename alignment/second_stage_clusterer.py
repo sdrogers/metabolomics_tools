@@ -26,13 +26,14 @@ class DpMixtureGibbs:
         self.W = len(self.word_counts_list[0])
         self.origins = data[2]
         self.N = len(self.rts)
-        assert self.N == len(self.rts)
         assert self.N == len(self.word_counts_list)
         assert self.N == len(self.origins)
-        
+
+        delta = hyperpars.across_file_rt_tol
+        var = (delta/3.0)**2 # assume 1 delta is 3 standard deviations
+        self.rt_prec = 1.0/var
+        self.rt_prior_prec = 5E-6
         self.mu_zero = np.mean(self.rts)
-        self.rt_prec = float(hyperpars.rt_prec)
-        self.rt_prior_prec = float(hyperpars.rt_prior_prec)
         self.alpha = float(hyperpars.dp_alpha)
         self.beta = float(hyperpars.beta)
         self.nsamps = hyperpars.rt_clustering_nsamps
@@ -43,8 +44,8 @@ class DpMixtureGibbs:
         else:
             self.random_state = RandomState()        
         
-        self.Z = None
-        self.ZZ_all = sp.lil_matrix((self.N, self.N),dtype=np.float)
+        # self.Z = None
+        # self.ZZ_all = sp.lil_matrix((self.N, self.N),dtype=np.float)
         self.cluster_rt_mean = None
         self.cluster_rt_prec = None
         self.matching_results = []
@@ -188,15 +189,15 @@ class DpMixtureGibbs:
             
                 if self.verbose:
                     print('\tSAMPLE\tIteration %d\ttime %4.2f\tnumClusters %d' % ((s+1), time_taken, K))
-                self.Z = self._get_Z(self.N, K, current_ks)
+                # self.Z = self._get_Z(self.N, K, current_ks)
                 self.samples_obtained += 1
             
                 # construct the actual alignment here
                 for k in range(K):
                     pos = np.flatnonzero(current_ks==k)
                     memberstup = tuple(pos.tolist())
-                    if self.verbose:
-                        print "\t\tsample=" + str(s) + " k=" + str(k) + " memberstup=" + str(memberstup)                    
+                    # if self.verbose:
+                    #    print "\t\tsample=" + str(s) + " k=" + str(k) + " memberstup=" + str(memberstup)                    
                     self.matching_results.append(memberstup)
             else:
                 if self.verbose:
@@ -219,15 +220,15 @@ class DpMixtureGibbs:
         current_ks[pos] = current_ks[pos] - 1
         return current_ks
     
-    def _get_Z(self, N, K, current_ks):
-        Z = sp.lil_matrix((N, K))
-        for n in range(len(current_ks)):
-            k = current_ks[n]
-            Z[n, k] = 1
-        return Z
-    
-    def _get_ZZ(self, Z):
-        return Z.tocsr() * Z.tocsr().transpose()
+#     def _get_Z(self, N, K, current_ks):
+#         Z = sp.lil_matrix((N, K))
+#         for n in range(len(current_ks)):
+#             k = current_ks[n]
+#             Z[n, k] = 1
+#         return Z
+#     
+#     def _get_ZZ(self, Z):
+#         return Z.tocsr() * Z.tocsr().transpose()
     
     def __repr__(self):
         return "Gibbs sampling for DP mixture model\n" + self.hyperpars.__repr__() + \

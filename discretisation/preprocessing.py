@@ -84,7 +84,7 @@ class Discretiser(object):
             
 class FileLoader:
         
-    def load_model_input(self, input_file, database_file, transformation_file, mass_tol, rt_tol,
+    def load_model_input(self, input_file, database_file,  mass_tol, rt_tol,
                          make_bins=True, synthetic=False, limit_n=-1, verbose=False):
         """ Load everything that a clustering model requires """
 
@@ -93,7 +93,6 @@ class FileLoader:
             database = self.load_database(database_file)
         else:
             database = None
-        transformations = self.load_transformation(transformation_file)
 
         # if this is a directory, process all files inside
         if os.path.isdir(input_file):
@@ -122,7 +121,7 @@ class FileLoader:
                 if limit_n > -1:
                     print "Using only " + str(limit_n) + " features from " + file_path
                     features = features[0:limit_n]
-                data = PeakData(features, database, transformations, corr_mat=corr_mat)
+                data = PeakData(features, database, None, corr_mat=corr_mat)
                 all_features.extend(features)
                 data_list.append(data)
                 sys.stdout.flush()
@@ -141,9 +140,9 @@ class FileLoader:
                 features = features[0:limit_n]
             binning = None
             if make_bins:
-                discretiser = Discretiser(transformations, mass_tol, rt_tol)
+                discretiser = Discretiser(None, mass_tol, rt_tol)
                 binning = discretiser.run_single(features)
-            data = PeakData(features, database, transformations, discrete_info=binning, corr_mat=corr_mat)
+            data = PeakData(features, database, None, discrete_info=binning, corr_mat=corr_mat)
             return data
                 
     def load_features(self, input_file, load_correlations=False, synthetic=False):

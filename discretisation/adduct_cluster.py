@@ -65,7 +65,7 @@ class Transformation(object):
 
 class AdductCluster(object):
 	def __init__(self,rt_tol = 5,mass_tol = 1,transformation_file = 'mulsubs/pos_transformations.yml',
-				alpha = 1,verbose = 0, mh_biggest = True):
+				alpha = 1,verbose = 0, mh_biggest = True, use_mass_likelihood=True):
 		self.mass_tol = mass_tol
 		self.rt_tol = rt_tol
 		self.transformation_file = transformation_file
@@ -74,6 +74,7 @@ class AdductCluster(object):
 		self.verbose = verbose
 		self.nSamples = 0
 		self.mh_biggest = mh_biggest
+		self.use_mass_likelihood = use_mass_likelihood
 
 
 
@@ -99,7 +100,7 @@ class AdductCluster(object):
 		
 
 	def init_from_file(self,filename):
-		self.peaks = []
+		peak_list = []
 		with open(filename,'r') as f:
 			heads = f.readline()
 			for line in f:
@@ -107,17 +108,22 @@ class AdductCluster(object):
 				mass = float(line[0]);
 				rt = float(line[1]);
 				intensity = float(line[2]);
-				self.peaks.append(Peak(mass,rt,intensity))
+				peak_list.append(Peak(mass,rt,intensity))
 
-		print "Loaded {} peaks from {}".format(len(self.peaks),filename);
+		print "Loaded {} peaks from {}".format(len(peak_list),filename);
+		self.init_from_list(peak_list)
+		
+	def init_from_list(self,peak_list):
 
+		self.peaks = []
 		self.clusters = []
 		self.possible = {}
 		self.Z = {}
 		self.todo = []
 		self.clus_poss = {}
 		current_id = 0
-		for p in self.peaks:
+		for p in peak_list:
+			self.peaks.append(p)
 			c = Cluster(p,self.MH.transform(p),current_id,
 				mass_tol = self.mass_tol,rt_tol = self.rt_tol)
 			current_id += 1
@@ -131,7 +137,13 @@ class AdductCluster(object):
 		print "Created {} clusters".format(len(self.clusters))
 		self.K = len(self.clusters)
 
-		for p in self.peaks:
+		for n in range(len(peak_list)):
+
+			p = peak_list[n]
+			if n%500==0:
+				print "Assigning possible transformations %d/%d" % (n, len(peak_list))
+				sys.stdout.flush()
+				
 			for c in self.clusters:
 				if p is c.mHPeak:
 					continue
@@ -145,7 +157,7 @@ class AdductCluster(object):
 						self.clus_poss[c].append(poss)
 
 
-		for p in self.peaks:
+		for p in peak_list:
 			if len(self.possible[p])>1:
 				self.todo.append(p)
 
@@ -200,7 +212,8 @@ class AdductCluster(object):
 			for poss in self.possible[peak]:
 				poss.prob = np.log(poss.cluster.pi)
 				poss.prob += -0.5*np.log(2*np.pi) + 0.5*np.log(poss.cluster.rt_precision) - 0.5*poss.cluster.rt_precision*(poss.rt**2 - 2*poss.rt*poss.cluster.mu_rt + poss.cluster.mu_rt_2)
-				poss.prob += -0.5*np.log(2*np.pi) + 0.5*np.log(poss.cluster.mass_precision) - 0.5*poss.cluster.mass_precision*(poss.transformed_mass**2 - 2*poss.transformed_mass*poss.cluster.mu_mass + poss.cluster.mu_mass_2)
+				if self.use_mass_likelihood:
+					poss.prob += -0.5*np.log(2*np.pi) + 0.5*np.log(poss.cluster.mass_precision) - 0.5*poss.cluster.mass_precision*(poss.transformed_mass**2 - 2*poss.transformed_mass*poss.cluster.mu_mass + poss.cluster.mu_mass_2)
 				if poss.prob > max_prob:
 					max_prob = poss.prob
 
