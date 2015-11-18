@@ -290,7 +290,7 @@ class AdductCluster(object):
 		# Check RT first
 		if np.abs(peak.rt - cluster.mHPeak.rt) > self.rt_tol:
 			return None
-		else:
+		else:	
 			for t in self.transformations:
 				tm = t.transform(peak)
 				if np.abs((tm - cluster.M)/cluster.M)*1e6 < self.mass_tol:
