@@ -36,7 +36,7 @@ AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 class SharedBinMatching:
     
     def __init__(self, input_dir, database_file, transformation_file, hyperpars, 
-                 synthetic=False, limit_n=-1, gt_file=None, verbose=False, seed=-1, parallel=True):
+                 synthetic=True, limit_n=-1, verbose=False, seed=-1, parallel=True):
 
         loader = FileLoader()
         self.hp = hyperpars
@@ -49,7 +49,6 @@ class SharedBinMatching:
         self.input_dir = input_dir
         self.database_file = database_file
         self.transformation_file = transformation_file
-        self.gt_file = gt_file
         self.verbose = verbose
         self.seed = seed
 
@@ -203,11 +202,7 @@ class SharedBinMatching:
         print
         print("--- TOTAL TIME %d seconds ---" % (time.time() - start_time))
         print
-        
-        if self.gt_file is not None:           
-            print "Evaluating performance"
-            self._evaluate_performance()
-        
+                
     def save_project(self, project_out):
         start = timeit.default_timer()        
         self.last_saved_timestamp = str(time.strftime("%c"))
@@ -266,8 +261,35 @@ class SharedBinMatching:
                 print 'Output written to', output_path
             except AttributeError:
                 print 'Nothing written to', output_path
+
+    def evaluate_performance(self, gt_file, verbose=False):
+
+        performance = []
+        gt = GroundTruth(gt_file, self.file_list, self.data_list, verbose=verbose)
+        probs = set([res.prob for res in self.alignment_results])
+        if len(probs) == 1:        
+
+            peaksets = [(res.peakset, res.prob) for res in self.alignment_results]
+            results = gt.evaluate_alignment_results(peaksets, 1.0, annotations=self.annotations, feature_binning=None, verbose=verbose)    
+            performance.append(results)
         
-        
+        else:
+
+            sorted_probs = sorted(probs)
+            for th_prob in sorted_probs:
+                print "Processing %.3f" % th_prob
+                sys.stdout.flush()
+                peaksets = []
+                for ps in self.alignment_results:
+                    if ps.prob > th_prob:
+                        peaksets.append(ps)
+                results = gt.evaluate_alignment_results(peaksets, th_prob, annotations=self.annotations, feature_binning=None, verbose=verbose)  
+                print results
+                if results is not None:  
+                    performance.append(results)
+
+        return performance
+            
     def _first_stage_clustering(self):
         
         # run precursor clustering for each file
@@ -636,7 +658,3 @@ class SharedBinMatching:
             tup = tuple(adducts[trans_name])
             results.append(tup)
         return results
-        
-    def _evaluate_performance(self):
-        gt = GroundTruth(self.gt_file, self.file_list, self.data_list)        
-        gt.evaluate_probabilistic_alignment(self.alignment_results)

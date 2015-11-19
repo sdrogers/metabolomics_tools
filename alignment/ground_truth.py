@@ -9,7 +9,7 @@ import pylab as plt
 
 class GroundTruth:
         
-    def __init__(self, gt_file, file_list, file_peak_data):
+    def __init__(self, gt_file, file_list, file_peak_data, verbose=False):
 
         # map filename (without extension) to the file data
         self.file_data = {}
@@ -23,7 +23,8 @@ class GroundTruth:
         self.gt_file = gt_file
         self.gt_lines = []
         self.gt_features = []
-        
+
+        size_map = {}
         old_format = True # ground truth can come in 2 different formats
         with open(gt_file, 'rb') as input_file:
             for line in input_file:
@@ -71,11 +72,17 @@ class GroundTruth:
                     print "Unsupported"
                     
                 if len(gt_entry) > 0:
-                    self.gt_features.append(tuple(gt_entry))
+                    item = tuple(gt_entry)
+                    self.gt_features.append(item)
+                    item_length = len(item)
+                    if item_length in size_map:
+                        size_map[item_length] += 1
+                    else:
+                        size_map[item_length] = 1
                     
-        print "Loaded " + str(len(self.gt_features)) + " ground truth entries"        
-#         for gt_entry in self.gt_features:
-#             print gt_entry
+        print "Loaded " + str(len(self.gt_features)) + " ground truth entries"   
+        print size_map
+        print
                 
     def evaluate_bins(self, file_bins, peak_feature_to_bin, results):
 
@@ -119,8 +126,121 @@ class GroundTruth:
         plt.pcolor(res_mat)
         plt.show()    
         
-    def evaluate_probabilistic_alignment(self, alignment_results):            
-        print "Hello"
+    def evaluate_alignment_results(self, peaksets, th_prob, annotations=None, feature_binning=None, verbose=False):   
+                 
+        tp = [] # should be matched and correctly matched
+        fp = [] # should be matched but incorrectly matched
+        fn = [] # should be matched but not matched
+        isMHs = [] # is it matching by M+H adducts only?
+        
+        # compare against ground truth
+        for i in range(len(self.gt_features)):
+
+            group = self.gt_features[i]                        
+            if verbose:
+                print "Checking ground truth entry %d of length %d" % (i, len(group))
+                for f in group:
+                    key = f._get_key()
+                    print "- id %s mass %.4f rt %.2f" % ((key, f.mass, f.rt))
+        
+            if verbose:
+                print "Overlapping peaksets:"
+                print
+            overlap = self._find_overlap(group, peaksets)
+            match = False
+            isMH = False
+
+            if len(overlap) == 0:            
+                fp.append(i) # nothing matches, false positive
+
+            elif len(overlap) == 1: # exactly one overlap
+
+                ps, prob = overlap[0]
+                match, isMH = self._print_peakset(ps, prob, group, annotations, feature_binning, verbose)
+                if match: # and it's a correct match, so it's a true positive
+                    tp.append(i)
+                    isMHs.append(isMH)
+                else: # else:
+                    fp.append(i)
+            
+            else: # more than one overlaps
+                fn.append(i)
+            
+        tp = float(len(tp))
+        fp = float(len(fp))
+        fn = float(len(fn))
+            
+        try:
+            prec = tp/(tp+fp)
+            rec = tp/(tp+fn)
+            f1 = (2*tp)/((2*tp)+fp+fn)
+            return tp, fp, fn, prec, rec, f1, th_prob
+        except ZeroDivisionError:
+            return None        
+                    
+    def _find_overlap(self, gt_entry, aligned_peaksets):
+        overlap = []
+        for ps, prob in aligned_peaksets:
+            ps_keys = [f._get_key() for f in ps]
+            any_found = False
+            for f in gt_entry:
+                if f._get_key() in ps_keys:
+                    any_found = True
+            if any_found:
+                overlap.append((ps, prob))
+        return overlap    
+
+    def _print_peakset(self, peakset, prob, gt_entry, annotations=None, feature_binning=None, verbose=True):
+        if verbose:
+            print "  Peakset %.2f" % prob
+        features = list(peakset)
+        features.sort(key=lambda x: x.file_id)    
+        gt_keys = [g._get_key() for g in gt_entry]
+        match = True
+        isMH = False
+        for f in features:
+            key = f._get_key()
+            if annotations is not None and key in annotations:
+                if feature_binning is not None:
+                    fbin = feature_binning[f._get_key()]
+                    annot = annotations[key] + " top_bin " + str(fbin)
+                else:
+                    annot = annotations[key]
+            else:
+                annot = "None"            
+            if 'M+H' in annot:
+                isMH = True
+            if verbose:
+                print "  - id %s mass %.4f rt %.2f MAP_trans %s" % ((key, f.mass, f.rt, annot))    
+            if key not in gt_keys:
+                match = False
+        if match:
+            match_str = 'TRUE'
+        else:
+            match_str = 'FALSE'
+        if verbose:
+            print "  - Match=%s" % match_str
+            print
+        return match, isMH
+
+    def _check_ground_truth(self, i, aligned_peaksets, aligner, feature_binning, verbose=True):
+        
+        group = self.gt_features[i]
+        if verbose:
+            print "Checking ground truth entry %d" % i
+            for f in group:
+                key = f._get_key()
+                print "- id %s mass %.4f rt %.2f" % ((key, f.mass, f.rt))
+    
+        if verbose:
+            print "Overlapping peaksets:"
+            print
+        overlap = self._find_overlap(group, aligned_peaksets)
+        match = False
+        isMH = False
+        for ps, prob in overlap:
+            match, isMH = self._print_peakset(ps, prob, group, aligner, feature_binning, verbose)
+        return match, isMH
                 
     def _find_features(self, filename, mass, rt, intensity):
         EPSILON = 0.0001;

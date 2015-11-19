@@ -76,5 +76,6 @@ def _run_second_stage_clustering(n, cluster_list, hp, seed, verbose=False):
         for key, value in sorted_results:
             output += "  %s = %d\n" % (key, value)
     print output
+    sys.stdout.flush()
     
     return matching_results
