@@ -71,7 +71,7 @@ class GroundTruth:
                     # handle better new ground truth format
                     print "Unsupported"
                     
-                if len(gt_entry) > 0:
+                if len(gt_entry) > 1:
                     item = tuple(gt_entry)
                     self.gt_features.append(item)
                     item_length = len(item)
@@ -126,122 +126,86 @@ class GroundTruth:
         plt.pcolor(res_mat)
         plt.show()    
         
-    def evaluate_alignment_results(self, peaksets, th_prob, annotations=None, feature_binning=None, verbose=False):   
+    def evaluate_alignment_results(self, alignment_results, th_prob, annotations=None, feature_binning=None, verbose=False):   
                  
-        tp = [] # should be matched and correctly matched
-        fp = [] # should be matched but incorrectly matched
-        fn = [] # should be matched but not matched
-        isMHs = [] # is it matching by M+H adducts only?
+        tp = set() # should be matched and correctly matched
+        fp = set() # should be matched but incorrectly matched
+        fn = set() # should be matched but not matched at all
         
-        # compare against ground truth
-        for i in range(len(self.gt_features)):
+        ground_truth = []
+        for item in self.gt_features:
+            feature_keys = frozenset([f._get_key() for f in item])
+            ground_truth.append(feature_keys)    
 
-            group = self.gt_features[i]                        
-            if verbose:
-                print "Checking ground truth entry %d of length %d" % (i, len(group))
-                for f in group:
-                    key = f._get_key()
-                    print "- id %s mass %.4f rt %.2f" % ((key, f.mass, f.rt))
-        
-            if verbose:
-                print "Overlapping peaksets:"
-                print
-            overlap = self._find_overlap(group, peaksets)
-            match = False
-            isMH = False
-
-            if len(overlap) == 0:            
-                fp.append(i) # nothing matches, false positive
-
-            elif len(overlap) == 1: # exactly one overlap
-
-                ps, prob = overlap[0]
-                match, isMH = self._print_peakset(ps, prob, group, annotations, feature_binning, verbose)
-                if match: # and it's a correct match, so it's a true positive
-                    tp.append(i)
-                    isMHs.append(isMH)
-                else: # else:
-                    fp.append(i)
-            
-            else: # more than one overlaps
-                fn.append(i)
-            
-        tp = float(len(tp))
-        fp = float(len(fp))
-        fn = float(len(fn))
-            
-        try:
-            prec = tp/(tp+fp)
-            rec = tp/(tp+fn)
-            f1 = (2*tp)/((2*tp)+fp+fn)
-            return tp, fp, fn, prec, rec, f1, th_prob
-        except ZeroDivisionError:
-            return None        
-                    
-    def _find_overlap(self, gt_entry, aligned_peaksets):
-        overlap = []
-        for ps, prob in aligned_peaksets:
-            ps_keys = [f._get_key() for f in ps]
-            any_found = False
-            for f in gt_entry:
-                if f._get_key() in ps_keys:
-                    any_found = True
-            if any_found:
-                overlap.append((ps, prob))
-        return overlap    
-
-    def _print_peakset(self, peakset, prob, gt_entry, annotations=None, feature_binning=None, verbose=True):
-        if verbose:
-            print "  Peakset %.2f" % prob
-        features = list(peakset)
-        features.sort(key=lambda x: x.file_id)    
-        gt_keys = [g._get_key() for g in gt_entry]
-        match = True
-        isMH = False
-        for f in features:
-            key = f._get_key()
-            if annotations is not None and key in annotations:
-                if feature_binning is not None:
-                    fbin = feature_binning[f._get_key()]
-                    annot = annotations[key] + " top_bin " + str(fbin)
-                else:
-                    annot = annotations[key]
-            else:
-                annot = "None"            
-            if 'M+H' in annot:
-                isMH = True
-            if verbose:
-                print "  - id %s mass %.4f rt %.2f MAP_trans %s" % ((key, f.mass, f.rt, annot))    
-            if key not in gt_keys:
-                match = False
-        if match:
-            match_str = 'TRUE'
-        else:
-            match_str = 'FALSE'
-        if verbose:
-            print "  - Match=%s" % match_str
-            print
-        return match, isMH
-
-    def _check_ground_truth(self, i, aligned_peaksets, aligner, feature_binning, verbose=True):
-        
-        group = self.gt_features[i]
-        if verbose:
-            print "Checking ground truth entry %d" % i
-            for f in group:
-                key = f._get_key()
-                print "- id %s mass %.4f rt %.2f" % ((key, f.mass, f.rt))
-    
-        if verbose:
-            print "Overlapping peaksets:"
-            print
-        overlap = self._find_overlap(group, aligned_peaksets)
-        match = False
-        isMH = False
-        for ps, prob in overlap:
-            match, isMH = self._print_peakset(ps, prob, group, aligner, feature_binning, verbose)
-        return match, isMH
+        peaksets = []
+        for item, prob in alignment_results:
+            ps_keys = frozenset([f._get_key() for f in item])
+            intersects = self._find_intersection(ps_keys, ground_truth)
+            if len(intersects)>0: # only consider items that also appear in ground truth
+                peaksets.append(ps_keys)    
                 
+        # check the positives
+        processed = set()
+        for ps_keys in peaksets:
+            if len(ps_keys) == 1:
+                continue
+            intersects = self._find_intersection(ps_keys, ground_truth)
+            for gt in intersects:
+                processed.add(gt)
+            if len(intersects) == 1:
+                gt_item = intersects[0]
+                same = (ps_keys == gt_item)
+                if same:
+                    tp.add(ps_keys)
+                    print "TP ps_keys = %s" % self._get_annotated_string(ps_keys, annotations)
+                    print "TP gt_item = %s" % self._get_annotated_string(gt_item, annotations)
+                    print
+                else:
+                    print "FP ps_keys = %s" % self._get_annotated_string(ps_keys, annotations)
+                    print "FP gt_item = %s" % self._get_annotated_string(gt_item, annotations)
+                    print
+                    fp.add(ps_keys)
+            else:
+                fp.add(ps_keys)
+                print "FP ps_keys = %s" % self._get_annotated_string(ps_keys, annotations)
+                for gt_item in intersects:
+                    print "FP gt_item = %s" % self._get_annotated_string(gt_item, annotations)
+                print
+                
+        # check the negatives
+        for gt_item in ground_truth:
+            if gt_item not in processed:
+                fn.add(gt_item)
+                print "FN gt_item = %s" % self._get_annotated_string(gt_item, annotations)
+            
+        tp_count = float(len(tp))
+        fp_count = float(len(fp))
+        fn_count = float(len(fn))                        
+        try:
+            prec = tp_count/(tp_count+fp_count)
+            rec = tp_count/(tp_count+fn_count)
+            f1 = (2*tp_count)/((2*tp_count)+fp_count+fn_count)
+            return tp_count, fp_count, fn_count, prec, rec, f1, th_prob
+        except ZeroDivisionError:
+            return tp, fp, fn, 0, 0, 0, th_prob        
+
+    def _get_annotated_string(self, peakset, annotations):
+        output = "\n"
+        for item in peakset:
+            if item in annotations:
+                output += "%s(%s)\n" % (item, annotations[item])
+            else:
+                output += str(item) + " "
+        return output
+
+    def _find_intersection(self, ps, ground_truth):
+        intersects = []
+        for gt_keys in ground_truth:
+            same_elements = ps & gt_keys
+            if len(same_elements) > 0:
+                intersects.append(gt_keys)
+        return intersects
+                    
     def _find_features(self, filename, mass, rt, intensity):
         EPSILON = 0.0001;
         features = self.file_data[filename].features

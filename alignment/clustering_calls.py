@@ -13,7 +13,7 @@ def _run_first_stage_clustering(j, peak_data, hp, trans_filename):
 
     sys.stdout.flush()
     ac = AdductCluster(mass_tol=hp.within_file_mass_tol, rt_tol=hp.within_file_rt_tol, 
-                       alpha=hp.alpha_mass, mh_biggest=True, transformation_file=trans_filename, verbose=2, use_mass_likelihood=True)
+                       alpha=hp.alpha_mass, mh_biggest=True, transformation_file=trans_filename, verbose=2)
 
     peak_list = peak_data.features
     ac.init_from_list(peak_list)

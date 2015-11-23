@@ -65,7 +65,7 @@ class Transformation(object):
 
 class AdductCluster(object):
 	def __init__(self,rt_tol = 5,mass_tol = 1,transformation_file = 'mulsubs/pos_transformations.yml',
-				alpha = 1,verbose = 0, mh_biggest = True, use_mass_likelihood=True):
+				alpha = 1,verbose = 0, mh_biggest = True):
 		self.mass_tol = mass_tol
 		self.rt_tol = rt_tol
 		self.transformation_file = transformation_file
@@ -74,7 +74,6 @@ class AdductCluster(object):
 		self.verbose = verbose
 		self.nSamples = 0
 		self.mh_biggest = mh_biggest
-		self.use_mass_likelihood = use_mass_likelihood
 
 
 
@@ -212,8 +211,7 @@ class AdductCluster(object):
 			for poss in self.possible[peak]:
 				poss.prob = np.log(poss.cluster.pi)
 				poss.prob += -0.5*np.log(2*np.pi) + 0.5*np.log(poss.cluster.rt_precision) - 0.5*poss.cluster.rt_precision*(poss.rt**2 - 2*poss.rt*poss.cluster.mu_rt + poss.cluster.mu_rt_2)
-				if self.use_mass_likelihood:
-					poss.prob += -0.5*np.log(2*np.pi) + 0.5*np.log(poss.cluster.mass_precision) - 0.5*poss.cluster.mass_precision*(poss.transformed_mass**2 - 2*poss.transformed_mass*poss.cluster.mu_mass + poss.cluster.mu_mass_2)
+				poss.prob += -0.5*np.log(2*np.pi) + 0.5*np.log(poss.cluster.mass_precision) - 0.5*poss.cluster.mass_precision*(poss.transformed_mass**2 - 2*poss.transformed_mass*poss.cluster.mu_mass + poss.cluster.mu_mass_2)
 				if poss.prob > max_prob:
 					max_prob = poss.prob
 

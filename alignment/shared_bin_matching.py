@@ -108,7 +108,13 @@ class SharedBinMatching:
                 ac.map_assign()
                 for peak in ac.peaks:
                     best_poss = ac.Z[peak]
-                    msg = "{:s}@{:3.5f}({:.4f})".format(best_poss.transformation.name, best_poss.cluster.mu_mass, best_poss.prob)            
+                    msg = "mz={:.4f},rt={:.2f},precursor={:s}@{:3.5f}(rt={:.2f},members={:d},prob={:.4f})".format(
+                                                                                peak.mass, peak.rt, 
+                                                                                best_poss.transformation.name, 
+                                                                                best_poss.cluster.mu_mass, 
+                                                                                best_poss.cluster.mu_rt,
+                                                                                best_poss.cluster.N,
+                                                                                best_poss.prob)            
                     self._annotate(peak, msg)   
                     best_poss.cluster.members.append((peak, best_poss))        
     
@@ -155,7 +161,9 @@ class SharedBinMatching:
                     for peak in ac.peaks:
                         for poss in ac.possible[peak]:
                             if poss.prob > self.hp.t:
-                                msg = "{:s}@{:3.5f}({:.4f})".format(poss.transformation.name, poss.cluster.mu_mass, poss.prob)            
+                                msg = "mz={:.4f},rt={:.2f},precursor={:s}@{:3.5f}({:.4f})".format(peak.mass, peak.rt, 
+                                                                                              poss.transformation.name, 
+                                                                                              poss.cluster.mu_mass, poss.prob)            
                                 self._annotate(peak, msg)   
                                 poss.cluster.members.append((peak, poss))    
                                 poss.cluster.N += 1
@@ -165,7 +173,9 @@ class SharedBinMatching:
                     ac.map_assign()
                     for peak in ac.peaks:
                         best_poss = ac.Z[peak]
-                        msg = "{:s}@{:3.5f}({:.4f})".format(best_poss.transformation.name, best_poss.cluster.mu_mass, best_poss.prob)            
+                        msg = "mz={:.4f},rt={:.2f},precursor={:s}@{:3.5f}({:.4f})".format(peak.mass, peak.rt, 
+                                                                                      best_poss.transformation.name, 
+                                                                                      best_poss.cluster.mu_mass, best_poss.prob)            
                         self._annotate(peak, msg)   
                         best_poss.cluster.members.append((peak, best_poss))        
     
@@ -283,10 +293,12 @@ class SharedBinMatching:
                 for ps in self.alignment_results:
                     if ps.prob > th_prob:
                         peaksets.append(ps)
-                results = gt.evaluate_alignment_results(peaksets, th_prob, annotations=self.annotations, feature_binning=None, verbose=verbose)  
-                print results
-                if results is not None:  
-                    performance.append(results)
+                print len(peaksets)
+                if len(peaksets) > 0:
+                    results = gt.evaluate_alignment_results(peaksets, th_prob, annotations=self.annotations, feature_binning=None, verbose=verbose)  
+                    print results
+                    if results is not None:  
+                        performance.append(results)
 
         return performance
             
