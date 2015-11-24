@@ -36,7 +36,7 @@ AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 class SharedBinMatching:
     
     def __init__(self, input_dir, database_file, transformation_file, hyperpars, 
-                 synthetic=True, limit_n=-1, verbose=False, seed=-1, parallel=True):
+                 synthetic=True, limit_n=-1, verbose=False, seed=-1, parallel=True, mh_biggest=False):
 
         loader = FileLoader()
         self.hp = hyperpars
@@ -51,6 +51,7 @@ class SharedBinMatching:
         self.transformation_file = transformation_file
         self.verbose = verbose
         self.seed = seed
+        self.mh_biggest = mh_biggest
 
         if parallel:
             self.num_cores = multiprocessing.cpu_count()
@@ -308,7 +309,7 @@ class SharedBinMatching:
         print "First stage clustering -- within_file_mass_tol=%.2f, within_file_rt_tol=%.2f, alpha=%.2f" % (self.hp.within_file_mass_tol, self.hp.within_file_rt_tol, self.hp.alpha_mass)
         sys.stdout.flush()
         clustering_results = Parallel(n_jobs=self.num_cores, verbose=10)(delayed(_run_first_stage_clustering)(
-                                        j, self.data_list[j], self.hp, self.transformation_file) for j in range(len(self.data_list)))
+                                        j, self.data_list[j], self.hp, self.transformation_file, self.mh_biggest) for j in range(len(self.data_list)))
         assert len(clustering_results) == len(self.data_list)        
         return clustering_results
 

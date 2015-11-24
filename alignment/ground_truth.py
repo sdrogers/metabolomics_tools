@@ -157,9 +157,9 @@ class GroundTruth:
                 same = (ps_keys == gt_item)
                 if same:
                     tp.add(ps_keys)
-                    print "TP ps_keys = %s" % self._get_annotated_string(ps_keys, annotations)
-                    print "TP gt_item = %s" % self._get_annotated_string(gt_item, annotations)
-                    print
+#                     print "TP ps_keys = %s" % self._get_annotated_string(ps_keys, annotations)
+#                     print "TP gt_item = %s" % self._get_annotated_string(gt_item, annotations)
+#                     print
                 else:
                     print "FP ps_keys = %s" % self._get_annotated_string(ps_keys, annotations)
                     print "FP gt_item = %s" % self._get_annotated_string(gt_item, annotations)

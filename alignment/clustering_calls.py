@@ -6,14 +6,14 @@ import numpy as np
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
-from discretisation.adduct_cluster import AdductCluster, Peak
+from adduct_cluster import AdductCluster, Peak
 from second_stage_clusterer import DpMixtureGibbs
 
-def _run_first_stage_clustering(j, peak_data, hp, trans_filename):
+def _run_first_stage_clustering(j, peak_data, hp, trans_filename, mh_biggest):
 
     sys.stdout.flush()
     ac = AdductCluster(mass_tol=hp.within_file_mass_tol, rt_tol=hp.within_file_rt_tol, 
-                       alpha=hp.alpha_mass, mh_biggest=True, transformation_file=trans_filename, verbose=2)
+                       alpha=hp.alpha_mass, mh_biggest=mh_biggest, transformation_file=trans_filename, verbose=2)
 
     peak_list = peak_data.features
     ac.init_from_list(peak_list)
