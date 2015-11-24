@@ -4,12 +4,14 @@ from discretisation.mulsubs import transformation
 import pylab as plt
 
 class Peak(object):
+
 	def __init__(self,mass,rt,intensity):
 		self.mass = mass
 		self.rt = rt
 		self.intensity = intensity
 
 class Cluster(object):
+	
 	def __init__(self,mHPeak,M,id,mass_tol = 5, rt_tol = 10):
 		self.mHPeak = mHPeak
 		self.N = 1
@@ -18,7 +20,6 @@ class Cluster(object):
 		self.M = M
 		self.prior_rt_mean = mHPeak.rt
 		self.prior_mass_mean = M
-
 
 		delta = mass_tol*M/1e6
 		var = (delta/3.0)**2
@@ -36,16 +37,19 @@ class Cluster(object):
 		post_prec = self.prior_rt_precision + self.N*self.rt_precision
 		post_mean = (1.0/post_prec)*(self.prior_rt_precision*self.prior_rt_mean + self.rt_precision*self.rt_sum)
 		pred_prec = (1.0/(1.0/post_prec + 1.0/self.rt_precision))
+		self.mu_mass = post_mean
 		return -0.5*np.log(2*np.pi) + 0.5*np.log(pred_prec) - 0.5*pred_prec*(rt-post_mean)**2
 
 	def compute_mass_like(self,mass):
 		post_prec = self.prior_mass_precision + self.N*self.mass_precision
 		post_mean = (1.0/post_prec)*(self.prior_mass_precision*self.prior_mass_mean + self.mass_precision*self.mass_sum)
 		pred_prec = (1.0/(1.0/post_prec + 1.0/self.mass_precision))
+		self.mu_rt = post_mean
 		return -0.5*np.log(2*np.pi) + 0.5*np.log(pred_prec) - 0.5*pred_prec*(mass-post_mean)**2
 
 
 class Possible(object):
+
 	def __init__(self,cluster,transformation,transformed_mass,rt):
 		self.count = 0
 		self.cluster = cluster
@@ -54,6 +58,7 @@ class Possible(object):
 		self.rt = rt
 
 class Transformation(object):
+
 	def __init__(self,name,mul,sub,de):
 		self.name = name
 		self.mul = mul
@@ -64,6 +69,7 @@ class Transformation(object):
 		return (peak.mass - self.sub)/self.mul + self.de
 
 class AdductCluster(object):
+
 	def __init__(self,rt_tol = 5,mass_tol = 1,transformation_file = 'mulsubs/pos_transformations.yml',
 				alpha = 1,verbose = 0, mh_biggest = True):
 		self.mass_tol = mass_tol
@@ -75,28 +81,12 @@ class AdductCluster(object):
 		self.nSamples = 0
 		self.mh_biggest = mh_biggest
 
-
-
 	def load_transformations(self):
-		# self.transformations = []
-		# with open(self.transformation_file,'r') as tf:
-		# 	for line in tf:
-		# 		line = line.split(',')
-		# 		name = line[0]
-		# 		sub = float(line[1])
-		# 		mul = float(line[2])
-		# 		de = float(line[3])
-		# 		t = Transformation(name,mul,sub,de)
-		# 		self.transformations.append(t)
-		# 		if name == "M+H":
-		# 			self.MH = t
-		# print "Loaded {} transformations from {}".format(len(self.transformations),self.transformation_file)
 		self.transformations = transformation.load_from_file(self.transformation_file)
 		self.MH = None
 		for t in self.transformations:
 			if t.name=="M+H":
 				self.MH = t
-		
 
 	def init_from_file(self,filename):
 		peak_list = []
@@ -175,7 +165,7 @@ class AdductCluster(object):
 						continue
 					else:
 						t = self.check(p,c)
-						if not t == None:
+						if t is not None and t.name != 'M+H':
 							poss = Possible(c,t,t.transform(p),p.rt)
 							self.possible[p].append(poss)
 							self.clus_poss[c].append(poss)
@@ -196,9 +186,12 @@ class AdductCluster(object):
 					
 					if p is c.mHPeak:
 						continue
-					allow = False
 
 					if c in transformed_into and p._get_key() in transformed_into[c]:
+						continue # prevent duplicates
+
+					allow = False
+					if c in transformed_into and p._get_key() not in transformed_into[c]:
 						existing = transformed_into[c]
 						if len(existing)>0:
 							# only if there's another existing transformation that obeys the stricter criteria
@@ -220,13 +213,14 @@ class AdductCluster(object):
 		print "{} peaks to be re-sampled in stage 1".format(len(self.todo))
 
 	def reset_counts(self):
+
 		for p in self.peaks:
 			for poss in self.possible[p]:
 				poss.count = 0
 		self.nSamples = 0
 
-
 	def init_vb(self):
+		
 		for cluster in self.clusters:
 			cluster.sumZ = 0.0
 			cluster.pi = 1.0+self.alpha/(1.0*self.K)
@@ -240,8 +234,8 @@ class AdductCluster(object):
 				else:
 					poss.prob = 0.0
 
-
 	def vb_step(self):
+		
 		# Update means
 		for cluster in self.clusters:
 			cluster.sumZ = 0.0
@@ -280,32 +274,20 @@ class AdductCluster(object):
 			for poss in self.possible[peak]:
 				poss.prob /= total_prob
 
+	def multi_sample(self, S):
 
-
-
-				# GOT TO HERE
-
-
-		# Update Z
-		# for peak in self.peaks:
-		# 	# Subtract old Z values
-		# 	for poss in self.possible[peak]:
-		# 		poss.prob = np.log(poss.cluster.pi)
-		# 		poss.prob += -0.5*np.log(2*np.pi) + 0.5*cluster.rt_prec - 
-		# 					0.5*cluster.rt_prec*(peak.rt**2 - 2*peak.rt*)
-
-
-
-	def multi_sample(self,S):
 		for s in range(S):
 			self.do_gibbs_sample()
 
 		# Fix the counts for things that don't get re-sampled
 		for p in self.peaks:
-			if not p in self.todo:
+			if p not in self.todo:
 				self.possible[p][0].count += S
+				self.possible[p][0].cluster.mu_mass = p.mass
+				self.possible[p][0].cluster.mu_rt = p.rt
 
 	def do_gibbs_sample(self):
+		
 		for p in self.todo:
 			
 			# Remove from current cluster
@@ -313,7 +295,6 @@ class AdductCluster(object):
 			old_poss.cluster.N -= 1
 			old_poss.cluster.rt_sum -= p.rt
 			old_poss.cluster.mass_sum -= old_poss.transformed_mass
-
 			
 			post_max = -1e6
 			post = []
@@ -325,7 +306,6 @@ class AdductCluster(object):
 				if new_post > post_max:
 					post_max = new_post
 
-			
 			post = np.array(post)
 			post = np.exp(post - post_max)
 			post /= post.sum()
@@ -339,6 +319,7 @@ class AdductCluster(object):
 			new_poss.cluster.rt_sum += p.rt
 			new_poss.cluster.mass_sum += new_poss.transformed_mass
 			new_poss.count += 1
+			
 		self.nSamples += 1
 
 	def compute_posterior_probs(self):
@@ -419,7 +400,6 @@ class AdductCluster(object):
 						(p.mass,0.1+p.intensity/max_intensity),
 						arrowprops=dict(arrowstyle='->'),
 						textcoords='data')
-
 		
 		trans_names = [i.name for i in trans]
 		all_trans_names = [i.name for i in self.transformations]
@@ -429,10 +409,6 @@ class AdductCluster(object):
 				pos_0 = trans_names.index(r[0])
 				pos_1 = trans_names.index(r[1])
 				print "{}/{} = {}".format(r[0],r[1],members[pos_0].intensity/members[pos_1].intensity)
-		
-
-
-
 
 if __name__=="__main__":
 	infile = sys.argv[1]

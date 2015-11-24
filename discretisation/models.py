@@ -49,7 +49,7 @@ class DatabaseEntry(object):
 
 class Feature(object):
             
-    def __init__(self, feature_id, mass, rt, intensity, file_id=0):
+    def __init__(self, feature_id, mass, rt, intensity, file_id):
         self.feature_id = feature_id
         self.mass = mass
         self.rt = rt
@@ -61,8 +61,8 @@ class Feature(object):
     def _get_key(self):
         return (self.feature_id, self.file_id)
 
-    def __eq__(self, x, y):
-        return x._get_key() == y._get_key()
+    def __eq__(self, other):
+        return self._get_key() == other._get_key()
 
     def __hash__(self):
         return hash(self._get_key())    

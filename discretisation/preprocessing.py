@@ -113,10 +113,7 @@ class FileLoader:
             data_list = []
             all_features = []
             for file_path in filelist:
-                features, corr_mat = self.load_features(file_path, synthetic=synthetic)
-                # TODO: feature really should be immutable!!
-                for f in features:
-                    f.file_id = file_id
+                features, corr_mat = self.load_features(file_path, file_id, synthetic=synthetic)
                 file_id += 1
                 if limit_n > -1:
                     print "Using only " + str(limit_n) + " features from " + file_path
@@ -145,19 +142,19 @@ class FileLoader:
             data = PeakData(features, database, None, discrete_info=binning, corr_mat=corr_mat)
             return data
                 
-    def load_features(self, input_file, load_correlations=False, synthetic=False):
+    def load_features(self, input_file, file_id, load_correlations=False, synthetic=False):
 
         # first load the features
         features = []
         if input_file.endswith(".csv"):
-            features = self.load_features_csv(input_file)
+            features = self.load_features_csv(input_file, file_id)
         elif input_file.endswith(".txt"):
             if synthetic:
                 # in SIMA (.txt) format, used for some old synthetic data
-                features = self.load_features_sima(input_file)
+                features = self.load_features_sima(input_file, file_id)
             else:
                 # in tab-separated format from mzMatch
-                features = self.load_features_txt(input_file)   
+                features = self.load_features_txt(input_file, file_id)   
         print str(len(features)) + " features read from " + input_file             
 
         # also check if the correlation matrix is there, if yes load it too
@@ -180,7 +177,7 @@ class FileLoader:
             elif header.find(",")!=-1:
                 return ','
     
-    def load_features_csv(self, input_file):
+    def load_features_csv(self, input_file, file_id):
         features = []
         if not os.path.exists(input_file):
             return features
@@ -204,17 +201,17 @@ class FileLoader:
                     rt = utils.num(elements[2])                    
                     intensity = utils.num(elements[3])
                     identification = elements[4] # unused
-                    feature = Feature(feature_id=feature_id, mass=mz, rt=rt, intensity=intensity)
+                    feature = Feature(feature_id, mz, rt, intensity, file_id)
                 elif len(elements)==4:
                     feature_id = utils.num(elements[0])
                     mz = utils.num(elements[1])
                     rt = utils.num(elements[2])
                     intensity = utils.num(elements[3])
-                    feature = Feature(feature_id=feature_id, mass=mz, rt=rt, intensity=intensity)
+                    feature = Feature(feature_id, mz, rt, intensity, file_id)
                 features.append(feature)
         return features
 
-    def load_features_txt(self, input_file):
+    def load_features_txt(self, input_file, file_id):
         features = []
         if not os.path.exists(input_file):
             return features
@@ -224,12 +221,12 @@ class FileLoader:
             feature_id = 1
             for elements in reader:
                 feature = Feature(feature_id=feature_id, mass=utils.num(elements[0]), \
-                                  rt=utils.num(elements[1]), intensity=utils.num(elements[2]))
+                                  rt=utils.num(elements[1]), intensity=utils.num(elements[2]), file_id=file_id)
                 features.append(feature)
                 feature_id = feature_id + 1
         return features
         
-    def load_features_sima(self, input_file):
+    def load_features_sima(self, input_file, file_id):
         features = []
         if not os.path.exists(input_file):
             return features
@@ -242,7 +239,7 @@ class FileLoader:
                 mass = mass/charge
                 intensity = utils.num(elements[2])
                 rt = utils.num(elements[3])
-                feature = Feature(feature_id, mass, rt, intensity)
+                feature = Feature(feature_id, mass, rt, intensity, file_id)
                 if len(elements)>4:
                     # for debugging with synthetic data
                     gt_peak_id = utils.num(elements[4])

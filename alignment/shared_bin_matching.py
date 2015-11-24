@@ -36,7 +36,7 @@ AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 class SharedBinMatching:
     
     def __init__(self, input_dir, database_file, transformation_file, hyperpars, 
-                 synthetic=True, limit_n=-1, verbose=False, seed=-1, parallel=True, mh_biggest=False):
+                 synthetic=True, limit_n=-1, verbose=False, seed=-1, parallel=True, mh_biggest=False, use_vb=True):
 
         loader = FileLoader()
         self.hp = hyperpars
@@ -52,6 +52,7 @@ class SharedBinMatching:
         self.verbose = verbose
         self.seed = seed
         self.mh_biggest = mh_biggest
+        self.use_vb = use_vb
 
         if parallel:
             self.num_cores = multiprocessing.cpu_count()
@@ -273,7 +274,7 @@ class SharedBinMatching:
             except AttributeError:
                 print 'Nothing written to', output_path
 
-    def evaluate_performance(self, gt_file, verbose=False):
+    def evaluate_performance(self, gt_file, verbose=False, print_TP=True):
 
         performance = []
         gt = GroundTruth(gt_file, self.file_list, self.data_list, verbose=verbose)
@@ -281,7 +282,7 @@ class SharedBinMatching:
         if len(probs) == 1:        
 
             peaksets = [(res.peakset, res.prob) for res in self.alignment_results]
-            results = gt.evaluate_alignment_results(peaksets, 1.0, annotations=self.annotations, feature_binning=None, verbose=verbose)    
+            results = gt.evaluate_alignment_results(peaksets, 1.0, annotations=self.annotations, feature_binning=None, verbose=verbose, print_TP=print_TP)    
             performance.append(results)
         
         else:
@@ -309,7 +310,7 @@ class SharedBinMatching:
         print "First stage clustering -- within_file_mass_tol=%.2f, within_file_rt_tol=%.2f, alpha=%.2f" % (self.hp.within_file_mass_tol, self.hp.within_file_rt_tol, self.hp.alpha_mass)
         sys.stdout.flush()
         clustering_results = Parallel(n_jobs=self.num_cores, verbose=10)(delayed(_run_first_stage_clustering)(
-                                        j, self.data_list[j], self.hp, self.transformation_file, self.mh_biggest) for j in range(len(self.data_list)))
+                                        j, self.data_list[j], self.hp, self.transformation_file, self.mh_biggest, self.use_vb) for j in range(len(self.data_list)))
         assert len(clustering_results) == len(self.data_list)        
         return clustering_results
 

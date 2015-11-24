@@ -9,7 +9,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from adduct_cluster import AdductCluster, Peak
 from second_stage_clusterer import DpMixtureGibbs
 
-def _run_first_stage_clustering(j, peak_data, hp, trans_filename, mh_biggest):
+def _run_first_stage_clustering(j, peak_data, hp, trans_filename, mh_biggest, use_vb):
 
     sys.stdout.flush()
     ac = AdductCluster(mass_tol=hp.within_file_mass_tol, rt_tol=hp.within_file_rt_tol, 
@@ -18,11 +18,15 @@ def _run_first_stage_clustering(j, peak_data, hp, trans_filename, mh_biggest):
     peak_list = peak_data.features
     ac.init_from_list(peak_list)
 
-    ac.init_vb()
-    for n in range(hp.mass_clustering_n_iterations):
-        print "VB step %d file %d " % (n, j)
-        sys.stdout.flush()
-        ac.vb_step()
+    if use_vb:
+        ac.init_vb()
+        for n in range(hp.mass_clustering_n_iterations):
+            print "VB step %d file %d " % (n, j)
+            sys.stdout.flush()
+            ac.vb_step()
+    else:
+        ac.multi_sample(hp.mass_clustering_n_iterations)
+        ac.compute_posterior_probs()    
 
     return ac
 

@@ -126,7 +126,7 @@ class GroundTruth:
         plt.pcolor(res_mat)
         plt.show()    
         
-    def evaluate_alignment_results(self, alignment_results, th_prob, annotations=None, feature_binning=None, verbose=False):   
+    def evaluate_alignment_results(self, alignment_results, th_prob, annotations=None, feature_binning=None, verbose=False, print_TP=True):   
                  
         tp = set() # should be matched and correctly matched
         fp = set() # should be matched but incorrectly matched
@@ -146,6 +146,7 @@ class GroundTruth:
                 
         # check the positives
         processed = set()
+        counter = 0
         for ps_keys in peaksets:
             if len(ps_keys) == 1:
                 continue
@@ -157,20 +158,22 @@ class GroundTruth:
                 same = (ps_keys == gt_item)
                 if same:
                     tp.add(ps_keys)
-#                     print "TP ps_keys = %s" % self._get_annotated_string(ps_keys, annotations)
-#                     print "TP gt_item = %s" % self._get_annotated_string(gt_item, annotations)
-#                     print
+                    if print_TP:
+                        print "TP %d peakset = %s" % (counter, self._get_annotated_string(ps_keys, annotations))
+                        print "TP %d groundtruth = %s" % (counter, self._get_annotated_string(gt_item, annotations))
+                        print "------------------------------------------------------------------------------------------"
                 else:
-                    print "FP ps_keys = %s" % self._get_annotated_string(ps_keys, annotations)
-                    print "FP gt_item = %s" % self._get_annotated_string(gt_item, annotations)
-                    print
+                    print "FP %d peakset = %s" % (counter, self._get_annotated_string(ps_keys, annotations))
+                    print "FP %d groundtruth = %s" % (counter, self._get_annotated_string(gt_item, annotations))
+                    print "------------------------------------------------------------------------------------------"
                     fp.add(ps_keys)
             else:
                 fp.add(ps_keys)
-                print "FP ps_keys = %s" % self._get_annotated_string(ps_keys, annotations)
+                print "FP %d peakset = %s" % (counter, self._get_annotated_string(ps_keys, annotations))
                 for gt_item in intersects:
-                    print "FP gt_item = %s" % self._get_annotated_string(gt_item, annotations)
-                print
+                    print "FP %d groundtruth = %s" % (counter, self._get_annotated_string(gt_item, annotations))
+                print "------------------------------------------------------------------------------------------"
+            counter += 1
                 
         # check the negatives
         for gt_item in ground_truth:
