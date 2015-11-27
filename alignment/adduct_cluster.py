@@ -1,7 +1,10 @@
-import numpy as np
 import sys
+
+from discretisation.models import Feature
 from discretisation.mulsubs import transformation
+import numpy as np
 import pylab as plt
+
 
 class Peak(object):
 
@@ -12,11 +15,12 @@ class Peak(object):
 
 class Cluster(object):
 	
-	def __init__(self,mHPeak,M,id,mass_tol = 5, rt_tol = 10):
+	def __init__(self, mHPeak, M, id, mass_tol = 5, rt_tol = 10):
 		self.mHPeak = mHPeak
 		self.N = 1
 		self.mass_sum = M
 		self.rt_sum = self.mHPeak.rt
+		self.peak_trans = ["M+H"]
 		self.M = M
 		self.prior_rt_mean = mHPeak.rt
 		self.prior_mass_mean = M
@@ -37,14 +41,14 @@ class Cluster(object):
 		post_prec = self.prior_rt_precision + self.N*self.rt_precision
 		post_mean = (1.0/post_prec)*(self.prior_rt_precision*self.prior_rt_mean + self.rt_precision*self.rt_sum)
 		pred_prec = (1.0/(1.0/post_prec + 1.0/self.rt_precision))
-		self.mu_mass = post_mean
+		self.mu_rt = post_mean
 		return -0.5*np.log(2*np.pi) + 0.5*np.log(pred_prec) - 0.5*pred_prec*(rt-post_mean)**2
 
 	def compute_mass_like(self,mass):
 		post_prec = self.prior_mass_precision + self.N*self.mass_precision
 		post_mean = (1.0/post_prec)*(self.prior_mass_precision*self.prior_mass_mean + self.mass_precision*self.mass_sum)
 		pred_prec = (1.0/(1.0/post_prec + 1.0/self.mass_precision))
-		self.mu_rt = post_mean
+		self.mu_mass = post_mean
 		return -0.5*np.log(2*np.pi) + 0.5*np.log(pred_prec) - 0.5*pred_prec*(mass-post_mean)**2
 
 
@@ -70,8 +74,8 @@ class Transformation(object):
 
 class AdductCluster(object):
 
-	def __init__(self,rt_tol = 5,mass_tol = 1,transformation_file = 'mulsubs/pos_transformations.yml',
-				alpha = 1,verbose = 0, mh_biggest = True):
+	def __init__(self,rt_tol = 5, mass_tol = 1, transformation_file = 'pos_transformations_full.yml',
+				alpha = 1, verbose = 0, mh_biggest = True):
 		self.mass_tol = mass_tol
 		self.rt_tol = rt_tol
 		self.transformation_file = transformation_file
@@ -193,12 +197,8 @@ class AdductCluster(object):
 					allow = False
 					if c in transformed_into and p._get_key() not in transformed_into[c]:
 						existing = transformed_into[c]
-						if len(existing)>0:
-							# only if there's another existing transformation that obeys the stricter criteria
+						if len(existing)>0 and p.intensity < c.mHPeak.intensity*2:
 							allow = True
-					elif p.intensity < c.mHPeak.intensity*2:
-						# or if the peak intensity is at most twice as large as the M+H peak intensity
-						allow = True
 
 					t = self.check(p,c)
 					if allow and t is not None and t.name != 'M+H':
@@ -289,12 +289,14 @@ class AdductCluster(object):
 	def do_gibbs_sample(self):
 		
 		for p in self.todo:
-			
+						
 			# Remove from current cluster
 			old_poss = self.Z[p]
 			old_poss.cluster.N -= 1
 			old_poss.cluster.rt_sum -= p.rt
 			old_poss.cluster.mass_sum -= old_poss.transformed_mass
+			old_trans = old_poss.transformation.name			
+			old_poss.cluster.peak_trans.remove(old_trans)
 			
 			post_max = -1e6
 			post = []
@@ -302,6 +304,9 @@ class AdductCluster(object):
 				new_post = poss.cluster.compute_rt_like(p.rt)
 				new_post += poss.cluster.compute_mass_like(poss.transformation.transform(p))
 				new_post += np.log(poss.cluster.N + (1.0*self.alpha)/(1.0*self.K))
+				new_trans = poss.transformation.name
+				if new_trans in poss.cluster.peak_trans:
+					new_post += float('-inf')				
 				post.append(new_post)
 				if new_post > post_max:
 					post_max = new_post
@@ -318,6 +323,8 @@ class AdductCluster(object):
 			new_poss.cluster.N += 1
 			new_poss.cluster.rt_sum += p.rt
 			new_poss.cluster.mass_sum += new_poss.transformed_mass
+			new_trans = new_poss.transformation.name
+			new_poss.cluster.peak_trans.append(new_trans)
 			new_poss.count += 1
 			
 		self.nSamples += 1
@@ -353,6 +360,7 @@ class AdductCluster(object):
 			c.N = 0
 			c.rt_sum = 0
 			c.mass_sum = 0
+			c.peak_trans = []
 		for p in self.peaks:
 			possible_clusters = self.possible[p]
 			# self.Z[p].cluster.N -= 1
@@ -369,6 +377,8 @@ class AdductCluster(object):
 			self.Z[p].cluster.N += 1
 			self.Z[p].cluster.rt_sum += p.rt
 			self.Z[p].cluster.mass_sum += self.Z[p].transformed_mass
+			new_trans = self.Z[p].transformation.name
+			self.Z[p].cluster.peak_trans.append(new_trans)
 
 	def cluster_plot(self,cluster):
 		# Find the members and possible objects
@@ -411,9 +421,19 @@ class AdductCluster(object):
 				print "{}/{} = {}".format(r[0],r[1],members[pos_0].intensity/members[pos_1].intensity)
 
 if __name__=="__main__":
-	infile = sys.argv[1]
-	ac = AdductCluster(alpha = 1)
-	ac.init_from_file(infile)
+
+	ac = AdductCluster()
+	for t in ac.transformations:
+		if t.name=="M+Na":
+			MNa = t
+
+	f1 = Feature(0, 100.002, 50, 1e6, 0)
+	f2 = Feature(1, MNa.transform(f1), 52, 1e4, 1)
+	f3 = Feature(2, MNa.transform(f1), 51, 1e4, 2)
+	f4 = Feature(3, MNa.transform(f1), 49, 1e4, 0)
+	peak_list = [f1, f2, f3, f4]
+
+	ac.init_from_list(peak_list)
 	ac.multi_sample(1000)
 	print ac.nSamples
 	ac.compute_posterior_probs()
