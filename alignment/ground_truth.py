@@ -126,7 +126,8 @@ class GroundTruth:
         plt.pcolor(res_mat)
         plt.show()    
         
-    def evaluate_alignment_results(self, alignment_results, th_prob, annotations=None, feature_binning=None, verbose=False, print_TP=True):   
+    def evaluate_alignment_results_1(self, alignment_results, th_prob, annotations=None, 
+                                     feature_binning=None, verbose=False, print_TP=True):   
                  
         tp = set() # should be matched and correctly matched
         fp = set() # should be matched but incorrectly matched
@@ -144,42 +145,33 @@ class GroundTruth:
             if len(intersects)>0: # only consider items that also appear in ground truth
                 peaksets.append(ps_keys)    
                 
-        # check the positives
-        processed = set()
-        counter = 0
-        for ps_keys in peaksets:
-            if len(ps_keys) == 1:
+        for i in range(len(ground_truth)):
+            gt_item = ground_truth[i]
+            if len(gt_item) == 1: # skip single entry ground truth?
                 continue
-            intersects = self._find_intersection(ps_keys, ground_truth)
-            for gt in intersects:
-                processed.add(gt)
+            intersects = self._find_intersection(gt_item, peaksets)
             if len(intersects) == 1:
-                gt_item = intersects[0]
-                same = (ps_keys == gt_item)
+                # check the positives
+                ps = intersects[0]
+                same = (gt_item == ps)
                 if same:
-                    tp.add(ps_keys)
+                    tp.add(gt_item)
                     if print_TP:
-                        print "TP %d peakset = %s" % (counter, self._get_annotated_string(ps_keys, annotations))
-                        print "TP %d groundtruth = %s" % (counter, self._get_annotated_string(gt_item, annotations))
+                        print "TP %d peakset = %s" % (i, self._get_annotated_string(ps, annotations))
+                        print "TP %d groundtruth = %s" % (i, self._get_annotated_string(gt_item, annotations))
                         print "------------------------------------------------------------------------------------------"
                 else:
-                    print "FP %d peakset = %s" % (counter, self._get_annotated_string(ps_keys, annotations))
-                    print "FP %d groundtruth = %s" % (counter, self._get_annotated_string(gt_item, annotations))
+                    print "FP %d peakset = %s" % (i, self._get_annotated_string(ps, annotations))
+                    print "FP %d groundtruth = %s" % (i, self._get_annotated_string(gt_item, annotations))
                     print "------------------------------------------------------------------------------------------"
-                    fp.add(ps_keys)
+                    fp.add(gt_item)
             else:
-                fp.add(ps_keys)
-                print "FP %d peakset = %s" % (counter, self._get_annotated_string(ps_keys, annotations))
-                for gt_item in intersects:
-                    print "FP %d groundtruth = %s" % (counter, self._get_annotated_string(gt_item, annotations))
-                print "------------------------------------------------------------------------------------------"
-            counter += 1
-                
-        # check the negatives
-        for gt_item in ground_truth:
-            if gt_item not in processed:
+                # check the negatives
                 fn.add(gt_item)
-                print "FN gt_item = %s" % self._get_annotated_string(gt_item, annotations)
+                for ps in intersects:
+                    print "FN %d peakset = %s" % (i, self._get_annotated_string(ps, annotations))
+                print "FN %d groundtruth = %s" % (i, self._get_annotated_string(gt_item, annotations))
+                print "------------------------------------------------------------------------------------------"
             
         tp_count = float(len(tp))
         fp_count = float(len(fp))
@@ -192,6 +184,77 @@ class GroundTruth:
         except ZeroDivisionError:
             return tp, fp, fn, 0, 0, 0, th_prob        
 
+    def evaluate_alignment_results_2(self, alignment_results, th_prob, annotations=None, 
+                                     feature_binning=None, verbose=False, print_TP=True):   
+                 
+        ground_truth = []
+        all_ground_truth_features = set()
+        for item in self.gt_features:
+            feature_keys = [f._get_key() for f in item]
+            ground_truth.append(feature_keys)    
+            all_ground_truth_features.update(feature_keys)
+
+        peaksets = []
+        for item, prob in alignment_results:
+            ps_keys = [f._get_key() for f in item]
+            peaksets.append(ps_keys)
+
+        g_plus = self._get_pairwise_peakset(ground_truth, whitelist=None)
+        t = self._get_pairwise_peakset(peaksets, whitelist=all_ground_truth_features)
+        
+        # TP = should be aligned & are aligned = G+ intersect t
+        tp = g_plus.intersection(t)
+        
+        # FN = should be aligned & aren't aligned = G+ \ t
+        fn = g_plus - t
+
+        # FP = shouldn't be aligned & are aligned = t \ G+
+        fp = t - g_plus
+                    
+        tp_count = float(len(tp))
+        fp_count = float(len(fp))
+        fn_count = float(len(fn))                        
+        try:
+            prec = tp_count/(tp_count+fp_count)
+            rec = tp_count/(tp_count+fn_count)
+            f1 = (2*tp_count)/((2*tp_count)+fp_count+fn_count)
+            return tp_count, fp_count, fn_count, prec, rec, f1, th_prob
+        except ZeroDivisionError:
+            return tp, fp, fn, 0, 0, 0, th_prob        
+
+    def _get_pairwise_peakset(self, peaksets, whitelist=None):
+        
+        results = []
+        for ps in peaksets:
+            if len(ps) == 1:
+                results.append(ps)
+            else:
+                for item1 in ps:
+                    for item2 in ps:
+                        if item1 == item2:
+                            continue
+                        elif item1[1] > item2[1]:
+                            continue
+                        else:
+                            results.append((item1, item2))
+
+        if whitelist is not None:            
+            unique_res = []                            
+            for items in results:
+                if len(items) == 1:
+                    if items[0] not in whitelist:
+                        continue
+                elif len(items) == 2:
+                    item1 = items[0]
+                    item2 = items[1]
+                    if item1 not in whitelist and item2 not in whitelist:
+                        continue
+                    else:
+                        unique_res.append((item1, item2))
+            return set(unique_res)
+        else:
+            return set(results)            
+
     def _get_annotated_string(self, peakset, annotations):
         output = "\n"
         for item in peakset:
@@ -201,12 +264,12 @@ class GroundTruth:
                 output += str(item) + " "
         return output
 
-    def _find_intersection(self, ps, ground_truth):
+    def _find_intersection(self, item, peakset):
         intersects = []
-        for gt_keys in ground_truth:
-            same_elements = ps & gt_keys
+        for ps in peakset:
+            same_elements = ps & item
             if len(same_elements) > 0:
-                intersects.append(gt_keys)
+                intersects.append(ps)
         return intersects
                     
     def _find_features(self, filename, mass, rt, intensity):
