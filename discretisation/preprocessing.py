@@ -94,8 +94,30 @@ class FileLoader:
         else:
             database = None
 
+        if type(input_file) is list:
+
+            self.file_list = input_file
+            starting_dir = os.getcwd() # save the initial dir to restore
+            
+            # load the files
+            file_id = 0
+            data_list = []
+            all_features = []
+            for file_path in input_file:
+                features, corr_mat = self.load_features(file_path, file_id, synthetic=synthetic)
+                file_id += 1
+                if limit_n > -1:
+                    print "Using only " + str(limit_n) + " features from " + file_path
+                    features = features[0:limit_n]
+                data = PeakData(features, database, None, corr_mat=corr_mat)
+                all_features.extend(features)
+                data_list.append(data)
+                sys.stdout.flush()
+            os.chdir(starting_dir)
+            return data_list
+
         # if this is a directory, process all files inside
-        if os.path.isdir(input_file):
+        elif os.path.isdir(input_file):
 
             # find all the .txt and csv files in input_dir
             input_dir = input_file
@@ -122,11 +144,7 @@ class FileLoader:
                 all_features.extend(features)
                 data_list.append(data)
                 sys.stdout.flush()
-            os.chdir(starting_dir)
-                                
-            # bin the files if necessary
-            if make_bins:
-                raise ValueError("Binning of multiple files is not supported by this method")               
+            os.chdir(starting_dir)                                
             return data_list
                     
         else:   

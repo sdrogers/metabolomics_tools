@@ -36,7 +36,7 @@ AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 class SharedBinMatching:
     
     def __init__(self, input_dir, database_file, transformation_file, hyperpars, 
-                 synthetic=True, limit_n=-1, verbose=False, seed=-1, parallel=True, mh_biggest=False, use_vb=True):
+                 synthetic=True, limit_n=-1, verbose=True, seed=1234567890, parallel=True, mh_biggest=True, use_vb=False):
 
         loader = FileLoader()
         self.hp = hyperpars
@@ -70,7 +70,7 @@ class SharedBinMatching:
                     self.MH = t
                     break
         
-    def run(self, match_mode, show_singleton=False):
+    def run(self, match_mode, first_stage_clustering_results=None):
 
         start_time = time.time()
         
@@ -84,8 +84,12 @@ class SharedBinMatching:
             
         elif match_mode == 1: # matching based on the MAP of precursor clustering
 
-            # do first-stage precursor clustering        
-            clustering_results = self._first_stage_clustering()        
+            # do first-stage precursor clustering if not present
+            if first_stage_clustering_results is None:
+                clustering_results = self._first_stage_clustering()        
+            else:
+                clustering_results = first_stage_clustering_results
+                
             file_data = {}
             for j in range(len(clustering_results)): # for each file
     
@@ -121,15 +125,18 @@ class SharedBinMatching:
                     best_poss.cluster.members.append((peak, best_poss))        
     
                 # keep track of the non-empty clusters                            
-                print
-                print "File %d clusters assignment " % j
+                if self.verbose:
+                    print
+                    print "File %d clusters assignment " % j
                 selected = []
                 for cluster in file_clusters:
                     if len(cluster.members) > 0:
-                        print "Cluster ID %d" % cluster.id
+                        if self.verbose:
+                            print "Cluster ID %d" % cluster.id
                         for peak, poss in cluster.members:                    
-                            print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
-                                                               poss.transformation.name, poss.prob)
+                            if self.verbose:
+                                print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
+                                                                   poss.transformation.name, poss.prob)
                             # update the binary flag for this transformation in the cluster
                             tidx = self.trans_idx[poss.transformation.name]
                             cluster.word_counts[tidx] = poss.prob
@@ -145,8 +152,12 @@ class SharedBinMatching:
 
         elif match_mode == 2: # match with DP clustering
 
-            # do first-stage precursor clustering        
-            clustering_results = self._first_stage_clustering()        
+            # do first-stage precursor clustering if not present
+            if first_stage_clustering_results is None:
+                clustering_results = self._first_stage_clustering()        
+            else:
+                clustering_results = first_stage_clustering_results
+
             all_nonempty_clusters = []
             for j in range(len(clustering_results)): # for each file
     
@@ -182,15 +193,18 @@ class SharedBinMatching:
                         best_poss.cluster.members.append((peak, best_poss))        
     
                 # keep track of the non-empty clusters                            
-                print
-                print "File %d clusters assignment " % j
+                if self.verbose:
+                    print
+                    print "File %d clusters assignment " % j
                 selected = []
                 for cluster in file_clusters:
                     if len(cluster.members) > 0:
-                        print "Cluster ID %d" % cluster.id
+                        if self.verbose:
+                            print "Cluster ID %d" % cluster.id
                         for peak, poss in cluster.members:                    
-                            print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
-                                                               poss.transformation.name, poss.prob)
+                            if self.verbose:
+                                print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
+                                                                   poss.transformation.name, poss.prob)
                             # update the counts for this transformation in the cluster
                             tidx = self.trans_idx[poss.transformation.name]
                             # use the binary count only
@@ -208,7 +222,8 @@ class SharedBinMatching:
             self.all_groups = all_groups
          
         # for any matching mode, we should get the same alignment results back
-        self._print_report(alignment_results, show_singleton=show_singleton)
+        if self.verbose:
+            self._print_report(alignment_results, show_singleton=False)
         self.alignment_results = alignment_results        
 
         print
@@ -495,11 +510,6 @@ class SharedBinMatching:
             temp = []
             for alignment_feature in row.features:
                 cluster = alignment_feature_to_precursor_cluster[alignment_feature]
-                if cluster.id == 1326:
-                    print "FOUND"
-                    print "Cluster %d %.4f %.2f" % (cluster.id, cluster.mu_mass, cluster.mu_rt)
-                    for f, poss in cluster.members:
-                        print "- id %s mass %.4f rt %.2f" % ((f._get_key(), f.mass, f.rt))                    
                 temp.append(cluster)
             tup = tuple(temp)
             results.append(tup)

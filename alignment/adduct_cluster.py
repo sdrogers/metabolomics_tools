@@ -20,10 +20,12 @@ class Cluster(object):
 		self.N = 1
 		self.mass_sum = M
 		self.rt_sum = self.mHPeak.rt
+		self.intensity_sum = np.log(self.mHPeak.intensity)
 		self.peak_trans = ["M+H"]
 		self.M = M
 		self.prior_rt_mean = mHPeak.rt
 		self.prior_mass_mean = M
+		self.prior_intensity_mean = np.log(mHPeak.intensity)
 
 		delta = mass_tol*M/1e6
 		var = (delta/3.0)**2
@@ -35,7 +37,19 @@ class Cluster(object):
 		self.prior_rt_precision = 1.0/var
 		self.rt_precision = 1.0/var
 
+		delta = np.log(self.mHPeak.intensity)
+		var = (delta/3.0)**2
+		self.prior_intensity_precision = 1.0/var
+		self.intensity_precision = 1.0/var
+
 		self.id = id
+
+	def compute_intensity_like(self,intensity):
+		post_prec = self.prior_intensity_precision + self.N*self.intensity_precision
+		post_mean = (1.0/post_prec)*(self.prior_intensity_precision*self.prior_intensity_mean + self.intensity_precision*self.intensity_sum)
+		pred_prec = (1.0/(1.0/post_prec + 1.0/self.intensity_precision))
+		self.mu_intensity = post_mean
+		return -0.5*np.log(2*np.pi) + 0.5*np.log(pred_prec) - 0.5*pred_prec*(intensity-post_mean)**2
 
 	def compute_rt_like(self,rt):
 		post_prec = self.prior_rt_precision + self.N*self.rt_precision
@@ -51,7 +65,6 @@ class Cluster(object):
 		self.mu_mass = post_mean
 		return -0.5*np.log(2*np.pi) + 0.5*np.log(pred_prec) - 0.5*pred_prec*(mass-post_mean)**2
 
-
 class Possible(object):
 
 	def __init__(self,cluster,transformation,transformed_mass,rt):
@@ -61,20 +74,9 @@ class Possible(object):
 		self.transformed_mass = transformed_mass
 		self.rt = rt
 
-class Transformation(object):
-
-	def __init__(self,name,mul,sub,de):
-		self.name = name
-		self.mul = mul
-		self.sub = sub
-		self.de = de
-
-	def transform(self,peak):
-		return (peak.mass - self.sub)/self.mul + self.de
-
 class AdductCluster(object):
 
-	def __init__(self,rt_tol = 5, mass_tol = 1, transformation_file = 'pos_transformations_full.yml',
+	def __init__(self,rt_tol = 10, mass_tol = 5, transformation_file = 'pos_transformations_full.yml',
 				alpha = 1, verbose = 0, mh_biggest = True):
 		self.mass_tol = mass_tol
 		self.rt_tol = rt_tol
@@ -131,80 +133,31 @@ class AdductCluster(object):
 		self.K = len(self.clusters)
 
 		if self.mh_biggest:
-
-			for n in range(len(peak_list)):
-	
-				p = peak_list[n]
-				if n%500==0:
-					print "Assigning possible transformations %d/%d" % (n, len(peak_list))
-					sys.stdout.flush()
-					
-				for c in self.clusters:
-					if p is c.mHPeak:
-						continue
-					if p.intensity > c.mHPeak.intensity:
-						continue
-					else:
-						t = self.check(p,c)
-						if not t == None:
-							poss = Possible(c,t,t.transform(p),p.rt)
-							self.possible[p].append(poss)
-							self.clus_poss[c].append(poss)
-
+			print "Binning with mh_biggest = True"
 		else:
-			
-			# first stage is to check the MH biggest constraint
-			transformed_into = {}
-			for n in range(len(peak_list)):
-	
-				p = peak_list[n]
-				if n%500==0:
-					print "Assigning first-stage possible transformations %d/%d" % (n, len(peak_list))
-					sys.stdout.flush()
-					
-				for c in self.clusters:
-					if p is c.mHPeak:
-						continue
+			print "Binning with mh_biggest = False"
+		for n in range(len(peak_list)):
+
+			p = peak_list[n]
+			if n%500==0:
+				print "Assigning possible transformations %d/%d" % (n, len(peak_list))
+				sys.stdout.flush()
+				
+			for c in self.clusters:
+				if p is c.mHPeak:
+					continue
+				if self.mh_biggest:
 					if p.intensity > c.mHPeak.intensity:
 						continue
-					else:
-						t = self.check(p,c)
-						if t is not None and t.name != 'M+H':
-							poss = Possible(c,t,t.transform(p),p.rt)
-							self.possible[p].append(poss)
-							self.clus_poss[c].append(poss)
-							if c in transformed_into:
-								transformed_into[c].append(p._get_key())
-							else:
-								transformed_into[c] = [p._get_key()]
-	
-			# second stage is without the M+H constraint
-			for n in range(len(peak_list)):
-	
-				p = peak_list[n]
-				if n%500==0:
-					print "Assigning second-stage possible transformations %d/%d" % (n, len(peak_list))
-					sys.stdout.flush()
-					
-				for c in self.clusters:
-					
-					if p is c.mHPeak:
-						continue
-
-					if c in transformed_into and p._get_key() in transformed_into[c]:
-						continue # prevent duplicates
-
-					allow = False
-					if c in transformed_into and p._get_key() not in transformed_into[c]:
-						existing = transformed_into[c]
-						if len(existing)>0 and p.intensity < c.mHPeak.intensity*2:
-							allow = True
-
-					t = self.check(p,c)
-					if allow and t is not None and t.name != 'M+H':
-						poss = Possible(c,t,t.transform(p),p.rt)
-						self.possible[p].append(poss)
-						self.clus_poss[c].append(poss)
+				else:
+					# the bin width for intensity is as much as the tolerance
+					if np.log(p.intensity) > np.log(c.mHPeak.intensity*2):
+						continue					
+				t = self.check(p,c)
+				if not t == None:
+					poss = Possible(c,t,t.transform(p),p.rt)
+					self.possible[p].append(poss)
+					self.clus_poss[c].append(poss)
 
 		for p in peak_list:
 			if len(self.possible[p])>1:
@@ -295,18 +248,23 @@ class AdductCluster(object):
 			old_poss.cluster.N -= 1
 			old_poss.cluster.rt_sum -= p.rt
 			old_poss.cluster.mass_sum -= old_poss.transformed_mass
+			old_poss.cluster.intensity_sum -= np.log(p.intensity)
 			old_trans = old_poss.transformation.name			
 			old_poss.cluster.peak_trans.remove(old_trans)
 			
 			post_max = -1e6
 			post = []
 			for poss in self.possible[p]:
-				new_post = poss.cluster.compute_rt_like(p.rt)
-				new_post += poss.cluster.compute_mass_like(poss.transformation.transform(p))
-				new_post += np.log(poss.cluster.N + (1.0*self.alpha)/(1.0*self.K))
 				new_trans = poss.transformation.name
 				if new_trans in poss.cluster.peak_trans:
-					new_post += float('-inf')				
+					new_post = float('-inf')
+				else:
+					new_post = np.log(poss.cluster.N + (1.0*self.alpha)/(1.0*self.K))
+					new_post += poss.cluster.compute_mass_like(poss.transformation.transform(p))
+					poss.cluster.compute_mass_like(poss.transformation.transform(p))
+					new_post += poss.cluster.compute_rt_like(p.rt)
+					if not self.mh_biggest:
+						new_post += poss.cluster.compute_intensity_like(np.log(p.intensity))
 				post.append(new_post)
 				if new_post > post_max:
 					post_max = new_post
@@ -323,6 +281,7 @@ class AdductCluster(object):
 			new_poss.cluster.N += 1
 			new_poss.cluster.rt_sum += p.rt
 			new_poss.cluster.mass_sum += new_poss.transformed_mass
+			new_poss.cluster.intensity_sum += np.log(p.intensity)
 			new_trans = new_poss.transformation.name
 			new_poss.cluster.peak_trans.append(new_trans)
 			new_poss.count += 1
@@ -360,6 +319,7 @@ class AdductCluster(object):
 			c.N = 0
 			c.rt_sum = 0
 			c.mass_sum = 0
+			c.intensity_sum = 0
 			c.peak_trans = []
 		for p in self.peaks:
 			possible_clusters = self.possible[p]
@@ -376,6 +336,7 @@ class AdductCluster(object):
 						max_prob = poss.prob
 			self.Z[p].cluster.N += 1
 			self.Z[p].cluster.rt_sum += p.rt
+			self.Z[p].cluster.intensity_sum += np.log(p.intensity)
 			self.Z[p].cluster.mass_sum += self.Z[p].transformed_mass
 			new_trans = self.Z[p].transformation.name
 			self.Z[p].cluster.peak_trans.append(new_trans)
@@ -420,17 +381,33 @@ class AdductCluster(object):
 				pos_1 = trans_names.index(r[1])
 				print "{}/{} = {}".format(r[0],r[1],members[pos_0].intensity/members[pos_1].intensity)
 
+	def inverse_transform(self, t, M):
+		O = (M - t.fragment_mass - t.charge*transformation.ELECTRON_MASS + t.adduct_mass)/t.charge
+		O *= (1.0*t.multiplicity)
+		O += t.isotope_diff
+		return O
+
 if __name__=="__main__":
 
-	ac = AdductCluster()
+	ac = AdductCluster(mass_tol=5, rt_tol=30, alpha=1, mh_biggest=True)
 	for t in ac.transformations:
+		print t
 		if t.name=="M+Na":
 			MNa = t
+		if t.name=="M+2H":
+			M2H = t
+		if t.name=="M+H":
+			MH = t
 
 	f1 = Feature(0, 100.002, 50, 1e6, 0)
-	f2 = Feature(1, MNa.transform(f1), 52, 1e4, 1)
-	f3 = Feature(2, MNa.transform(f1), 51, 1e4, 2)
-	f4 = Feature(3, MNa.transform(f1), 49, 1e4, 0)
+	M = MH.transform(f1)
+	O = ac.inverse_transform(MH, M)
+	print f1.mass
+	print O
+	
+	f2 = Feature(1, ac.inverse_transform(MNa, M), 51, 1e4, 1)
+	f3 = Feature(2, ac.inverse_transform(M2H, M), 52, 1e4, 2)
+	f4 = Feature(3, ac.inverse_transform(MNa, M), 53, 1e4, 0)
 	peak_list = [f1, f2, f3, f4]
 
 	ac.init_from_list(peak_list)

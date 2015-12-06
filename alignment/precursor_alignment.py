@@ -89,7 +89,7 @@ def main(argv):
     alignment_hp.rt_clustering_burnin = options.rt_clustering_burnin
         
     sb = SharedBinMatching(input_dir, database_file, transformation_file, 
-                           alignment_hp, synthetic=True, gt_file=gt_file, 
+                           alignment_hp, synthetic=True, 
                            verbose=options.verbose, seed=options.seed)
     sb.run(match_mode, show_singleton=False)
     sb.save_output(output_path)

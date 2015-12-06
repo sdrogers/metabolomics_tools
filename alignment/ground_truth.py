@@ -150,28 +150,34 @@ class GroundTruth:
             if len(gt_item) == 1: # skip single entry ground truth?
                 continue
             intersects = self._find_intersection(gt_item, peaksets)
-            if len(intersects) == 1:
+            if len(intersects) == 0:
+                fn.add(gt_item)
+                if verbose:
+                    print "FN %d groundtruth = %s" % (i, self._get_annotated_string(gt_item, annotations))
+                    print "------------------------------------------------------------------------------------------"
+            elif len(intersects) == 1:
                 # check the positives
                 ps = intersects[0]
                 same = (gt_item == ps)
                 if same:
                     tp.add(gt_item)
-                    if print_TP:
+                    if print_TP and verbose:
                         print "TP %d peakset = %s" % (i, self._get_annotated_string(ps, annotations))
                         print "TP %d groundtruth = %s" % (i, self._get_annotated_string(gt_item, annotations))
                         print "------------------------------------------------------------------------------------------"
                 else:
-                    print "FP %d peakset = %s" % (i, self._get_annotated_string(ps, annotations))
+                    if verbose:
+                        print "FP %d peakset = %s" % (i, self._get_annotated_string(ps, annotations))
+                        print "FP %d groundtruth = %s" % (i, self._get_annotated_string(gt_item, annotations))
+                        print "------------------------------------------------------------------------------------------"
+                    fp.add(gt_item)
+            else: # len(intersects) > 1
+                fp.add(gt_item)
+                if verbose:
+                    for ps in intersects:
+                        print "FP %d peakset = %s" % (i, self._get_annotated_string(ps, annotations))
                     print "FP %d groundtruth = %s" % (i, self._get_annotated_string(gt_item, annotations))
                     print "------------------------------------------------------------------------------------------"
-                    fp.add(gt_item)
-            else:
-                # check the negatives
-                fn.add(gt_item)
-                for ps in intersects:
-                    print "FN %d peakset = %s" % (i, self._get_annotated_string(ps, annotations))
-                print "FN %d groundtruth = %s" % (i, self._get_annotated_string(gt_item, annotations))
-                print "------------------------------------------------------------------------------------------"
             
         tp_count = float(len(tp))
         fp_count = float(len(fp))
