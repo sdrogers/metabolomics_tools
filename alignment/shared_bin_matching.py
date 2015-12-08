@@ -17,7 +17,6 @@ from joblib import Parallel, delayed
 from clustering_calls import _run_first_stage_clustering, _run_second_stage_clustering
 from discretisation import utils
 from discretisation.mulsubs import transformation
-from discretisation.preprocessing import FileLoader
 from ground_truth import GroundTruth
 from matching import MaxWeightedMatching
 from models import AlignmentFile, Feature, AlignmentRow
@@ -35,18 +34,17 @@ AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 
 class SharedBinMatching:
     
-    def __init__(self, input_dir, database_file, transformation_file, hyperpars, 
+    def __init__(self, data_list, database_file, transformation_file, hyperpars, 
                  synthetic=True, limit_n=-1, verbose=True, seed=1234567890, parallel=True, mh_biggest=True, use_vb=False):
 
-        loader = FileLoader()
+        self.data_list = data_list
         self.hp = hyperpars
         print self.hp
-        self.data_list = loader.load_model_input(input_dir, None, 0, 0, make_bins=False, synthetic=synthetic, 
-                                                 limit_n=limit_n, verbose=verbose)
 
         sys.stdout.flush()
-        self.file_list = loader.file_list
-        self.input_dir = input_dir
+        self.file_list = []
+        for data in data_list:
+            self.file_list.append(data.filename)
         self.database_file = database_file
         self.transformation_file = transformation_file
         self.verbose = verbose

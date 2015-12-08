@@ -84,40 +84,11 @@ class Discretiser(object):
             
 class FileLoader:
         
-    def load_model_input(self, input_file, database_file,  mass_tol, rt_tol,
-                         make_bins=True, synthetic=False, limit_n=-1, verbose=False):
+    def load_model_input(self, input_file, synthetic=False, limit_n=-1, verbose=False):
         """ Load everything that a clustering model requires """
 
-        # load database and transformations
-        if database_file is not None:
-            database = self.load_database(database_file)
-        else:
-            database = None
-
-        if type(input_file) is list:
-
-            self.file_list = input_file
-            starting_dir = os.getcwd() # save the initial dir to restore
-            
-            # load the files
-            file_id = 0
-            data_list = []
-            all_features = []
-            for file_path in input_file:
-                features, corr_mat = self.load_features(file_path, file_id, synthetic=synthetic)
-                file_id += 1
-                if limit_n > -1:
-                    print "Using only " + str(limit_n) + " features from " + file_path
-                    features = features[0:limit_n]
-                data = PeakData(features, database, None, corr_mat=corr_mat)
-                all_features.extend(features)
-                data_list.append(data)
-                sys.stdout.flush()
-            os.chdir(starting_dir)
-            return data_list
-
         # if this is a directory, process all files inside
-        elif os.path.isdir(input_file):
+        if os.path.isdir(input_file):
 
             # find all the .txt and csv files in input_dir
             input_dir = input_file
@@ -140,7 +111,7 @@ class FileLoader:
                 if limit_n > -1:
                     print "Using only " + str(limit_n) + " features from " + file_path
                     features = features[0:limit_n]
-                data = PeakData(features, database, None, corr_mat=corr_mat)
+                data = PeakData(features, file_path, corr_mat=corr_mat)
                 all_features.extend(features)
                 data_list.append(data)
                 sys.stdout.flush()
@@ -153,11 +124,7 @@ class FileLoader:
             features, corr_mat = self.load_features(input_file, synthetic=synthetic)
             if limit_n > -1:
                 features = features[0:limit_n]
-            binning = None
-            if make_bins:
-                discretiser = Discretiser(None, mass_tol, rt_tol)
-                binning = discretiser.run_single(features)
-            data = PeakData(features, database, None, discrete_info=binning, corr_mat=corr_mat)
+            data = PeakData(features, input_file, corr_mat=corr_mat)
             return data
                 
     def load_features(self, input_file, file_id, load_correlations=False, synthetic=False):

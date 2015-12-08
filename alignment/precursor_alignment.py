@@ -6,6 +6,8 @@ import time
 
 from shared_bin_matching import SharedBinMatching
 from models import HyperPars as AlignmentHyperPars
+from discretisation.preprocessing import FileLoader
+
 
 def print_banner():
     '''Prints some banner at program start'''
@@ -88,10 +90,11 @@ def main(argv):
     alignment_hp.rt_clustering_nsamps = options.rt_clustering_nsamps
     alignment_hp.rt_clustering_burnin = options.rt_clustering_burnin
         
-    sb = SharedBinMatching(input_dir, database_file, transformation_file, 
-                           alignment_hp, synthetic=True, 
-                           verbose=options.verbose, seed=options.seed)
-    sb.run(match_mode, show_singleton=False)
+    loader = FileLoader()        
+    data_list = loader.load_model_input(input_dir, synthetic=True, verbose=options.verbose)    
+    sb = SharedBinMatching(data_list, database_file, transformation_file, 
+                           alignment_hp, verbose=options.verbose, seed=options.seed)
+    sb.run(match_mode)
     sb.save_output(output_path)
     sb.save_project(output_path + ".project")
     sys.stdout.flush()

@@ -39,11 +39,11 @@ class Feature(object):
     def _get_key(self):
         return (self.peak_id, self.parent_file)
 
-    def __eq__(self, x, y):
-        return x._get_key() == y._get_key()
+    def __eq__(self, other):
+        return self._get_key() == other._get_key()
 
     def __hash__(self):
-        return hash(self._get_key())        
+        return hash(self._get_key())    
         
     def __repr__(self):
         return "peak_id " + str(self.peak_id) + " parent_file " + self.parent_file.filename + \
