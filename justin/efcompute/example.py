@@ -35,7 +35,7 @@ if __name__=='__main__':
     # precursor_mass_list = [55.0182]
     # Create the ef_assigner object
     ef = ef_assigner(scale_factor=1000)
-
+    mass_list =[70.0653]
     # Find the formulas for the list of masses
     formulas_out, top_hit_string, precursor_mass_list = ef.find_formulas(mass_list, ppm=10, 
                                                                          polarisation="POS", 

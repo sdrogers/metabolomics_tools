@@ -27,9 +27,11 @@ class ef_assigner(object):
         precursor_mass_list = []
         for mass in mass_list:
             if polarisation == "POS":
-                precursor_mass = float(mass) + PROTON_MASS
+                precursor_mass = float(mass)
+                 # + PROTON_MASS
             elif polarisation == "NEG":
-                precursor_mass = float(mass) - PROTON_MASS
+                precursor_mass = float(mass)
+                 # - PROTON_MASS
             precursor_mass_list.append(precursor_mass)
 
         # used to accumulate values during the recursive calls in _find_all
