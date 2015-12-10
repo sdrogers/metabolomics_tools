@@ -16,7 +16,7 @@ from models import *
 from utils import *
 from clustering import *
 
-from pq import PriorityQueue
+from Queue import PriorityQueue
 from IntervalTree import IntervalTree
     
 class MaxWeightedMatching:
@@ -234,7 +234,7 @@ class MaxWeightedMatching:
 
         # make the queue first
         q = self.make_queue(score_arr)
-        total = q.size
+        total = len(q.queue)
         tick = total / 20
         if tick == 0:
             tick = total

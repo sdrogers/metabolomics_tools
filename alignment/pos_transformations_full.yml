@@ -1,71 +1,87 @@
+# list of common adducts used for MetAssign
+# adducts="M+2H,M+H,M+ACN+H,2M+Na,M+H+NH4,M+NH4,M+ACN+Na,2M+ACN+H,M+ACN+2H,M+Na,M+2ACN+H,M+2ACN+2H,M+CH3OH+H,2M+H"
+
 transformations: 
- "M+H":
-  n: 1
-  g: ['H']
 
  "M+2H":
   n: 1
   g: ['H','H']
 
- "M+NH4":
+ "M+H":
   n: 1
-  g: ['NH4']
+  g: ['H']
+
+ "M+ACN+H":
+  n: 1
+  g: ['ACN','H']
+
+ "2M+Na":
+  n: 2
+  g: ['Na']
 
  "M+H+NH4":
   n: 1
   g: ['H','NH4']
 
- "M+H+Na":
+ "M+NH4":
   n: 1
-  g: ['H','Na']
+  g: ['NH4']
 
- "M+K":
+ "M+ACN+Na":
   n: 1
-  g: ['K']
+  g: ['ACN','Na']
 
- "M+H+K":
-  n: 1
-  g: ['H','K']
-
- "M+ACN+H":
-  n: 1
+ "2M+ACN+H":
+  n: 2
   g: ['ACN','H']
 
  "M+ACN+2H":
   n: 1
   g: ['ACN','H','H']
 
- "M+ACN+Na":
+ "M+Na":
   n: 1
-  g: ['ACN','Na']
+  g: ['Na']
 
  "M+2ACN+H":
   n: 1
   g: ['ACN','ACN','H']
 
- "M+Na":
+ "M+2ACN+2H":
   n: 1
-  g: ['Na']
-
- "M+2Na":
-  n: 1
-  g: ['Na','Na']
+  g: ['ACN','ACN','H','H']
 
  "M+CH3OH+H":
   n: 1
   g: ['CH3OH','H']
 
- "M+IsoProp+H":
-  n: 1
-  g: ['IsoProp','H']
+ "2M+H":
+  n: 2
+  g: ['H']
 
- "M+2K-H":
-  n: 1
-  g: ['K','K','-H']
+# "M+H+Na":
+#  n: 1
+#  g: ['H','Na']
 
- "M+DMSO+H":
-  n: 1
-  g: ['DMSO','H']
+# "M+K":
+#  n: 1
+#  g: ['K']
+
+# "M+H+K":
+#  n: 1
+#  g: ['H','K']
+
+# "M+2Na":
+#  n: 1
+#  g: ['Na','Na']
+
+# "M+IsoProp+H":
+#  n: 1
+#  g: ['IsoProp','H']
+
+# "M+DMSO+H":
+#  n: 1
+#  g: ['DMSO','H']
 
 charges:
  H: 1
@@ -75,11 +91,11 @@ charges:
  Cl: -1
  Br: -1
 
-fragments: [CO,H2O,CH2O2,CO2]
-# fragments: []
+# fragments: [CO,H2O,CH2O2,CO2]
+fragments: []
 
-isotopes: [C13]
-# isotopes: []
+# isotopes: [C13]
+isotopes: []
 
 masses: 
  H: 1.0078250319
@@ -95,5 +111,4 @@ masses:
  C13: 1.0033548378
  CH3OH: 32.0262147499
  IsoProp: 60.0575148775
- -H: -1.00727645199076
  DMSO: 78.0139355437

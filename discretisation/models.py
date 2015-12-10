@@ -49,7 +49,7 @@ class DatabaseEntry(object):
 
 class Feature(object):
             
-    def __init__(self, feature_id, mass, rt, intensity, file_id=0):
+    def __init__(self, feature_id, mass, rt, intensity, file_id):
         self.feature_id = feature_id
         self.mass = mass
         self.rt = rt
@@ -61,8 +61,8 @@ class Feature(object):
     def _get_key(self):
         return (self.feature_id, self.file_id)
 
-    def __eq__(self, x, y):
-        return x._get_key() == y._get_key()
+    def __eq__(self, other):
+        return self._get_key() == other._get_key()
 
     def __hash__(self):
         return hash(self._get_key())    
@@ -75,40 +75,18 @@ DiscreteInfo = namedtuple('DiscreteInfo', ['possible', 'transformed', 'matRT', '
     
 class PeakData(object):
     
-    def __init__(self, features, database, transformations, discrete_info=None, corr_mat=None):
+    def __init__(self, features, filename, corr_mat=None):
                 
         # list of feature, database entry and transformation objects
         self.features = features
-        self.database = database
-        self.transformations = transformations
         self.num_peaks = len(features)
         self.corr_mat = corr_mat
+        self.filename = filename
 
         # the same data as numpy arrays for convenience
         self.mass = np.array([f.mass for f in self.features])[:, None]              # N x 1 
         self.rt = np.array([f.rt for f in self.features])[:, None]                  # N x 1 
         self.intensity = np.array([f.intensity for f in self.features])[:, None]    # N x 1
-        
-        if discrete_info is not None:
-            self.set_discrete_info(discrete_info)
-            
-    def set_discrete_info(self, discrete_info):
-            self.possible = discrete_info.possible
-            self.transformed = discrete_info.transformed
-            self.matRT = discrete_info.matRT
-            self.bins = discrete_info.bins
-            self.prior_masses = discrete_info.prior_masses
-            self.prior_rts = discrete_info.prior_rts            
-            self.num_clusters = len(self.bins)
-
-    def remove_discrete_info(self):
-            del self.possible
-            del self.transformed
-            del self.matRT
-            del self.bins
-            del self.prior_masses
-            del self.prior_rts
-            del self.num_clusters
                 
 # Not sure whether want to keep this or not ...
 # Probably useful for identification and plotting later

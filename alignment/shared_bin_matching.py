@@ -1,52 +1,56 @@
-import sys
-import os
-sys.path.insert(1, os.path.join(sys.path[0], '..'))
-
-import timeit
-import gzip
 import cPickle
-
 from collections import namedtuple
 import csv
+import gzip
+from itertools import chain, combinations
+import multiprocessing
 from operator import attrgetter
 from operator import itemgetter
-import multiprocessing
-from joblib import Parallel, delayed  
+import os
+import sys
 import time
-from itertools import chain, combinations
+import timeit
+from Queue import PriorityQueue
 
+from joblib import Parallel, delayed  
+
+from clustering_calls import _run_first_stage_clustering, _run_second_stage_clustering
 from discretisation import utils
-from discretisation.preprocessing import FileLoader
+from discretisation.mulsubs import transformation
 from ground_truth import GroundTruth
 from matching import MaxWeightedMatching
 from models import AlignmentFile, Feature, AlignmentRow
 import numpy as np
 import shared_bin_matching_plotter as plotter
-from clustering_calls import _run_first_stage_clustering, _run_second_stage_clustering
-from discretisation.mulsubs import transformation
+
+
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+
+
+
 
 
 AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 
 class SharedBinMatching:
     
-    def __init__(self, input_dir, database_file, transformation_file, hyperpars, 
-                 synthetic=False, limit_n=-1, gt_file=None, verbose=False, seed=-1, parallel=True):
+    def __init__(self, data_list, database_file, transformation_file, hyperpars, 
+                 synthetic=True, limit_n=-1, verbose=True, seed=1234567890, parallel=True, mh_biggest=True, use_vb=False):
 
-        loader = FileLoader()
+        self.data_list = data_list
         self.hp = hyperpars
         print self.hp
-        self.data_list = loader.load_model_input(input_dir, None, 0, 0, make_bins=False, synthetic=synthetic, 
-                                                 limit_n=limit_n, verbose=verbose)
 
         sys.stdout.flush()
-        self.file_list = loader.file_list
-        self.input_dir = input_dir
+        self.file_list = []
+        for data in data_list:
+            self.file_list.append(data.filename)
         self.database_file = database_file
         self.transformation_file = transformation_file
-        self.gt_file = gt_file
         self.verbose = verbose
         self.seed = seed
+        self.mh_biggest = mh_biggest
+        self.use_vb = use_vb
 
         if parallel:
             self.num_cores = multiprocessing.cpu_count()
@@ -64,7 +68,7 @@ class SharedBinMatching:
                     self.MH = t
                     break
         
-    def run(self, match_mode, show_singleton=False):
+    def run(self, match_mode, first_stage_clustering_results=None):
 
         start_time = time.time()
         
@@ -78,8 +82,12 @@ class SharedBinMatching:
             
         elif match_mode == 1: # matching based on the MAP of precursor clustering
 
-            # do first-stage precursor clustering        
-            clustering_results = self._first_stage_clustering()        
+            # do first-stage precursor clustering if not present
+            if first_stage_clustering_results is None:
+                clustering_results = self._first_stage_clustering()        
+            else:
+                clustering_results = first_stage_clustering_results
+                
             file_data = {}
             for j in range(len(clustering_results)): # for each file
     
@@ -104,20 +112,29 @@ class SharedBinMatching:
                 ac.map_assign()
                 for peak in ac.peaks:
                     best_poss = ac.Z[peak]
-                    msg = "{:s}@{:3.5f}({:.4f})".format(best_poss.transformation.name, best_poss.cluster.mu_mass, best_poss.prob)            
+                    msg = "mz={:.4f},rt={:.2f},precursor={:s}@{:3.5f}(rt={:.2f},members={:d},prob={:.4f})".format(
+                                                                                peak.mass, peak.rt, 
+                                                                                best_poss.transformation.name, 
+                                                                                best_poss.cluster.mu_mass, 
+                                                                                best_poss.cluster.mu_rt,
+                                                                                best_poss.cluster.N,
+                                                                                best_poss.prob)            
                     self._annotate(peak, msg)   
                     best_poss.cluster.members.append((peak, best_poss))        
     
                 # keep track of the non-empty clusters                            
-                print
-                print "File %d clusters assignment " % j
+                if self.verbose:
+                    print
+                    print "File %d clusters assignment " % j
                 selected = []
                 for cluster in file_clusters:
                     if len(cluster.members) > 0:
-                        print "Cluster ID %d" % cluster.id
+                        if self.verbose:
+                            print "Cluster ID %d" % cluster.id
                         for peak, poss in cluster.members:                    
-                            print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
-                                                               poss.transformation.name, poss.prob)
+                            if self.verbose:
+                                print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
+                                                                   poss.transformation.name, poss.prob)
                             # update the binary flag for this transformation in the cluster
                             tidx = self.trans_idx[poss.transformation.name]
                             cluster.word_counts[tidx] = poss.prob
@@ -133,43 +150,65 @@ class SharedBinMatching:
 
         elif match_mode == 2: # match with DP clustering
 
-            # do first-stage precursor clustering        
-            clustering_results = self._first_stage_clustering()        
+            # do first-stage precursor clustering if not present
+            if first_stage_clustering_results is None:
+                clustering_results = self._first_stage_clustering()        
+            else:
+                clustering_results = first_stage_clustering_results
+
             all_nonempty_clusters = []
             for j in range(len(clustering_results)): # for each file
     
                 ac = clustering_results[j]
                 file_clusters = ac.clusters
     
-                # initialise some attributes during runtime -- because we don't want to change the object            
+                # initialise some attributes during runtime -- because we don't want to change adduct clusterer code ...
                 for cluster in file_clusters:
                     cluster.members = []
                     cluster.origin = j                    
                     cluster.word_counts = np.zeros(self.T)
-                
-                # assign peaks above the threshold to this cluster
-                for peak in ac.peaks:
-                    for poss in ac.possible[peak]:
-                        msg = "{:s}@{:3.5f}({:.4f})".format(poss.transformation.name, poss.cluster.mu_mass, poss.prob)            
+
+                if self.hp.t > 0: # assign peaks above threshold to clusters
+                    for peak in ac.peaks:
+                        for poss in ac.possible[peak]:
+                            if poss.prob > self.hp.t:
+                                msg = "mz={:.4f},rt={:.2f},precursor={:s}@{:3.5f}({:.4f})".format(peak.mass, peak.rt, 
+                                                                                              poss.transformation.name, 
+                                                                                              poss.cluster.mu_mass, poss.prob)            
+                                self._annotate(peak, msg)   
+                                poss.cluster.members.append((peak, poss))    
+                                poss.cluster.N += 1
+                                poss.cluster.rt_sum += peak.rt
+                                poss.cluster.mass_sum += poss.transformed_mass                            
+                else: # perform MAP assignment of peaks to their most likely cluster
+                    ac.map_assign()
+                    for peak in ac.peaks:
+                        best_poss = ac.Z[peak]
+                        msg = "mz={:.4f},rt={:.2f},precursor={:s}@{:3.5f}({:.4f})".format(peak.mass, peak.rt, 
+                                                                                      best_poss.transformation.name, 
+                                                                                      best_poss.cluster.mu_mass, best_poss.prob)            
                         self._annotate(peak, msg)   
-                        poss.cluster.members.append((peak, poss))    
-                        poss.cluster.N += 1
-                        poss.cluster.rt_sum += peak.rt
-                        poss.cluster.mass_sum += poss.transformed_mass                            
+                        best_poss.cluster.members.append((peak, best_poss))        
     
                 # keep track of the non-empty clusters                            
-                print
-                print "File %d clusters assignment " % j
+                if self.verbose:
+                    print
+                    print "File %d clusters assignment " % j
                 selected = []
                 for cluster in file_clusters:
                     if len(cluster.members) > 0:
-                        print "Cluster ID %d" % cluster.id
+                        if self.verbose:
+                            print "Cluster ID %d" % cluster.id
                         for peak, poss in cluster.members:                    
-                            print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
-                                                               poss.transformation.name, poss.prob)
-                            # update the binary flag for this transformation in the cluster
+                            if self.verbose:
+                                print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
+                                                                   poss.transformation.name, poss.prob)
+                            # update the counts for this transformation in the cluster
                             tidx = self.trans_idx[poss.transformation.name]
+                            # use the binary count only
                             cluster.word_counts[tidx] += 1
+                            # use some dodgy scaling of the probabilities
+                            # cluster.word_counts[tidx] += round(poss.prob*100)
                         selected.append(cluster)
     
                 all_nonempty_clusters.extend(selected) # collect across all files
@@ -181,17 +220,14 @@ class SharedBinMatching:
             self.all_groups = all_groups
          
         # for any matching mode, we should get the same alignment results back
-        self._print_report(alignment_results, show_singleton=show_singleton)
+        if self.verbose:
+            self._print_report(alignment_results, show_singleton=False)
         self.alignment_results = alignment_results        
 
         print
         print("--- TOTAL TIME %d seconds ---" % (time.time() - start_time))
         print
-        
-        if self.gt_file is not None:           
-            print "Evaluating performance"
-            self._evaluate_performance()
-        
+                
     def save_project(self, project_out):
         start = timeit.default_timer()        
         self.last_saved_timestamp = str(time.strftime("%c"))
@@ -250,54 +286,88 @@ class SharedBinMatching:
                 print 'Output written to', output_path
             except AttributeError:
                 print 'Nothing written to', output_path
+
+    def evaluate_performance(self, gt_file, verbose=False, print_TP=True, method=2):
+
+        performance = []
+        gt = GroundTruth(gt_file, self.file_list, self.data_list, verbose=verbose)
+        probs = set([res.prob for res in self.alignment_results])
+        if len(probs) == 1:        
+
+            peaksets = [(res.peakset, res.prob) for res in self.alignment_results]
+            if method == 1:
+                results = gt.evaluate_alignment_results_1(peaksets, 1.0, annotations=self.annotations, feature_binning=None, verbose=verbose, print_TP=print_TP)    
+            elif method ==  2:
+                results = gt.evaluate_alignment_results_2(peaksets, 1.0, annotations=self.annotations, feature_binning=None, verbose=verbose, print_TP=print_TP)                    
+            performance.append(results)
         
-        
+        else:
+
+            sorted_probs = sorted(probs)
+            for th_prob in sorted_probs:
+                print "Processing %.3f" % th_prob
+                sys.stdout.flush()
+                peaksets = []
+                for ps in self.alignment_results:
+                    if ps.prob > th_prob:
+                        peaksets.append(ps)
+                print len(peaksets)
+                if len(peaksets) > 0:
+                    if method == 1:
+                        results = gt.evaluate_alignment_results_1(peaksets, th_prob, annotations=self.annotations, feature_binning=None, verbose=verbose)  
+                    elif method == 2:
+                        results = gt.evaluate_alignment_results_2(peaksets, th_prob, annotations=self.annotations, feature_binning=None, verbose=verbose)                          
+                    print results
+                    if results is not None:  
+                        performance.append(results)
+
+        return performance
+            
     def _first_stage_clustering(self):
         
         # run precursor clustering for each file
         print "First stage clustering -- within_file_mass_tol=%.2f, within_file_rt_tol=%.2f, alpha=%.2f" % (self.hp.within_file_mass_tol, self.hp.within_file_rt_tol, self.hp.alpha_mass)
         sys.stdout.flush()
         clustering_results = Parallel(n_jobs=self.num_cores, verbose=10)(delayed(_run_first_stage_clustering)(
-                                        j, self.data_list[j], self.hp, self.transformation_file) for j in range(len(self.data_list)))
+                                        j, self.data_list[j], self.hp, self.transformation_file, self.mh_biggest, self.use_vb) for j in range(len(self.data_list)))
         assert len(clustering_results) == len(self.data_list)        
         return clustering_results
 
-    def _find_matching(self, precursor_mass_list, lower, upper):
-        results = []
-        for i in range(len(precursor_mass_list)):
-            mass, processed, cluster = precursor_mass_list[i]            
-            if processed:
-                continue
-            if mass >= lower and mass <= upper:
-                results.append((i, cluster)) 
-        return results
-
     def _create_abstract_bins(self, cluster_list, mass_tol):
-                    
-        # group precursor clusters by mass tol                    
-        precursor_mass_list = []
+                            
+        q = PriorityQueue()
         for cl in cluster_list:
             pm = cl.mu_mass
-            precursor_mass_list.append([pm, False, cl]) 
+            q.put([pm, cl])            
 
-        abstract_bins = {}   
+        groups = {}
         k = 0
-        for mass, processed, cluster in precursor_mass_list:
-            if processed:
-                continue
-            lower, upper = utils.mass_range(mass, mass_tol)            
-            matches = self._find_matching(precursor_mass_list, lower, upper)
-            data = []
-            for index, match in matches:
-                precursor_mass_list[index][1] = True # processed
-                data.append(match)
-            abstract_bins[k] = data
-            k += 1        
+        group = []
+        while not q.empty():
+            
+            current_item = q.get()
+            current_mass = current_item[0]
+            current_cluster = current_item[1]
+            group.append(current_cluster)
 
-        K = len(abstract_bins)
+            # check if the next mass is outside tolerance            
+            if len(q.queue) > 0:
+                head = q.queue[0]
+                head_mass = head[0]
+                lower, upper = utils.mass_range(current_mass, mass_tol)                            
+                if head_mass > upper:
+                    # start a new group
+                    groups[k] = group
+                    group = []
+                    k += 1
+            else:
+                # no more item
+                groups[k] = group
+
+        K = len(groups)
         N = len(cluster_list)        
         print "Total abstract bins=" + str(K) + " total features=" + str(N)
-        return abstract_bins
+        return groups
     
     def _cp_summary(self, possible, cluster_membership):
         
@@ -415,7 +485,7 @@ class SharedBinMatching:
         # do the matching
         Options = namedtuple('Options', 'dmz drt exact_match use_fingerprint verbose')
         my_options = Options(dmz = mass_tol, drt = rt_tol, 
-                             exact_match = False, use_fingerprint = True,
+                             exact_match = False, use_fingerprint = False,
                              verbose = self.verbose)
         matched_results = AlignmentFile("", True)
         num_files = len(alignment_files)        
@@ -438,11 +508,6 @@ class SharedBinMatching:
             temp = []
             for alignment_feature in row.features:
                 cluster = alignment_feature_to_precursor_cluster[alignment_feature]
-                if cluster.id == 1326:
-                    print "FOUND"
-                    print "Cluster %d %.4f %.2f" % (cluster.id, cluster.mu_mass, cluster.mu_rt)
-                    for f, poss in cluster.members:
-                        print "- id %s mass %.4f rt %.2f" % ((f._get_key(), f.mass, f.rt))                    
                 temp.append(cluster)
             tup = tuple(temp)
             results.append(tup)
@@ -621,7 +686,3 @@ class SharedBinMatching:
             tup = tuple(adducts[trans_name])
             results.append(tup)
         return results
-        
-    def _evaluate_performance(self):
-        gt = GroundTruth(self.gt_file, self.file_list, self.data_list)        
-        gt.evaluate_probabilistic_alignment(self.alignment_results)
