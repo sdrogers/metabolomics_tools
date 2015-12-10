@@ -49,7 +49,7 @@ class DatabaseEntry(object):
 
 class Feature(object):
             
-    def __init__(self, feature_id, mass, rt, intensity, file_id=0):
+    def __init__(self, feature_id, mass, rt, intensity, file_id):
         self.feature_id = feature_id
         self.mass = mass
         self.rt = rt
@@ -58,48 +58,35 @@ class Feature(object):
         self.gt_metabolite = None   # used for synthetic data
         self.gt_adduct = None       # used for synthetic data
         
-    def __key(self):
+    def _get_key(self):
         return (self.feature_id, self.file_id)
 
-    def __eq__(self, x, y):
-        return x.__key() == y.__key()
+    def __eq__(self, other):
+        return self._get_key() == other._get_key()
 
     def __hash__(self):
-        return hash(self.__key())    
+        return hash(self._get_key())    
         
     def __repr__(self):
-        return "Feature " + utils.print_all_attributes(self)
+        return "id=(%d,%d) mass=%.4f rt=%.2f int=%.2f" % (self.feature_id, self.file_id, self.mass, self.rt, self.intensity)
 
 Transformation = namedtuple('Transformation', ['trans_id', 'name', 'sub', 'mul', 'iso'])
 DiscreteInfo = namedtuple('DiscreteInfo', ['possible', 'transformed', 'matRT', 'bins', 'prior_masses', 'prior_rts'])
     
 class PeakData(object):
     
-    def __init__(self, features, database, transformations, discrete_info=None, corr_mat=None):
+    def __init__(self, features, filename, corr_mat=None):
                 
         # list of feature, database entry and transformation objects
         self.features = features
-        self.database = database
-        self.transformations = transformations
         self.num_peaks = len(features)
         self.corr_mat = corr_mat
+        self.filename = filename
 
         # the same data as numpy arrays for convenience
         self.mass = np.array([f.mass for f in self.features])[:, None]              # N x 1 
         self.rt = np.array([f.rt for f in self.features])[:, None]                  # N x 1 
         self.intensity = np.array([f.intensity for f in self.features])[:, None]    # N x 1
-        
-        if discrete_info is not None:
-            self.set_discrete_info(discrete_info)
-            
-    def set_discrete_info(self, discrete_info):
-            self.possible = discrete_info.possible
-            self.transformed = discrete_info.transformed
-            self.matRT = discrete_info.matRT
-            self.bins = discrete_info.bins
-            self.prior_masses = discrete_info.prior_masses
-            self.prior_rts = discrete_info.prior_rts            
-            self.num_clusters = len(self.bins)
                 
 # Not sure whether want to keep this or not ...
 # Probably useful for identification and plotting later
@@ -134,7 +121,11 @@ class PrecursorBin(object):
     def get_features_rt(self):
         total_rt = 0
         for feature in self.features:
-            total_rt = total_rt + feature.rt
+            if isinstance(feature, tuple):
+                # if it's a list of tuples, then take the first element
+                total_rt += feature[0].rt
+            else:
+                total_rt += feature.rt
         return total_rt
     
     def add_molecule(self, molecule):

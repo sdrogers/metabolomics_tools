@@ -29,10 +29,10 @@ def _print_table(table):
 class ClusterPlotter(object):
     
     # an uncommented class for plotting clusters
-    def __init__(self,peak_data,cluster_model):
+    def __init__(self, peak_data, cluster_model, threshold=0.5):
         self.cluster_model = cluster_model
         self.peak_data = peak_data
-        self.cluster_membership = (cluster_model.Z>0.5)
+        self.cluster_membership = (cluster_model.Z>threshold)
 
     def summary(self, file_idx=0, show_plot=False):
 
