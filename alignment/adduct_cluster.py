@@ -105,7 +105,8 @@ class AdductCluster(object):
 				intensity = float(line[2]);
 				peak_list.append(Peak(mass,rt,intensity))
 
-		print "Loaded {} peaks from {}".format(len(peak_list),filename);
+		if self.verbose:
+			print "Loaded {} peaks from {}".format(len(peak_list),filename);
 		self.init_from_list(peak_list)
 		
 	def init_from_list(self,peak_list):
@@ -129,17 +130,19 @@ class AdductCluster(object):
 			self.Z[p] = poss
 			self.clus_poss[c] = [poss]
 
-		print "Created {} clusters".format(len(self.clusters))
+		if self.verbose:
+			print "Created {} clusters".format(len(self.clusters))
 		self.K = len(self.clusters)
 
-		if self.mh_biggest:
-			print "Binning with mh_biggest = True"
-		else:
-			print "Binning with mh_biggest = False"
+		if self.verbose:
+			if self.mh_biggest:
+				print "Binning with mh_biggest = True"
+			else:
+				print "Binning with mh_biggest = False"
 		for n in range(len(peak_list)):
 
 			p = peak_list[n]
-			if n%500==0:
+			if self.verbose and n%500==0:
 				print "Assigning possible transformations %d/%d" % (n, len(peak_list))
 				sys.stdout.flush()
 				
@@ -163,7 +166,8 @@ class AdductCluster(object):
 			if len(self.possible[p])>1:
 				self.todo.append(p)
 
-		print "{} peaks to be re-sampled in stage 1".format(len(self.todo))
+		if self.verbose:
+			print "{} peaks to be re-sampled in stage 1".format(len(self.todo))
 
 	def reset_counts(self):
 

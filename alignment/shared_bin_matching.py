@@ -37,9 +37,11 @@ class SharedBinMatching:
     def __init__(self, data_list, database_file, transformation_file, hyperpars, 
                  synthetic=True, limit_n=-1, verbose=True, seed=1234567890, parallel=True, mh_biggest=True, use_vb=False):
 
+        self.verbose = verbose
         self.data_list = data_list
         self.hp = hyperpars
-        print self.hp
+        if self.verbose:
+            print self.hp
 
         sys.stdout.flush()
         self.file_list = []
@@ -72,7 +74,8 @@ class SharedBinMatching:
 
         start_time = time.time()
         
-        print "Match mode " + str(match_mode)
+        if self.verbose:
+            print "Match mode " + str(match_mode)
         if match_mode == 0: # matching based on the peak features alone
 
             matching_mass_tol = self.hp.across_file_mass_tol
@@ -224,9 +227,10 @@ class SharedBinMatching:
             self._print_report(alignment_results, show_singleton=False)
         self.alignment_results = alignment_results        
 
-        print
-        print("--- TOTAL TIME %d seconds ---" % (time.time() - start_time))
-        print
+        if self.verbose:
+            print
+            print("--- TOTAL TIME %d seconds ---" % (time.time() - start_time))
+            print
                 
     def save_project(self, project_out):
         start = timeit.default_timer()        
@@ -234,7 +238,8 @@ class SharedBinMatching:
         with gzip.GzipFile(project_out, 'wb') as f:
             cPickle.dump(self, f, protocol=cPickle.HIGHEST_PROTOCOL)
             stop = timeit.default_timer()
-            print "Project saved to " + project_out + " time taken = " + str(stop-start)
+            if self.verbose:
+                print "Project saved to " + project_out + " time taken = " + str(stop-start)
 
     @classmethod
     def resume_from(cls, project_in):
@@ -242,7 +247,8 @@ class SharedBinMatching:
         with gzip.GzipFile(project_in, 'rb') as f:
             obj = cPickle.load(f)
             stop = timeit.default_timer()
-            print "Project loaded from " + project_in + " time taken = " + str(stop-start)
+            if self.verbose:
+                print "Project loaded from " + project_in + " time taken = " + str(stop-start)
             return obj
         
     def save_output(self, output_path):
@@ -283,9 +289,11 @@ class SharedBinMatching:
                         out = [row_id, parent_filename, peak_id, mass, rt, prob, msg]
                         writer.writerow(out)        
                     row_id += 1
-                print 'Output written to', output_path
+                if self.verbose:
+                    print 'Output written to', output_path
             except AttributeError:
-                print 'Nothing written to', output_path
+                if self.verbose:
+                    print 'Nothing written to', output_path
 
     def evaluate_performance(self, gt_file, verbose=False, print_TP=True, method=2):
 
@@ -305,19 +313,19 @@ class SharedBinMatching:
 
             sorted_probs = sorted(probs)
             for th_prob in sorted_probs:
-                print "Processing %.3f" % th_prob
+                # print "Processing %.3f" % th_prob
                 sys.stdout.flush()
                 peaksets = []
                 for ps in self.alignment_results:
                     if ps.prob > th_prob:
                         peaksets.append(ps)
-                print len(peaksets)
+                # print len(peaksets)
                 if len(peaksets) > 0:
                     if method == 1:
                         results = gt.evaluate_alignment_results_1(peaksets, th_prob, annotations=self.annotations, feature_binning=None, verbose=verbose)  
                     elif method == 2:
                         results = gt.evaluate_alignment_results_2(peaksets, th_prob, annotations=self.annotations, feature_binning=None, verbose=verbose)                          
-                    print results
+                    # print results
                     if results is not None:  
                         performance.append(results)
 
@@ -326,7 +334,8 @@ class SharedBinMatching:
     def _first_stage_clustering(self):
         
         # run precursor clustering for each file
-        print "First stage clustering -- within_file_mass_tol=%.2f, within_file_rt_tol=%.2f, alpha=%.2f" % (self.hp.within_file_mass_tol, self.hp.within_file_rt_tol, self.hp.alpha_mass)
+        if self.verbose:
+            print "First stage clustering -- within_file_mass_tol=%.2f, within_file_rt_tol=%.2f, alpha=%.2f" % (self.hp.within_file_mass_tol, self.hp.within_file_rt_tol, self.hp.alpha_mass)
         sys.stdout.flush()
         clustering_results = Parallel(n_jobs=self.num_cores, verbose=10)(delayed(_run_first_stage_clustering)(
                                         j, self.data_list[j], self.hp, self.transformation_file, self.mh_biggest, self.use_vb) for j in range(len(self.data_list)))
@@ -366,7 +375,8 @@ class SharedBinMatching:
 
         K = len(groups)
         N = len(cluster_list)        
-        print "Total abstract bins=" + str(K) + " total features=" + str(N)
+        if self.verbose:
+            print "Total abstract bins=" + str(K) + " total features=" + str(N)
         return groups
     
     def _cp_summary(self, possible, cluster_membership):
@@ -392,7 +402,8 @@ class SharedBinMatching:
 
     def _match_peak_features(self, file_data, mass_tol, rt_tol):
 
-        print "Matching peak features"
+        if self.verbose:
+            print "Matching peak features"
         sys.stdout.flush()
 
         alignment_files = []
@@ -421,7 +432,8 @@ class SharedBinMatching:
         input_count = 0
         output_count = 0
         for i in range(num_files):
-            print "Processing file %d" % i
+            if self.verbose:
+                print "Processing file %d" % i
             alignment_file = alignment_files[i]
             input_count += len(alignment_file.get_all_features()) + len(matched_results.get_all_features())
             matched_results.reset_aligned_status()
@@ -445,7 +457,8 @@ class SharedBinMatching:
         
     def _match_precursor_bins(self, file_data, mass_tol, rt_tol):
 
-        print "Matching precursor bins"
+        if self.verbose:
+            print "Matching precursor bins"
         sys.stdout.flush()
 
         alignment_files = []
@@ -492,7 +505,8 @@ class SharedBinMatching:
         input_count = 0
         output_count = 0
         for i in range(num_files):
-            print "Processing file %d" % i
+            if self.verbose:
+                print "Processing file %d" % i
             alignment_file = alignment_files[i]
             input_count += len(alignment_file.get_all_features()) + len(matched_results.get_all_features())
             matched_results.reset_aligned_status()
@@ -531,7 +545,8 @@ class SharedBinMatching:
         abstract_bins = self._create_abstract_bins(sorted_clusters, self.hp.across_file_mass_tol)
         all_groups = abstract_bins.values() # each value is a group of precursors that have been grouped by mass
 
-        print "Running second-stage clustering"
+        if self.verbose:
+            print "Running second-stage clustering"
         sys.stdout.flush()   
         file_matchings = Parallel(n_jobs=self.num_cores, verbose=10)(delayed(_run_second_stage_clustering)(
                                     n, all_groups[n], self.hp, self.seed) for n in range(len(all_groups)))
@@ -545,14 +560,15 @@ class SharedBinMatching:
 
     def _construct_alignment(self, matching_results, samples_obtained, show_plot=False):
         
-        print "Constructing alignment of peak features"
+        if self.verbose:
+            print "Constructing alignment of peak features"
         
         # count frequencies of aligned bins produced across the Gibbs samples
         counter = dict()
         for n in range(len(matching_results)):
             
             bins = matching_results[n]
-            if n%1000 == 0:
+            if self.verbose and n%1000 == 0:
                 print str(n) + "/" + str(len(matching_results))
                 sys.stdout.flush()
                                             
@@ -576,7 +592,8 @@ class SharedBinMatching:
                 else:
                     counter[bins] += 1
                     
-        print
+        if self.verbose:
+            print
         
         # normalise the counts
         S = samples_obtained
@@ -594,7 +611,7 @@ class SharedBinMatching:
         for item in sorted_list:
             members = item[0]
             prob = item[1]
-            if n % 1000 == 0:
+            if self.verbose and n % 1000 == 0:
                 print "Processing aligned bins " + str(n) + "/" + str(len(sorted_list)) + "\tprob " + str(prob)
                 sys.stdout.flush()
             # members is a tuple of bins so the features inside need to be matched

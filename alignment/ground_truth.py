@@ -80,9 +80,10 @@ class GroundTruth:
                     else:
                         size_map[item_length] = 1
                     
-        print "Loaded " + str(len(self.gt_features)) + " ground truth entries"   
-        print size_map
-        print
+        if verbose:
+            print "Loaded " + str(len(self.gt_features)) + " ground truth entries"   
+            print size_map
+            print
                 
     def evaluate_bins(self, file_bins, peak_feature_to_bin, results):
 
@@ -226,7 +227,7 @@ class GroundTruth:
             f1 = (2*tp_count)/((2*tp_count)+fp_count+fn_count)
             return tp_count, fp_count, fn_count, prec, rec, f1, th_prob
         except ZeroDivisionError:
-            return tp, fp, fn, 0, 0, 0, th_prob        
+            return tp_count, fp_count, fn_count, 0, 0, 0, th_prob        
 
     def _get_pairwise_peakset(self, peaksets, whitelist=None):
         

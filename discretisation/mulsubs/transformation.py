@@ -55,7 +55,7 @@ def load_from_file(file_name):
 														isotope_diff=isotope_diff,
 														fragment_mass = fragment_mass))
 
-	print transformations
+	# print transformations
 	return transformations
 
 
