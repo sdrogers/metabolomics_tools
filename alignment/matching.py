@@ -13,8 +13,6 @@ import networkx as nx
 from networkx.algorithms import matching
 
 from models import *
-from utils import *
-from clustering import *
 
 from Queue import PriorityQueue
 from IntervalTree import IntervalTree
