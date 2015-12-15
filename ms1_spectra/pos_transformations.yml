@@ -3,13 +3,18 @@ transformations:
   n: 1
   g: ['H']
 
+ "2M+H":
+  n: 2
+  g: ['H']
+
+
  "M+2H":
   n: 1
   g: ['H','H']
 
- "M+NH4":
-  n: 1
-  g: ['NH4']
+ # "M+NH4":
+ #  n: 1
+ #  g: ['NH4']
 
  "M+ACN+H":
   n: 1
@@ -30,7 +35,10 @@ charges:
  NH4: 1
  K: 1
 
-isotopes: [C13]
+isotopes: [C13,2C13]
+
+fragments: [CO,H2O,CH2O2,CO2,NH3]
+
 
 masses: 
  H: 1.0078250319
@@ -44,3 +52,4 @@ masses:
  CO2: 43.989829244199996
  NH3: 17.02654910166
  C13: 1.0033548378
+ 2C13: 2.0067096756

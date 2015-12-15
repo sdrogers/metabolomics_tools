@@ -4,18 +4,26 @@ import scipy.io as sio
 import os
 import scipy
 from scipy.stats import beta
+
+class Signal(object):
+    def __init__(self,x,y):
+        self.x = x
+        self.y = y
+
 class Peak(object):
-    def __init__(self,pid,mass,rt,intensity):
+    def __init__(self,pid,mass,rt,intensity,signal=None):
         self.pid = pid
         self.mass = mass
         self.rt = rt
         self.intensity = intensity
 
+        self.signal = signal
+
     def __str__(self):
         return "({}, {})".format(self.mass,self.rt)
 
 class BetaLike(object):
-    def __init__(self,alp_in,bet_in,alp_out,bet_out,p0_in,p0_out):
+    def __init__(self,alp_in=10,bet_in=1,alp_out=1,bet_out=1,p0_in=0.01,p0_out=0.99):
         self.alp_in = alp_in
         self.bet_in = bet_in
         self.alp_out = alp_out
@@ -51,9 +59,9 @@ class BetaLike(object):
 
 
 class CorrCluster(object):
-    def __init__(self,like_object,peak_file,corr_file,algo='greedy',alpha=1,greedy_thresh=0.8):
+    def __init__(self,like_object,peak_file,corr_file,signal_file = None,algo='greedy',alpha=1,greedy_thresh=0.8):
         self.like_object = like_object
-        self.load_peaks(peak_file)
+        self.load_peaks(peak_file,signal_file)
         self.create_adjacency(corr_file)
         self.alpha = alpha
         self.N = len(self.peaks)
@@ -69,7 +77,8 @@ class CorrCluster(object):
 
 
 
-    def load_peaks(self,peak_file):
+    def load_peaks(self,peak_file,signal_file):
+
         self.peaks = []
         if os.path.isfile(peak_file):
             with open(peak_file) as f:
@@ -81,6 +90,24 @@ class CorrCluster(object):
                     rt = float(split_line[2])
                     intensity = float(split_line[3])
                     self.peaks.append(Peak(pid,mass,rt,intensity))
+
+        peak_pos = 0
+        if not signal_file is None:
+            with open(signal_file) as f:
+                for line in f:
+                    signal = line.split(',')[-1].strip()
+                    sis = signal.split(' ')
+                    x = []
+                    y = []
+                    for si in sis:
+                        try:
+                            x.append(float(si.split(':')[0]))
+                            y.append(float(si.split(':')[1]))
+                        except ValueError:
+                            print si
+
+                    self.peaks[peak_pos].signal = Signal(x,y)
+                    peak_pos += 1
                 
         print "Loaded {} peaks".format(len(self.peaks))
 
@@ -226,8 +253,12 @@ class CorrCluster(object):
             print "Sample {}".format(s)
             self.gibbs_cycle()
 
-    def get_peaks_by_cluster(self):
+
+    def order_clusters_by_size(self):
         self.clusters = sorted(self.clusters,key=lambda x: x.size,reverse=True)
+        
+    def get_peaks_by_cluster(self):
+        self.order_clusters_by_size()
         ordered_peaks = []
         order = []
         for cluster in self.clusters:
