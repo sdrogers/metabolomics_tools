@@ -103,7 +103,7 @@ class CorrCluster(object):
                         try:
                             x.append(float(si.split(':')[0]))
                             y.append(float(si.split(':')[1]))
-                        except ValueError:
+                        except:
                             print si
 
                     self.peaks[peak_pos].signal = Signal(x,y)
