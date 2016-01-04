@@ -48,7 +48,7 @@ def _run_second_stage_clustering(n, cluster_list, hp, seed, verbose=False):
     
     # run dp clustering for each top id
     dp = DpMixtureGibbs(data, hp, seed=seed, verbose=verbose, 
-                        use_mass_likelihood=True, use_rt_likelihood=True, use_adduct_likelihood=False)
+                        use_mass_likelihood=True, use_rt_likelihood=True, use_adduct_likelihood=True)
     dp.nsamps = hp.rt_clustering_nsamps
     dp.burn_in = hp.rt_clustering_burnin
     dp.run() 
