@@ -69,12 +69,13 @@ class SharedBinMatching:
         if self.verbose:
             print "Match mode " + str(match_mode)
             
-        if match_mode == 0: # matching based on the peak features alone
+        if match_mode == 0 or match_mode == 3: # matching based on the peak features alone
 
-            matching_mass_tol = self.hp.across_file_mass_tol
-            matching_rt_tol = self.hp.across_file_rt_tol
             file_data = self.data_list
-            alignment_results = self._match_peak_features(file_data, matching_mass_tol, matching_rt_tol)
+            use_group = False
+            if match_mode == 3:
+                use_group = True
+            alignment_results = self._match_peak_features(file_data, use_group)
             
         elif match_mode == 1: # matching based on the MAP of precursor clustering
 
@@ -365,7 +366,7 @@ class SharedBinMatching:
         for key in self.trans_map:
             print self.trans_map[key].name + ": " + str((t==key).sum())
 
-    def _match_peak_features(self, file_data, mass_tol, rt_tol):
+    def _match_peak_features(self, file_data, use_group):
 
         if self.verbose:
             print "Matching peak features"
@@ -388,9 +389,10 @@ class SharedBinMatching:
             alignment_files.append(this_file)
             
         # do the matching
-        Options = namedtuple('Options', 'dmz drt exact_match use_fingerprint verbose')
-        my_options = Options(dmz = mass_tol, drt = rt_tol, 
-                             exact_match = False, use_fingerprint = False,
+        Options = namedtuple('Options', 'dmz drt exact_match use_group grt grouping_method alpha verbose use_peakshape num_samples burn_in dp_alpha always_recluster')
+        my_options = Options(dmz=self.hp.across_file_mass_tol, drt=self.hp.across_file_rt_tol, exact_match=False, 
+                             use_group=use_group, grt=self.hp.within_file_rt_tol, grouping_method='greedy', alpha=self.hp.matching_alpha, use_peakshape=False, always_recluster=True,
+                             num_samples=self.hp.rt_clustering_nsamps, burn_in=self.hp.rt_clustering_burnin, dp_alpha=1.0,
                              verbose = self.verbose)
         matched_results = AlignmentFile("", True)
         num_files = len(alignment_files)        
@@ -461,10 +463,8 @@ class SharedBinMatching:
             alignment_files.append(this_file)
             
         # do the matching
-        Options = namedtuple('Options', 'dmz drt exact_match use_fingerprint verbose')
-        my_options = Options(dmz = mass_tol, drt = rt_tol, 
-                             exact_match = False, use_fingerprint = False,
-                             verbose = self.verbose)
+        Options = namedtuple('Options', 'dmz drt exact_match verbose')
+        my_options = Options(dmz = mass_tol, drt = rt_tol, exact_match = False, verbose = self.verbose)
         matched_results = AlignmentFile("", True)
         num_files = len(alignment_files)        
         input_count = 0

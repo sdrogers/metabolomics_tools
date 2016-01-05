@@ -61,6 +61,8 @@ def get_options(argv):
     parser.set_defaults(rt_clustering_nsamps=alignment_hp.rt_clustering_nsamps)
     parser.add_argument('-rt_clustering_burnin', help='no. of burn-in samples for Gibbs RT clustering', type=int)
     parser.set_defaults(rt_clustering_burnin=alignment_hp.rt_clustering_burnin)
+    parser.add_argument('-matching_alpha', help='Matching alpha for MWG, MWM', type=float)
+    parser.set_defaults(matching_alpha=alignment_hp.matching_alpha)
     
     # parse it
     options = parser.parse_args(argv)
@@ -92,6 +94,7 @@ def main(argv):
     alignment_hp.mass_clustering_n_iterations = options.mass_clustering_n_iterations
     alignment_hp.rt_clustering_nsamps = options.rt_clustering_nsamps
     alignment_hp.rt_clustering_burnin = options.rt_clustering_burnin
+    alignment_hp.matching_alpha = options.matching_alpha
         
     loader = FileLoader()        
     data_list = loader.load_model_input(input_dir, synthetic=True, verbose=options.verbose)    

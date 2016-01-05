@@ -13,6 +13,7 @@ import networkx as nx
 from networkx.algorithms import matching
 
 from models import *
+from clustering import *
 
 from Queue import PriorityQueue
 from IntervalTree import IntervalTree
@@ -27,9 +28,16 @@ class MaxWeightedMatching:
         self.exact_match = self.options.exact_match
         self.dmz = float(self.options.dmz)
         self.drt = float(self.options.drt)
-#         self.use_group = self.options.use_group
-#         self.grt = self.options.grt
-#         self.alpha = self.options.alpha
+        
+        try :
+            self.use_group = self.options.use_group
+            self.grt = self.options.grt
+            self.alpha = self.options.alpha
+        except AttributeError:
+            self.use_group = False
+            self.grt = 0
+            self.alpha = 1.0
+
         self.verbose = self.options.verbose
 
     def do_matching(self):
@@ -51,6 +59,15 @@ class MaxWeightedMatching:
             if self.verbose:
                 print "Computing score matrix"
             score_arr, Q = self.compute_scores(self.men, self.women, self.dmz, self.drt)
+            
+            # combine scores, if necessary
+            if self.use_group:
+                print "\nCombining grouping information"
+                clusterer = self.get_clusterer(self.men, self.options)
+                A = clusterer.do_clustering()
+                clusterer = self.get_clusterer(self.women, self.options)
+                B = clusterer.do_clustering()
+                score_arr = self.combine_scores(score_arr, A, B, Q)            
             
             # do approximate or exact matching here
             if self.verbose:
@@ -84,6 +101,16 @@ class MaxWeightedMatching:
                 row.aligned = True
 
             return matched_results
+        
+    def get_clusterer(self, alignment_file, options):
+        if self.options.grouping_method.lower() == "greedy":
+            clusterer = GreedyClustering(alignment_file, options)
+        elif self.options.grouping_method.lower() == "posterior":
+            clusterer = MixtureModelClustering(alignment_file, options)
+        else:
+            print "Unknown grouping method " + options.grouping_method
+            exit(1)
+        return clusterer        
         
     def compute_dist(self, row1, row2, dmz, drt):
         
@@ -150,7 +177,50 @@ class MaxWeightedMatching:
                 if score > max_score:
                     max_score = score
                                       
-            return score_arr, Q          
+            return score_arr, Q       
+        
+    def combine_scores(self, W, A, B, Q):
+
+        print " - Combining scores"
+        sys.stdout.flush()
+
+        W_row, W_col = W.shape
+        A_row, A_col = A.shape
+        B_row, B_col = B.shape        
+
+        # turn to CSR for faster computation
+        A = A.tocsr()
+        B = B.tocsr()
+        W = W.tocsr()
+        
+        # delete the diagonal entries for A and B, see 
+        # http://stackoverflow.com/questions/22660374/remove-set-the-non-zero-diagonal-elements-of-a-sparse-matrix-in-scipy
+        A = A - scipy.sparse.dia_matrix((A.diagonal()[scipy.newaxis, :], [0]), shape=(A_row, A_row))
+        B = B - scipy.sparse.dia_matrix((B.diagonal()[scipy.newaxis, :], [0]), shape=(B_row, B_row))
+        
+        # do the multiplication to upweight / downweight
+        print "\tComputing D=(AW)"
+        AW = A * W
+        print "\tComputing D=(AW)B"
+        AWB = AW * B
+        
+        # mask the resulting output
+        print "\tComputing D.*Q"                    
+        D = AWB.multiply(Q)
+        
+        # normalise it
+        max_score = D.max()
+        D = D * (1/max_score)
+
+        # combine with original scores
+        print "\tComputing W'=(alpha.*W)+((1-alpha).*D)"            
+        W = W * self.alpha
+        D = D * (1-self.alpha)
+        score_arr = W + D
+        max_score = score_arr.max()
+        score_arr = score_arr * (1/max_score)
+                
+        return score_arr           
             
     def hungarian_matching(self, men, women, score_arr):
 
