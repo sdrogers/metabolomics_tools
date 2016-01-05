@@ -7,7 +7,7 @@ import time
 from shared_bin_matching import SharedBinMatching
 from models import HyperPars as AlignmentHyperPars
 from discretisation.preprocessing import FileLoader
-
+import pandas as pd
 
 def print_banner():
     '''Prints some banner at program start'''
@@ -25,7 +25,7 @@ def get_options(argv):
 
     # core arguments
     parser.add_argument('-i', required=True, dest='input_dir', help='input directory')
-    parser.add_argument('-o', required=True, dest='output_path', help='output path')
+    parser.add_argument('-o', required=False, dest='output_path', help='output path')
     parser.add_argument('-trans', required=True, dest="transformation_file", help='transformation file')
     parser.add_argument('-db', dest='database_file', help='identification database file')
     parser.set_defaults(database_file=None)
@@ -51,6 +51,8 @@ def get_options(argv):
     parser.set_defaults(alpha_mass=alignment_hp.alpha_mass)
     parser.add_argument('-alpha_rt', help='Dirichlet Process concentration parameter for mixture on RT', type=float)
     parser.set_defaults(alpha_rt=alignment_hp.dp_alpha)
+    parser.add_argument('-beta_adduct', help='Dirichlet prior on the adduct fingerprint', type=float)
+    parser.set_defaults(beta_adduct=alignment_hp.beta)
     parser.add_argument('-t', help='threshold for cluster membership for precursor mass clustering', type=float)
     parser.set_defaults(t=alignment_hp.t)
     parser.add_argument('-mass_clustering_n_iterations', help='no. of iterations for VB precursor clustering', type=int)
@@ -85,6 +87,7 @@ def main(argv):
     alignment_hp.across_file_rt_tol = options.across_file_rt_tol
     alignment_hp.alpha_mass = options.alpha_mass
     alignment_hp.dp_alpha = options.alpha_rt
+    alignment_hp.beta = options.beta_adduct
     alignment_hp.t = options.t
     alignment_hp.mass_clustering_n_iterations = options.mass_clustering_n_iterations
     alignment_hp.rt_clustering_nsamps = options.rt_clustering_nsamps
@@ -96,8 +99,21 @@ def main(argv):
                            alignment_hp, verbose=options.verbose, seed=options.seed)
     sb.run(match_mode)
     sb.save_output(output_path)
-    sb.save_project(output_path + ".project")
     sys.stdout.flush()
+    
+    if gt_file is not None:
+        performances = []        
+        res = sb.evaluate_performance(gt_file, verbose=False, print_TP=True, method=2)
+        param = (alignment_hp.across_file_mass_tol, alignment_hp.across_file_rt_tol)
+        output = param+res[0]        
+        performances.append(output)    
+
+        print "\nResults"
+        df = pd.DataFrame(performances, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold'])
+        sorted_df = df.sort_values(['F1', 'mass_tol', 'rt_tol'], ascending=[False, True, True])
+        best_row = sorted_df.iloc[0]
+        print sorted_df
+    
 #     print"Ending program in 60 seconds ..."
 #     time.sleep(60)
     

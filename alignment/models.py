@@ -8,18 +8,19 @@ class HyperPars(object):
 
     def __init__(self):
 
-        self.within_file_mass_tol = 1.0
-        self.within_file_rt_tol = 5.0
-        self.t = 0.10
-        self.alpha_mass = 1.0
-        self.mass_clustering_n_iterations = 200
+        self.within_file_mass_tol = 5.0
+        self.within_file_rt_tol = 30.0
+        self.across_file_mass_tol = 10.0
+        self.across_file_rt_tol = 60.0
 
-        self.across_file_mass_tol = 4.0
-        self.across_file_rt_tol = 10.0
+        self.alpha_mass = 1.0
+        self.dp_alpha = 1000.0
         self.beta = 0.1
-        self.dp_alpha = 100.0
-        self.rt_clustering_nsamps = 200
-        self.rt_clustering_burnin = 100
+
+        self.t = 0.0
+        self.mass_clustering_n_iterations = 200
+        self.rt_clustering_nsamps = 100
+        self.rt_clustering_burnin = 0
         
     def __repr__(self):
         return "Hyperparameters " + utils.print_all_attributes(self)
@@ -106,14 +107,7 @@ class AlignmentRow(object):
         for feature in self.features:
             total_intensity = total_intensity + feature.intensity
         return total_intensity / len(self.features)    
-    
-    def get_average_fingerprint(self):
-        '''Computes the average fingerprint'''
-        total_fingerprint = np.zeros_like(self.features[0].fingerprint)
-        for feature in self.features:
-            total_fingerprint = total_fingerprint + feature.fingerprint
-        return total_fingerprint / len(self.features)    
-    
+        
     def is_within_tolerance(self, another_row, dmz, drt, absolute_mass_tolerance=True):
         if another_row.aligned == True:
             return False

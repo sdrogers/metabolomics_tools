@@ -1,7 +1,5 @@
-import cPickle
 from collections import namedtuple
 import csv
-import gzip
 from itertools import chain, combinations
 import multiprocessing
 from operator import attrgetter
@@ -9,7 +7,6 @@ from operator import itemgetter
 import os
 import sys
 import time
-import timeit
 from Queue import PriorityQueue
 
 from joblib import Parallel, delayed  
@@ -26,10 +23,6 @@ import shared_bin_matching_plotter as plotter
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
-
-
-
-
 AlignmentResults = namedtuple('AlignmentResults', ['peakset', 'prob'])
 
 class SharedBinMatching:
@@ -42,14 +35,13 @@ class SharedBinMatching:
         self.hp = hyperpars
         if self.verbose:
             print self.hp
-
         sys.stdout.flush()
+        
         self.file_list = []
         for data in data_list:
             self.file_list.append(data.filename)
         self.database_file = database_file
         self.transformation_file = transformation_file
-        self.verbose = verbose
         self.seed = seed
         self.mh_biggest = mh_biggest
         self.use_vb = use_vb
@@ -76,6 +68,7 @@ class SharedBinMatching:
         
         if self.verbose:
             print "Match mode " + str(match_mode)
+            
         if match_mode == 0: # matching based on the peak features alone
 
             matching_mass_tol = self.hp.across_file_mass_tol
@@ -102,14 +95,6 @@ class SharedBinMatching:
                     cluster.members = []
                     cluster.origin = j                    
                     cluster.word_counts = np.zeros(self.T)
-
-#                 # assign peaks above the threshold to this cluster
-#                 for peak in ac.peaks:
-#                     for poss in ac.possible[peak]:
-#                         if poss.prob > self.hp.t:
-#                             msg = "{:s}@{:3.5f}({:.4f})".format(poss.transformation.name, poss.cluster.mu_mass, poss.prob)            
-#                             self._annotate(peak, msg)   
-#                             poss.cluster.members.append((peak, poss))        
 
                 # perform MAP assignment of peaks to their most likely cluster
                 ac.map_assign()
@@ -138,11 +123,7 @@ class SharedBinMatching:
                             if self.verbose:
                                 print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
                                                                    poss.transformation.name, poss.prob)
-                            # update the binary flag for this transformation in the cluster
-                            tidx = self.trans_idx[poss.transformation.name]
-                            cluster.word_counts[tidx] = poss.prob
-                        selected.append(cluster)
-    
+                        selected.append(cluster)    
                 file_data[j] = selected # set non-empty clusters to match within each file            
 
             matching_mass_tol = self.hp.across_file_mass_tol
@@ -231,27 +212,11 @@ class SharedBinMatching:
             print
             print("--- TOTAL TIME %d seconds ---" % (time.time() - start_time))
             print
-                
-    def save_project(self, project_out):
-        start = timeit.default_timer()        
-        self.last_saved_timestamp = str(time.strftime("%c"))
-        with gzip.GzipFile(project_out, 'wb') as f:
-            cPickle.dump(self, f, protocol=cPickle.HIGHEST_PROTOCOL)
-            stop = timeit.default_timer()
-            if self.verbose:
-                print "Project saved to " + project_out + " time taken = " + str(stop-start)
-
-    @classmethod
-    def resume_from(cls, project_in):
-        start = timeit.default_timer()        
-        with gzip.GzipFile(project_in, 'rb') as f:
-            obj = cPickle.load(f)
-            stop = timeit.default_timer()
-            if self.verbose:
-                print "Project loaded from " + project_in + " time taken = " + str(stop-start)
-            return obj
-        
+                        
     def save_output(self, output_path):
+        
+        if output_path is None:
+            return        
         
         # if the directory doesn't exist, create it
         if not os.path.exists(os.path.dirname(output_path)):
