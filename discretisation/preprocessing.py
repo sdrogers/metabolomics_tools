@@ -121,7 +121,8 @@ class FileLoader:
         else:   
                      
             # process only a single file
-            features, corr_mat = self.load_features(input_file, synthetic=synthetic)
+            file_id = 0
+            features, corr_mat = self.load_features(input_file, file_id, synthetic=synthetic)
             if limit_n > -1:
                 features = features[0:limit_n]
             data = PeakData(features, input_file, corr_mat=corr_mat)

@@ -16,13 +16,15 @@ class GreedyClustering:
         
         self.alignment_file = alignment_file
         self.options = options
+        self.verbose = options.verbose
         self.grt = float(self.options.grt)  
         if self.options.use_peakshape:
             self.min_corr_signal = float(self.options.mcs)
 
     def do_clustering(self):
         
-        print " - Grouping " + self.alignment_file.filename
+        if self.verbose:
+            print " - Grouping " + self.alignment_file.filename
         sys.stdout.flush()
         
         if self.options.use_peakshape:
@@ -63,7 +65,8 @@ class GreedyClustering:
                 Z[n, k] = 1
             k = k + 1
 
-        print " - " + str(k) + " groups obtained"
+        if self.verbose:
+            print " - " + str(k) + " groups obtained"
                 
         ZZ = Z.tocsr() * Z.tocsr().transpose()
         return ZZ.tolil()
