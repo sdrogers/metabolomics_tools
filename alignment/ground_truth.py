@@ -202,8 +202,11 @@ class GroundTruth:
             all_ground_truth_features.update(feature_keys)
 
         peaksets = []
+        feature_map = {}
         for item, prob in alignment_results:
             ps_keys = [f._get_key() for f in item]
+            for f in item:
+                feature_map[f._get_key()] = f
             peaksets.append(ps_keys)
 
         g_plus = self._get_pairwise_peakset(ground_truth, whitelist=None)
@@ -217,6 +220,22 @@ class GroundTruth:
 
         # FP = shouldn't be aligned & are aligned = t \ G+
         fp = t - g_plus
+        
+        print "TP"
+        for item in tp:
+            for key in item:
+                print feature_map[key],
+            print
+        print "FP"
+        for item in fp:
+            for key in item:
+                print feature_map[key],
+            print
+        print "FN"
+        for item in fn:
+            for key in item:
+                print feature_map[key],
+            print
                     
         tp_count = float(len(tp))
         fp_count = float(len(fp))
