@@ -221,21 +221,21 @@ class GroundTruth:
         # FP = shouldn't be aligned & are aligned = t \ G+
         fp = t - g_plus
         
-        print "TP"
-        for item in tp:
-            for key in item:
-                print feature_map[key],
-            print
-        print "FP"
-        for item in fp:
-            for key in item:
-                print feature_map[key],
-            print
-        print "FN"
-        for item in fn:
-            for key in item:
-                print feature_map[key],
-            print
+#         print "TP"
+#         for item in tp:
+#             for key in item:
+#                 print feature_map[key],
+#             print
+#         print "FP"
+#         for item in fp:
+#             for key in item:
+#                 print feature_map[key],
+#             print
+#         print "FN"
+#         for item in fn:
+#             for key in item:
+#                 print feature_map[key],
+#             print
                     
         tp_count = float(len(tp))
         fp_count = float(len(fp))
