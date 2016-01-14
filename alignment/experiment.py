@@ -134,7 +134,7 @@ def run_experiment_single(match_mode, training_list, testing_list, i, param_list
         with gzip.GzipFile(filename, 'rb') as f:        
             item = cPickle.load(f)
             print "Loaded from %s" % filename
-            return exp_results
+            return item
     except (IOError, EOFError):
         training_data = training_list[i]
         testing_data = testing_list[i]

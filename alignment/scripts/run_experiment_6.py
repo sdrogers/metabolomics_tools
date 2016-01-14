@@ -55,8 +55,6 @@ def main(argv):
                 for alpha in range(0, 11, 2):
                     param_list_mwg.append((mass_tol, rt_tol, group_tol, alpha/10.0))
                     
-    param_list_mwg = param_list_mwg[0:2]
-                    
     n_files = 6
     training_list = load_or_create_filelist('../notebooks/pickles/training_list_6.p', None, n_iter, n_files)    
     testing_list = load_or_create_filelist('../notebooks/pickles/testing_list_6.p', None, n_iter, n_files)    
