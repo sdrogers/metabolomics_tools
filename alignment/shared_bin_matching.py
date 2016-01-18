@@ -124,6 +124,9 @@ class SharedBinMatching:
                             if self.verbose:
                                 print "\tpeak_id %d mass %f rt %f intensity %f (%s %.3f)" % (peak.feature_id, peak.mass, peak.rt, peak.intensity, 
                                                                    poss.transformation.name, poss.prob)
+                            # update the counts for this transformation in the cluster
+                            tidx = self.trans_idx[poss.transformation.name]
+                            cluster.word_counts[tidx] = poss.prob
                         selected.append(cluster)    
                 file_data[j] = selected # set non-empty clusters to match within each file            
 
@@ -153,27 +156,15 @@ class SharedBinMatching:
                     cluster.origin = j                    
                     cluster.word_counts = np.zeros(self.T)
 
-                if self.hp.t > 0: # assign peaks above threshold to clusters
-                    for peak in ac.peaks:
-                        for poss in ac.possible[peak]:
-                            if poss.prob > self.hp.t:
-                                msg = "mz={:.4f},rt={:.2f},precursor={:s}@{:3.5f}({:.4f})".format(peak.mass, peak.rt, 
-                                                                                              poss.transformation.name, 
-                                                                                              poss.cluster.mu_mass, poss.prob)            
-                                self._annotate(peak, msg)   
-                                poss.cluster.members.append((peak, poss))    
-                                poss.cluster.N += 1
-                                poss.cluster.rt_sum += peak.rt
-                                poss.cluster.mass_sum += poss.transformed_mass                            
-                else: # perform MAP assignment of peaks to their most likely cluster
-                    ac.map_assign()
-                    for peak in ac.peaks:
-                        best_poss = ac.Z[peak]
-                        msg = "mz={:.4f},rt={:.2f},precursor={:s}@{:3.5f}({:.4f})".format(peak.mass, peak.rt, 
-                                                                                      best_poss.transformation.name, 
-                                                                                      best_poss.cluster.mu_mass, best_poss.prob)            
-                        self._annotate(peak, msg)   
-                        best_poss.cluster.members.append((peak, best_poss))        
+                # perform MAP assignment of peaks to their most likely cluster
+                ac.map_assign()
+                for peak in ac.peaks:
+                    best_poss = ac.Z[peak]
+                    msg = "mz={:.4f},rt={:.2f},precursor={:s}@{:3.5f}({:.4f})".format(peak.mass, peak.rt, 
+                                                                                  best_poss.transformation.name, 
+                                                                                  best_poss.cluster.mu_mass, best_poss.prob)            
+                    self._annotate(peak, msg)   
+                    best_poss.cluster.members.append((peak, best_poss))        
     
                 # keep track of the non-empty clusters                            
                 if self.verbose:
@@ -192,8 +183,6 @@ class SharedBinMatching:
                             tidx = self.trans_idx[poss.transformation.name]
                             # use the binary count only
                             cluster.word_counts[tidx] += 1
-                            # use some dodgy scaling of the probabilities
-                            # cluster.word_counts[tidx] += round(poss.prob*100)
                         selected.append(cluster)
     
                 all_nonempty_clusters.extend(selected) # collect across all files
@@ -389,10 +378,11 @@ class SharedBinMatching:
             alignment_files.append(this_file)
             
         # do the matching
-        Options = namedtuple('Options', 'dmz drt exact_match use_group grt grouping_method alpha verbose use_peakshape num_samples burn_in dp_alpha always_recluster')
+        Options = namedtuple('Options', 'dmz drt exact_match use_group grt grouping_method alpha verbose use_peakshape num_samples burn_in dp_alpha always_recluster use_fingerprint')
         my_options = Options(dmz=self.hp.across_file_mass_tol, drt=self.hp.across_file_rt_tol, exact_match=False, 
                              use_group=use_group, grt=self.hp.within_file_rt_tol, grouping_method='greedy', alpha=self.hp.matching_alpha, use_peakshape=False, always_recluster=True,
                              num_samples=self.hp.rt_clustering_nsamps, burn_in=self.hp.rt_clustering_burnin, dp_alpha=1.0,
+                             use_fingerprint=False,
                              verbose = self.verbose)
         matched_results = AlignmentFile("", True)
         num_files = len(alignment_files)        
@@ -463,8 +453,8 @@ class SharedBinMatching:
             alignment_files.append(this_file)
             
         # do the matching
-        Options = namedtuple('Options', 'dmz drt exact_match verbose')
-        my_options = Options(dmz = mass_tol, drt = rt_tol, exact_match = False, verbose = self.verbose)
+        Options = namedtuple('Options', 'dmz drt exact_match verbose use_fingerprint')
+        my_options = Options(dmz=mass_tol, drt=rt_tol, exact_match=False, verbose=self.verbose, use_fingerprint=False)
         matched_results = AlignmentFile("", True)
         num_files = len(alignment_files)        
         input_count = 0

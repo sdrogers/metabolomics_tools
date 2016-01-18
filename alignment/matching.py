@@ -26,6 +26,7 @@ class MaxWeightedMatching:
         self.women = women
         self.options = options
         self.exact_match = self.options.exact_match
+        self.use_fingerprint = self.options.use_fingerprint        
         self.dmz = float(self.options.dmz)
         self.drt = float(self.options.drt)
         
@@ -123,7 +124,15 @@ class MaxWeightedMatching:
         rt = rt1 - rt2
         mz = mass1 - mass2
         dist = math.sqrt((rt*rt)/(drt*drt) + (mz*mz)/(dmz*dmz))
-        return dist
+
+        if self.use_fingerprint:        
+            fingerprint1 = row1.get_average_fingerprint()
+            fingerprint2 = row2.get_average_fingerprint()
+            cos_sim = cosine_similarity(fingerprint1, fingerprint2)
+        else:
+            cos_sim = 1
+        
+        return dist, cos_sim
     
     def compute_scores(self, men, women, dmz, drt):
         
@@ -131,6 +140,7 @@ class MaxWeightedMatching:
         n_row = len(men.rows)
         n_col = len(women.rows)
         dist_arr = lil_matrix((n_row, n_col))
+        weight_arr = lil_matrix((n_row, n_col))        
         max_dist = 0        
         
         T = IntervalTree(women.rows)
@@ -140,9 +150,10 @@ class MaxWeightedMatching:
             candidate_women = T.search(int(mass_lower), int(mass_upper))
             for woman in candidate_women:
                 if man.is_within_tolerance(woman, dmz, drt, absolute_mass_tolerance=False):
-                    dist = self.compute_dist(man, woman, dmz, drt)
+                    dist, w = self.compute_dist(man, woman, dmz, drt)
                     j = woman.row_id
                     dist_arr[i, j] = dist
+                    weight_arr[i, j] = w                    
                     if dist > max_dist:
                         max_dist = dist
 
@@ -156,6 +167,7 @@ class MaxWeightedMatching:
             # see http://stackoverflow.com/questions/4319014/iterating-through-a-scipy-sparse-vector-or-matrix
             for i, j, v in itertools.izip(dist_arr.row, dist_arr.col, dist_arr.data):
                 score = 1-(v/max_dist)
+                score = weight_arr[i, j] * score                
                 score_arr[i, j] = score
                 Q[i, j] = 1
                 if score > max_score:
@@ -173,6 +185,7 @@ class MaxWeightedMatching:
             max_score = 0
             for i, j, v in itertools.izip(dist_arr.row, dist_arr.col, dist_arr.data):
                 score = 1-v
+                score = weight_arr[i, j] * score                
                 score_arr[i, j] = score
                 Q[i, j] = 1
                 if score > max_score:

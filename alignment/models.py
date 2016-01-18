@@ -109,7 +109,14 @@ class AlignmentRow(object):
         for feature in self.features:
             total_intensity = total_intensity + feature.intensity
         return total_intensity / len(self.features)    
-        
+    
+    def get_average_fingerprint(self):
+        '''Computes the average fingerprint'''
+        total_fingerprint = np.zeros_like(self.features[0].fingerprint)
+        for feature in self.features:
+            total_fingerprint = total_fingerprint + feature.fingerprint
+        return total_fingerprint / len(self.features)    
+    
     def is_within_tolerance(self, another_row, dmz, drt, absolute_mass_tolerance=True):
         if another_row.aligned == True:
             return False
