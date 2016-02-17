@@ -29,7 +29,7 @@ def load_or_create_clustering(filename, input_dir, transformation_file, hp):
         loader = FileLoader()        
         data_list = loader.load_model_input(input_dir, synthetic=True)
         aligner = Aligner(data_list, None, transformation_file, 
-                               hp, verbose=False, seed=1234567890, parallel=True, mh_biggest=True, use_vb=False)
+                               hp, verbose=False, seed=1234567890, parallel=False, mh_biggest=True, use_vb=False)
         clustering_results = aligner._first_stage_clustering()
         combined_list = zip(data_list, clustering_results)
         with gzip.GzipFile(filename, 'wb') as f:
