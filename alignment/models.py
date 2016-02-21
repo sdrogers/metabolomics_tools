@@ -17,12 +17,15 @@ class HyperPars(object):
         self.dp_alpha = 1000.0
         self.beta = 0.1
 
-        self.t = 0.0
         self.mass_clustering_n_iterations = 200
         self.rt_clustering_nsamps = 100
         self.rt_clustering_burnin = 0
         
         self.matching_alpha = 0.3
+        self.second_stage_clustering_use_mass_likelihood = True
+        self.second_stage_clustering_use_rt_likelihood = True
+        self.second_stage_clustering_use_adduct_likelihood = True
+
         
     def __repr__(self):
         return "Hyperparameters " + utils.print_all_attributes(self)

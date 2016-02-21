@@ -12,8 +12,7 @@ import scipy.sparse as sp
 
 class DpMixtureGibbs:
     
-    def __init__(self, data, hyperpars, seed=-1, verbose=False, 
-                 use_rt_likelihood=True, use_mass_likelihood=False, use_adduct_likelihood=True):
+    def __init__(self, data, hyperpars, seed=-1, verbose=False):
         ''' 
         Clusters bins by DP mixture model using Gibbs sampling
         '''
@@ -22,9 +21,9 @@ class DpMixtureGibbs:
             print 'DpMixtureGibbs initialised'
             sys.stdout.flush()
             
-        self.use_rt_likelihood = use_rt_likelihood
-        self.use_mass_likelihood = use_mass_likelihood
-        self.use_adduct_likelihood = use_adduct_likelihood
+        self.use_rt_likelihood = hyperpars.second_stage_clustering_use_rt_likelihood
+        self.use_mass_likelihood = hyperpars.second_stage_clustering_use_mass_likelihood
+        self.use_adduct_likelihood = hyperpars.second_stage_clustering_use_adduct_likelihood
 
         # prepare arrays for concrete bins, posterior rts 
         # and word counts (from 1st stage clustering)

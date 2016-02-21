@@ -16,6 +16,7 @@ import timeit
 
 import seaborn as sns
 
+from multifile_feature import MultifileFeatureExtractor
 import multifile_utils as utils
 
 class MultifileLDA(object):
@@ -35,16 +36,32 @@ class MultifileLDA(object):
         self.ms1s = {}
         self.ms2s = {}
         self.Ds = {}
-        self.vocab = None
+        self.vocab = None        
+        
+        if len(input_set[0]) == 4:
+            do_feature_extraction = False
+        elif len(input_set[0]) == 2:
+            do_feature_extraction = True
+            extractor = MultifileFeatureExtractor(input_set)
+            extractor.create_features()
+            
+        return
 
         for f in range(self.F):        
             
             entry = input_set[f]
-            
-            fragment_filename, neutral_loss_filename, ms1_filename, ms2_filename = entry
-            df, vocab, ms1, ms2 = self._load_data(f, fragment_filename, neutral_loss_filename, 
-                                                  ms1_filename, ms2_filename, 
-                                                  scaling_factor, normalise)
+            if do_feature_extraction:
+                
+                # perform feature extraction
+                df, vocab, ms1, ms2 = extractor.get_entry(f)
+                
+            else:
+                
+                # load features that have been extracted            
+                fragment_filename, neutral_loss_filename, ms1_filename, ms2_filename = entry
+                df, vocab, ms1, ms2 = self._load_data(f, fragment_filename, neutral_loss_filename, 
+                                                      ms1_filename, ms2_filename, 
+                                                      scaling_factor, normalise)
             nrow, ncol = df.shape
             assert nrow == len(ms1)
             assert ncol == len(vocab)
@@ -302,10 +319,15 @@ class MultifileLDA(object):
 def main():    
     
     lda = MultifileLDA()
+#     input_set = [
+#                  ('input/beer3pos_fragments_1.csv', 'input/beer3pos_losses_1.csv', 'input/beer3pos_ms1_1.csv','input/beer3pos_ms2_1.csv'),
+#                  ('input/beer3pos_fragments_2.csv', 'input/beer3pos_losses_2.csv', 'input/beer3pos_ms1_2.csv','input/beer3pos_ms2_2.csv'),
+#                  ('input/beer3pos_fragments_3.csv', 'input/beer3pos_losses_3.csv', 'input/beer3pos_ms1_3.csv','input/beer3pos_ms2_3.csv')
+#                  ]
     input_set = [
-                 ('input/beer3pos_fragments_1.csv', 'input/beer3pos_losses_1.csv', 'input/beer3pos_ms1_1.csv','input/beer3pos_ms2_1.csv'),
-                 ('input/beer3pos_fragments_2.csv', 'input/beer3pos_losses_2.csv', 'input/beer3pos_ms1_2.csv','input/beer3pos_ms2_2.csv'),
-                 ('input/beer3pos_fragments_3.csv', 'input/beer3pos_losses_3.csv', 'input/beer3pos_ms1_3.csv','input/beer3pos_ms2_3.csv')
+                 ('input/beer3pos_ms1_1.csv','input/beer3pos_ms2_1.csv'),
+                 ('input/beer3pos_ms1_2.csv','input/beer3pos_ms2_2.csv'),
+                 ('input/beer3pos_ms1_3.csv','input/beer3pos_ms2_3.csv')
                  ]
     lda.load_all(input_set)    
     lda.run(300, 0.01, 0.1, n_burn=0, n_samples=20, n_thin=1)
