@@ -5,6 +5,8 @@ sys.path.append(basedir)
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import pylab as plt
 
 import cPickle
 import random
@@ -175,3 +177,127 @@ def load_or_create_filelist(filename, combined_list, n_iter, n_files):
             cPickle.dump(item_list, f, protocol=cPickle.HIGHEST_PROTOCOL)                    
         print "Saved to %s" % filename
         return item_list
+        
+def replace_clustering(combined_list, item_list):
+
+    combined_map = {}
+    for peakdata, clustering in combined_list:
+        combined_map[peakdata.filename] = clustering
+
+    new_item_list = []
+    for row in item_list:
+        new_row = []
+        for peakdata, clustering in row:
+            new_clustering = combined_map[peakdata.filename]
+            new_item = (peakdata, new_clustering)
+            new_row.append(new_item)
+        new_item_list.append(new_row)
+
+    return new_item_list
+    
+def second_stage_clustering(hp, training_list, i, evaluation_method, transformation_file, gt_file, use_adduct_likelihood=True):
+
+    hp.second_stage_clustering_use_adduct_likelihood = use_adduct_likelihood    
+    print hp
+    
+    training_data = training_list[i]
+    print "Iteration %d" % i
+    print "Training on %s" % [x[0].filename for x in training_data]
+
+    param = (hp.across_file_mass_tol, hp.across_file_rt_tol )
+    selected_files = [x[0] for x in training_data]  
+    selected_clusterings = [x[1] for x in training_data]            
+    aligner = Aligner(selected_files, None, transformation_file, 
+                           hp, verbose=False, seed=1234567890, parallel=False)
+    match_mode = 2
+    aligner.run(match_mode, first_stage_clustering_results=selected_clusterings)
+
+    res = aligner.evaluate_performance(gt_file, verbose=False, print_TP=True, method=evaluation_method)
+    performances = []
+    for r in res:
+        performances.append(param+r)
+    df = pd.DataFrame(performances, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold'])
+    return df
+    
+def plot_density(exp_res, title):
+    training_dfs = []
+    for item in exp_res:
+        training_data, training_df, best_training_row, match_res = item
+        training_dfs.append(training_df)
+    combined = pd.concat(training_dfs, axis=0)
+    combined = combined.reset_index(drop=True)
+#     f, ax = plt.subplots(figsize=(6, 6))    
+#     sns.kdeplot(combined.Rec, combined.Prec, ax=ax)
+#     sns.rugplot(combined.Rec, ax=ax)
+#     sns.rugplot(combined.Prec, vertical=True, ax=ax)    
+#     ax.set_xlim([0.7, 1.0])
+#     ax.set_ylim([0.7, 1.0])
+    g = sns.JointGrid(x="Rec", y="Prec", data=combined, xlim=(0.7, 1.0), ylim=(0.7, 1.0))
+    g = g.plot_joint(sns.kdeplot)
+    g = g.plot_marginals(sns.kdeplot, shade=True)
+    ax = g.ax_joint
+    ax.set_xlabel('Rec', fontsize=24)
+    ax.set_ylabel('Prec', fontsize=24)
+    ax = g.ax_marg_x
+    ax.set_title(title, fontsize=24)  
+    
+def get_training_rows(exp_res, matching, no_files):
+    rows = []
+    for i in range(len(exp_res)):
+        item = exp_res[i]
+        training_data, training_df, best_training_row, match_res = item
+        best_training_row['no_files'] = no_files
+        best_training_row['matching'] = matching
+        best_training_row['iter'] = i
+        rows.append(best_training_row)
+    return rows
+    
+def get_testing_rows(exp_res, matching, no_files):
+    rows = []
+    for i in range(len(exp_res)):
+        item = exp_res[i]
+        training_data, training_df, best_training_row, match_res = item
+        if matching == 'MWG':
+            temp = match_res[0:2] + match_res[4:]
+            testing_results = temp + (no_files, matching, i)
+        else:
+            testing_results = match_res  + (no_files, matching, i)            
+        rows.append(testing_results)
+    return rows
+    
+def plot_training_boxplot():
+    rows = []
+    rows.extend(get_training_rows(exp_results_2a, 'MW', 2))
+    rows.extend(get_training_rows(exp_results_2c, 'MWG', 2))
+    rows.extend(get_training_rows(exp_results_2b, 'Cluster-Match', 2))
+    df = pd.DataFrame(rows)
+    df = df.reset_index(drop=True)
+    ax = sns.boxplot(x="matching", y="F1", data=df, palette="Set3", width=0.5)
+    ax.set_title('Training Performance', fontsize=24)
+    
+def plot_testing_boxplot():
+    rows = []
+    rows.extend(get_testing_rows(exp_results_2a, 'MW', 2))
+    rows.extend(get_testing_rows(exp_results_2c, 'MWG', 2))
+    rows.extend(get_testing_rows(exp_results_2b, 'Cluster-Match', 2))
+    df = pd.DataFrame(rows, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold', 'no_files', 'matching', 'iter'])
+    df = df.reset_index(drop=True)
+    ax = sns.boxplot(x="matching", y="F1", data=df, palette="Set3", width=0.5)
+    ax.set_title('Testing Performance', fontsize=24)
+    
+def plot_scatter(exp_res, idx, df, title):
+    item = exp_res[idx]
+    training_data, training_df, best_training_row, match_res = item
+    training_df = training_df.reset_index(drop=True)
+    g = sns.JointGrid(x="Rec", y="Prec", data=training_df)
+    g = g.plot_joint(plt.scatter, color=".5", edgecolor="white")
+    plt.figure(g.fig.number)
+    plt.plot(df.Rec, df.Prec, '.r-')    
+    # g = g.plot_marginals(sns.distplot, kde=False, color=".5")  
+    g = g.plot_marginals(sns.kdeplot, shade=True)
+    ax = g.ax_joint
+    ax.set_xlabel('Rec')
+    ax.set_ylabel('Prec')
+    ax.set_ylim([0.7, 1.0])
+    ax = g.ax_marg_x
+    ax.set_title(title)
