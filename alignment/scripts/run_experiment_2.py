@@ -12,6 +12,7 @@ from alignment.experiment import *
 
 def get_options(argv):
     parser = argparse.ArgumentParser()
+    parser.add_argument('-method', required=True, dest='method', help='Method', type=int)
     parser.add_argument('-iter', required=True, dest='iter', help='Iteration', type=int)
     options = parser.parse_args(argv)
     print "Options", options
@@ -34,8 +35,8 @@ def main(argv):
     hp.dp_alpha = 1000.0
     hp.beta = 0.1
     hp.t = 0.0
-    hp.mass_clustering_n_iterations = 200
-    hp.rt_clustering_nsamps = 100
+    hp.mass_clustering_n_iterations = 5000
+    hp.rt_clustering_nsamps = 1000
     hp.rt_clustering_burnin = 0
 
     print hp
@@ -58,8 +59,15 @@ def main(argv):
     n_files = 2
     training_list = load_or_create_filelist('../notebooks/pickles/training_list_2.p', None, n_iter, n_files)    
     testing_list = load_or_create_filelist('../notebooks/pickles/testing_list_2.p', None, n_iter, n_files)    
-    outfile = '../notebooks/pickles/res_mwg_2_iter_%d.p' % options.iter
-    exp_results = run_experiment_single(3, training_list, testing_list, options.iter, param_list_mwg, outfile, hp, evaluation_method, transformation_file, gt_file)
+    if options.method == 0:
+        outfile = '../notebooks/pickles/res_mw_2_iter_%d.p' % options.iter
+        exp_results = run_experiment_single(options.method, training_list, testing_list, options.iter, param_list, outfile, hp, evaluation_method, transformation_file, gt_file)
+    elif options.method == 1:
+        outfile = '../notebooks/pickles/res_cluster_match_2_iter_%d.p' % options.iter
+        exp_results = run_experiment_single(options.method, training_list, testing_list, options.iter, param_list, outfile, hp, evaluation_method, transformation_file, gt_file)
+    elif options.method == 3:
+        outfile = '../notebooks/pickles/res_mwg_2_iter_%d.p' % options.iter
+        exp_results = run_experiment_single(options.method, training_list, testing_list, options.iter, param_list_mwg, outfile, hp, evaluation_method, transformation_file, gt_file)
     
 if __name__ == "__main__":
    main(sys.argv[1:])
