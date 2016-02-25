@@ -186,7 +186,13 @@ def load_results(path, n_iter):
             item = cPickle.load(f)
             results.append(item)
             print "Loaded from %s" % filename
-    return results        
+    return results   
+    
+def load_clustering(path):
+    with gzip.GzipFile(path, 'rb') as f:
+        ac = cPickle.load(f)
+        print "Loaded from %s" % filename     
+    return ac
         
 def replace_clustering(combined_list, item_list):
 
