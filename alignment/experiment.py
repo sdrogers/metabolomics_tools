@@ -14,6 +14,8 @@ import copy
 import glob
 import gzip
 
+from IPython.display import display, HTML
+
 from alignment.models import HyperPars as AlignmentHyperPars
 from discretisation.adduct_cluster import AdductCluster, Peak, Possible
 from discretisation import utils
@@ -191,7 +193,7 @@ def load_results(path, n_iter):
 def load_clustering(path):
     with gzip.GzipFile(path, 'rb') as f:
         ac = cPickle.load(f)
-        print "Loaded from %s" % filename     
+        print "Loaded from %s" % path     
     return ac
         
 def replace_clustering(combined_list, item_list):
@@ -333,6 +335,7 @@ def plot_scatter(exp_res, idx, df, title):
     item = exp_res[idx]
     training_data, training_df, best_training_row, match_res = item
     training_df = training_df.reset_index(drop=True)
+    display(training_df)
     g = sns.JointGrid(x="Rec", y="Prec", data=training_df)
     g = g.plot_joint(plt.scatter, color=".5", edgecolor="white")
     plt.figure(g.fig.number)
