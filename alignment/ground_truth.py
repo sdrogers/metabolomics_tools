@@ -1,4 +1,6 @@
 import glob
+import itertools
+import operator
 import os
 import sys
 
@@ -6,6 +8,7 @@ from discretisation import utils
 from discretisation.preprocessing import FileLoader
 import numpy as np
 import pylab as plt
+
 
 class GroundTruth:
         
@@ -248,6 +251,47 @@ class GroundTruth:
         except ZeroDivisionError:
             return tp_count, fp_count, fn_count, 0, 0, 0, th_prob        
 
+    def evaluate_alignment_results_3(self, alignment_results, th_prob, annotations=None, 
+                                     feature_binning=None, verbose=False, print_TP=True, q=2):   
+                 
+        ground_truth = []
+        all_ground_truth_features = set()
+        for item in self.gt_features:
+            feature_keys = [f._get_key() for f in item]
+            ground_truth.append(feature_keys)    
+            all_ground_truth_features.update(feature_keys)
+
+        peaksets = []
+        feature_map = {}
+        for item, prob in alignment_results:
+            ps_keys = [f._get_key() for f in item]
+            for f in item:
+                feature_map[f._get_key()] = f
+            peaksets.append(ps_keys)
+
+        g_plus = self._get_combination_peakset(ground_truth, whitelist=None, q=q)
+        t = self._get_combination_peakset(peaksets, whitelist=all_ground_truth_features, q=q)
+        
+        # TP = should be aligned & are aligned = G+ intersect t
+        tp = g_plus.intersection(t)
+        
+        # FN = should be aligned & aren't aligned = G+ \ t
+        fn = g_plus - t
+
+        # FP = shouldn't be aligned & are aligned = t \ G+
+        fp = t - g_plus
+        
+        tp_count = float(len(tp))
+        fp_count = float(len(fp))
+        fn_count = float(len(fn))                        
+        try:
+            prec = tp_count/(tp_count+fp_count)
+            rec = tp_count/(tp_count+fn_count)
+            f1 = (2*tp_count)/((2*tp_count)+fp_count+fn_count)
+            return tp_count, fp_count, fn_count, prec, rec, f1, th_prob
+        except ZeroDivisionError:
+            return tp_count, fp_count, fn_count, 0, 0, 0, th_prob        
+
     def _get_pairwise_peakset(self, peaksets, whitelist=None):
         
         results = []
@@ -263,7 +307,7 @@ class GroundTruth:
                             continue
                         else:
                             results.append((item1, item2))
-
+                            
         if whitelist is not None:            
             unique_res = []                            
             for items in results:
@@ -280,6 +324,33 @@ class GroundTruth:
             return set(unique_res)
         else:
             return set(results)            
+
+    def _get_combination_peakset(self, peaksets, whitelist=None, q=2):
+        
+        results = []
+        for ps in peaksets:
+            
+            # get the q-size combinations
+            for combi in itertools.combinations(ps, q): 
+
+                # sort the combination
+                temp = list(combi)
+                temp.sort(key=operator.itemgetter(1))
+                temp = tuple(temp)
+                
+                # check if it should be included
+                found = False
+                if whitelist is not None:
+                    for to_check in temp:
+                        if to_check in whitelist:
+                            found = True
+                            break
+                    if found:
+                        results.append(temp)        
+                else:
+                    results.append(temp)                            
+                    
+        return set(results)
 
     def _get_annotated_string(self, peakset, annotations):
         output = "\n"

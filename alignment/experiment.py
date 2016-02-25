@@ -39,7 +39,7 @@ def load_or_create_clustering(filename, input_dir, transformation_file, hp):
         print "Saved to %s" % filename
         return combined_list
         
-def train(selected_data, param_list, hp, match_mode, evaluation_method, transformation_file, gt_file):
+def train(selected_data, param_list, hp, match_mode, evaluation_method, transformation_file, gt_file, q=2):
     
     performances = []
     for param in param_list:
@@ -59,7 +59,7 @@ def train(selected_data, param_list, hp, match_mode, evaluation_method, transfor
                                hp, verbose=False, seed=1234567890)
         aligner.run(match_mode, first_stage_clustering_results=selected_clusterings)
 
-        res = aligner.evaluate_performance(gt_file, verbose=False, print_TP=True, method=evaluation_method)
+        res = aligner.evaluate_performance(gt_file, verbose=False, print_TP=True, method=evaluation_method, q=q)
         output = param+res[0]
         if len(param) > 2:
             print "mass_tol=%d, rt_tol=%d, grouping_tol=%d, matching_alpha=%.1f, tp=%d, fp=%d, fn=%d, prec=%.3f, rec=%.3f, f1=%.3f, th_prob=%.3f" % output        
@@ -77,7 +77,7 @@ def train(selected_data, param_list, hp, match_mode, evaluation_method, transfor
     best_row = sorted_df.iloc[0]
     return df, best_row
     
-def test(selected_data, best_row, hp, match_mode, evaluation_method, transformation_file, gt_file):
+def test(selected_data, best_row, hp, match_mode, evaluation_method, transformation_file, gt_file, q=2):
 
     if 'grouping_tol' in best_row:
         param = (best_row['mass_tol'], best_row['rt_tol'], best_row['grouping_tol'], best_row['matching_alpha'])
@@ -96,19 +96,19 @@ def test(selected_data, best_row, hp, match_mode, evaluation_method, transformat
                            hp, verbose=False, seed=1234567890)
     aligner.run(match_mode, first_stage_clustering_results=selected_clusterings)
 
-    res = aligner.evaluate_performance(gt_file, verbose=False, print_TP=True, method=evaluation_method)
+    res = aligner.evaluate_performance(gt_file, verbose=False, print_TP=True, method=evaluation_method, q=q)
     output = param+res[0]
     return output
     
-def train_test_single(match_mode, training_data, testing_data, i, param_list, hp, evaluation_method, transformation_file, gt_file):
+def train_test_single(match_mode, training_data, testing_data, i, param_list, hp, evaluation_method, transformation_file, gt_file, q=2):
     
     print "Iteration %d" % i
     print "Training on %s" % [x[0].filename for x in training_data]
-    training_df, best_training_row = train(training_data, param_list, hp, match_mode, evaluation_method, transformation_file, gt_file)
+    training_df, best_training_row = train(training_data, param_list, hp, match_mode, evaluation_method, transformation_file, gt_file, q=q)
     print "Best row is\n%s" % best_training_row
 
     print "Testing on %s" % [x[0].filename for x in testing_data]
-    match_res = test(testing_data, best_training_row, hp, match_mode, evaluation_method, transformation_file, gt_file)
+    match_res = test(testing_data, best_training_row, hp, match_mode, evaluation_method, transformation_file, gt_file, q=q)
     output = (match_mode,) + match_res
     if len(output) == 10:
         print "match_mode=%d, mass_tol=%d, rt_tol=%d, tp=%d, fp=%d, fn=%d, prec=%.3f, rec=%.3f, f1=%.3f, th_prob=%.3f" % output
@@ -118,14 +118,14 @@ def train_test_single(match_mode, training_data, testing_data, i, param_list, hp
     item = (training_data, training_df, best_training_row, match_res)
     return item
     
-def train_test(match_mode, training_list, testing_list, param_list, hp, evaluation_method, transformation_file, gt_file):
+def train_test(match_mode, training_list, testing_list, param_list, hp, evaluation_method, transformation_file, gt_file, q=2):
     assert len(training_list) == len(testing_list)
     n_iter = len(training_list)
     exp_results = []
     for i in range(n_iter):
         training_data = training_list[i]
         testing_data = testing_list[i]
-        item = train_test_single(match_mode, training_data, testing_data, i, param_list, hp, evaluation_method, transformation_file, gt_file)
+        item = train_test_single(match_mode, training_data, testing_data, i, param_list, hp, evaluation_method, transformation_file, gt_file, q=q)
         exp_results.append(item)
         print
         
@@ -146,14 +146,14 @@ def run_experiment_single(match_mode, training_list, testing_list, i, param_list
         print "Saved to %s" % filename
     return item
     
-def run_experiment(match_mode, training_list, testing_list, param_list, filename, hp, evaluation_method, transformation_file, gt_file):
+def run_experiment(match_mode, training_list, testing_list, param_list, filename, hp, evaluation_method, transformation_file, gt_file, q=2):
     try:
         with gzip.GzipFile(filename, 'rb') as f:        
             exp_results = cPickle.load(f)
             print "Loaded from %s" % filename
             return exp_results
     except (IOError, EOFError):
-        exp_results = train_test(match_mode, training_list, testing_list, param_list, hp, evaluation_method, transformation_file, gt_file)
+        exp_results = train_test(match_mode, training_list, testing_list, param_list, hp, evaluation_method, transformation_file, gt_file, q=q)
         with gzip.GzipFile(filename, 'wb') as f:
             cPickle.dump(exp_results, f, protocol=cPickle.HIGHEST_PROTOCOL)                        
         print "Saved to %s" % filename
@@ -205,16 +205,16 @@ def replace_clustering(combined_list, item_list):
 
     return new_item_list
     
-def evaluate_performance(hp, aligner, gt_file, evaluation_method):
+def evaluate_performance(hp, aligner, gt_file, evaluation_method, q=2):
     param = (hp.across_file_mass_tol, hp.across_file_rt_tol )
-    res = aligner.evaluate_performance(gt_file, verbose=False, print_TP=True, method=evaluation_method)
+    res = aligner.evaluate_performance(gt_file, verbose=False, print_TP=True, method=evaluation_method, q=q)
     performances = []
     for r in res:
         performances.append(param+r)
     df = pd.DataFrame(performances, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold'])
     return df
     
-def second_stage_clustering(hp, training_list, i, evaluation_method, transformation_file, gt_file, clustering_out=None, df_out=None, use_adduct_likelihood=True, parallel=False):
+def second_stage_clustering(hp, training_list, i, evaluation_method, transformation_file, gt_file, clustering_out=None, df_out=None, use_adduct_likelihood=True, parallel=False, q=2):
 
     hp.second_stage_clustering_use_adduct_likelihood = use_adduct_likelihood    
     print hp
@@ -235,7 +235,7 @@ def second_stage_clustering(hp, training_list, i, evaluation_method, transformat
             cPickle.dump(aligner, f, protocol=cPickle.HIGHEST_PROTOCOL)                    
         print "Saved clustering to %s" % clustering_out
 
-    df = evaluate_performance(hp, aligner, gt_file, evaluation_method)
+    df = evaluate_performance(hp, aligner, gt_file, evaluation_method, q=q)
     if df_out is not None:
         df.to_pickle(df_out)    
         print "Saved df to %s" % df_out

@@ -53,8 +53,6 @@ def get_options(argv):
     parser.set_defaults(alpha_rt=alignment_hp.dp_alpha)
     parser.add_argument('-beta_adduct', help='Dirichlet prior on the adduct fingerprint', type=float)
     parser.set_defaults(beta_adduct=alignment_hp.beta)
-    parser.add_argument('-t', help='threshold for cluster membership for precursor mass clustering', type=float)
-    parser.set_defaults(t=alignment_hp.t)
     parser.add_argument('-mass_clustering_n_iterations', help='no. of iterations for VB precursor clustering', type=int)
     parser.set_defaults(mass_clustering_n_iterations=alignment_hp.mass_clustering_n_iterations)
     parser.add_argument('-rt_clustering_nsamps', help='no. of total samples for Gibbs RT clustering', type=int)
@@ -90,7 +88,6 @@ def main(argv):
     alignment_hp.alpha_mass = options.alpha_mass
     alignment_hp.dp_alpha = options.alpha_rt
     alignment_hp.beta = options.beta_adduct
-    alignment_hp.t = options.t
     alignment_hp.mass_clustering_n_iterations = options.mass_clustering_n_iterations
     alignment_hp.rt_clustering_nsamps = options.rt_clustering_nsamps
     alignment_hp.rt_clustering_burnin = options.rt_clustering_burnin

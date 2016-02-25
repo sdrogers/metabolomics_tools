@@ -250,7 +250,7 @@ class SharedBinMatching:
                 if self.verbose:
                     print 'Nothing written to', output_path
 
-    def evaluate_performance(self, gt_file, verbose=False, print_TP=True, method=2):
+    def evaluate_performance(self, gt_file, verbose=False, print_TP=True, method=2, q=2):
 
         performance = []
         gt = GroundTruth(gt_file, self.file_list, self.data_list, verbose=verbose)
@@ -262,6 +262,8 @@ class SharedBinMatching:
                 results = gt.evaluate_alignment_results_1(peaksets, 1.0, annotations=self.annotations, feature_binning=None, verbose=verbose, print_TP=print_TP)    
             elif method ==  2:
                 results = gt.evaluate_alignment_results_2(peaksets, 1.0, annotations=self.annotations, feature_binning=None, verbose=verbose, print_TP=print_TP)                    
+            elif method == 3:
+                results = gt.evaluate_alignment_results_3(peaksets, 1.0, annotations=self.annotations, feature_binning=None, verbose=verbose, print_TP=print_TP, q=q)                                    
             performance.append(results)
         
         else:
@@ -280,6 +282,8 @@ class SharedBinMatching:
                         results = gt.evaluate_alignment_results_1(peaksets, th_prob, annotations=self.annotations, feature_binning=None, verbose=verbose)  
                     elif method == 2:
                         results = gt.evaluate_alignment_results_2(peaksets, th_prob, annotations=self.annotations, feature_binning=None, verbose=verbose)                          
+                    elif method == 3:
+                        results = gt.evaluate_alignment_results_3(peaksets, th_prob, annotations=self.annotations, feature_binning=None, verbose=verbose, q=q)                          
                     # print results
                     if results is not None:  
                         performance.append(results)
