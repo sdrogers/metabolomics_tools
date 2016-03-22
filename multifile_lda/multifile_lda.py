@@ -41,18 +41,24 @@ class MultifileLDA(object):
         if len(input_set[0]) == 4:
             do_feature_extraction = False
         elif len(input_set[0]) == 2:
+
             do_feature_extraction = True
             extractor = MultifileFeatureExtractor(input_set)
-            extractor.create_features()
             
-        return
+            fragment_q = extractor.make_fragment_queue()
+            fragment_groups = extractor.group_features(fragment_q, extractor.fragment_grouping_tol)
 
+            loss_q = extractor.make_loss_queue()
+            loss_groups = extractor.group_features(loss_q, extractor.loss_grouping_tol, check_threshold=True)
+            extractor.create_dataframes(fragment_groups, loss_groups)
+            
         for f in range(self.F):        
             
             entry = input_set[f]
             if do_feature_extraction:
                 
                 # perform feature extraction
+                extractor.normalise(f, scaling_factor)
                 df, vocab, ms1, ms2 = extractor.get_entry(f)
                 
             else:
@@ -63,7 +69,7 @@ class MultifileLDA(object):
                                                       ms1_filename, ms2_filename, 
                                                       scaling_factor, normalise)
             nrow, ncol = df.shape
-            assert nrow == len(ms1)
+            assert nrow == len(ms1), "df shape %s doesn't match %d" % (df.shape, len(ms1))
             assert ncol == len(vocab)
 
             self.Ds[f] = nrow
@@ -71,7 +77,7 @@ class MultifileLDA(object):
             self.ms1s[f] = ms1
             self.ms2s[f] = ms2
             self.vocab = vocab
-            
+
     def _load_data(self, f, fragment_filename, neutral_loss_filename, ms1_filename, ms2_filename, scaling_factor, normalise):
     
         print "Loading file " + str(f),
@@ -219,9 +225,12 @@ class MultifileLDA(object):
         for f in range(len(self.doc_topic_)):
             self.thresholded_doc_topic.append(utils.threshold_matrix(self.doc_topic_[f], epsilon=th_doc_topic))        
                 
-    def print_top_words(self, with_probabilities=True, query=None):
+    def print_top_words(self, with_probabilities=True, selected=None):
         
         for i, topic_dist in enumerate(self.thresholded_topic_word):
+            
+            if selected is not None and i not in selected:
+                continue
             
             ordering = np.argsort(topic_dist)
             topic_words = np.array(self.vocab)[ordering][::-1]
@@ -329,7 +338,7 @@ def main():
                  ('input/beer3pos_ms1_2.csv','input/beer3pos_ms2_2.csv'),
                  ('input/beer3pos_ms1_3.csv','input/beer3pos_ms2_3.csv')
                  ]
-    lda.load_all(input_set)    
+    lda.load_all(input_set, scaling_factor=10)    
     lda.run(300, 0.01, 0.1, n_burn=0, n_samples=20, n_thin=1)
     lda.plot_e_alphas()
     
