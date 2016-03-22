@@ -359,7 +359,7 @@ class AdductCluster(object):
 		print "CLUSTER {}".format(cluster.id)
 		max_intensity = 0
 		for p in range(len(members)):
-			print "Peak: {},{},{} -> {},{} (p={})".format(members[p].mass,members[p].rt,members[p].intensity,
+			print "Peak {} : {},{},{} -> {},{} (p={})".format(members[p]._get_key(), members[p].mass,members[p].rt,members[p].intensity,
 												possibles[p].transformation.name,
 												possibles[p].transformed_mass,
 												possibles[p].prob)
