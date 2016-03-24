@@ -11,9 +11,13 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
             alphas, beta, Z,
             cdk, cd, ckn, ck):    
 
+    all_files_ckn = np.zeros_like(ckn[0])
+    all_files_ck = np.zeros_like(ck[0])
     items = []
     for f in range(F):
         file_D = Ds[f]
+        all_files_ckn += ckn[f]
+        all_files_ck += ck[f]
         for d in range(file_D):
             word_locs = document_indices[(f, d)]
             for pos, n in word_locs:
@@ -21,14 +25,14 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
                 items.append(item)
 
     N_beta = np.sum(beta)
-    thin = 0
+    thin = 0    
     for samp in range(n_samples):
     
         s = samp+1        
         if s >= n_burn:
-            print("Sample " + str(s) + " "),
+            print 'Sample  %5d ' % s,
         else:
-            print("Burn-in " + str(s) + " "),
+            print 'Burn-in %5d ' % s,
 
         counter = 0        
         random_order = range(len(items))
@@ -56,13 +60,12 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
             file_cdk[d, k] -= 1
             file_ckn[k, n] -= 1
             file_ck[k] -= 1
+            all_files_ckn[k, n] -= 1
+            all_files_ck[k] -= 1
             
             # compute prior and likelihood
-            all_files_ck = np.zeros_like(file_ck)
-            for this_f in range(F):
-                all_files_ck += ck[this_f]
             log_prior = np.log(file_cdk[d, :] + file_alpha)    
-            log_likelihood = np.log(file_ckn[:, n] + beta[n]) - np.log(all_files_ck + N_beta)
+            log_likelihood = np.log(all_files_ckn[:, n] + beta[n]) - np.log(all_files_ck + N_beta)
 
             # sample new k from the posterior distribution log_post
             log_post = log_likelihood + log_prior
@@ -86,35 +89,34 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
             # reassign word back into model
             file_cdk[d, k] += 1
             file_ckn[k, n] += 1
+            all_files_ckn[k, n] += 1
+            all_files_ck[k] += 1
             file_ck[k] += 1
             Z[(f, d, pos)] = k
             
             counter += 1
 
-        print                
-
-#         thin += 1                
-#         if s>n_burn and thin%n_thin==0: 
-#             ll = 0
-#             ll += p_w_z(F, N, K, beta, N_beta, ckn, ck)
-#             for ll_f in range(F):
-#                 f_D = Ds[ll_f]
-#                 f_alpha = alphas[ll_f]
-#                 f_cdk = cdk[ll_f]
-#                 f_cd = cd[ll_f]
-#                 f_K_alpha = np.sum(f_alpha)
-#                 ll += p_z(f_D, K, f_alpha, f_K_alpha, f_cdk, f_cd)                  
-#             print(" - Log likelihood = %.3f " % ll)                                          
+        thin += 1                
+        if s>n_burn and thin%n_thin==0: 
+            ll = 0
+            ll += p_w_z(F, N, K, beta, N_beta, all_files_ckn, all_files_ck)
+            for ll_f in range(F):
+                f_D = Ds[ll_f]
+                f_alpha = alphas[ll_f]
+                f_cdk = cdk[ll_f]
+                f_cd = cd[ll_f]
+                f_K_alpha = np.sum(f_alpha)
+                ll += p_z(f_D, K, f_alpha, f_K_alpha, f_cdk, f_cd)                  
+            print(" Log likelihood = %.3f " % ll)
+        else:
+            print
 
     thetas = []
     posterior_alphas = []            
-    all_files_ckn = None
     for f in range(F):
         
         file_D = Ds[f]
         file_cdk = cdk[f]
-        file_ckn = ckn[f]
-        file_ck = ck[f]
         file_alpha = alphas[f]        
 
         # update theta for this file
@@ -124,32 +126,15 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
         
         # update alpha for this file
         alpha_new = estimate_alpha_from_counts(file_D, K, file_alpha, file_cdk)
-        # alphas[f] = alpha_new
         posterior_alphas.append(alpha_new)
-        
-        if all_files_ckn is None:
-            all_files_ckn = file_ckn
-        else:
-            all_files_ckn += file_ckn
             
     # update phi for all files
     phi = all_files_ckn + beta
     phi /= np.sum(phi, axis=1)[:, np.newaxis]
-
+    
     return phi, thetas, posterior_alphas
 
-def p_w_z(F, N, K, beta, N_beta, ckn, ck):
-
-    all_files_ckn = None
-    all_files_ck = None
-    for f in range(F):
-        if all_files_ckn is None:
-            all_files_ckn = ckn[f]
-            all_files_ck = ck[f]
-        else:
-            all_files_ckn += ckn[f]
-            all_files_ck += ck[f]
-    
+def p_w_z(F, N, K, beta, N_beta, all_files_ckn, all_files_ck):
     val = K * ( gammaln(N_beta) - np.sum(gammaln(beta)) )
     for k in range(K):
         for n in range(N):
