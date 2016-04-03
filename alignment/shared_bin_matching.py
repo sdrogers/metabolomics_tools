@@ -137,7 +137,7 @@ class SharedBinMatching:
             self.file_data = file_data
 
         elif match_mode == 2: # match with DP clustering
-
+            
             # do first-stage precursor clustering if not present
             if first_stage_clustering_results is None:
                 clustering_results = self._first_stage_clustering()        
@@ -189,6 +189,9 @@ class SharedBinMatching:
             
             matching_results, samples_obtained, all_groups = self._second_stage_clustering(all_nonempty_clusters)
             alignment_results = self._construct_alignment(matching_results, samples_obtained)
+
+            self.samples_obtained = samples_obtained
+            self.matching_results = matching_results
             self.clustering_results = clustering_results
             self.all_nonempty_clusters = all_nonempty_clusters
             self.all_groups = all_groups
@@ -521,64 +524,30 @@ class SharedBinMatching:
         
         if self.verbose:
             print "Constructing alignment of peak features"
-        
-        # count frequencies of aligned bins produced across the Gibbs samples
+
         counter = dict()
-        for n in range(len(matching_results)):
-            
-            bins = matching_results[n]
-            if self.verbose and n%1000 == 0:
-                print str(n) + "/" + str(len(matching_results))
-                sys.stdout.flush()
-                                            
-            enumerate_powersets = False
-            if enumerate_powersets:
-                # might give a ridiculous amount of results
-                # convert bins into its powerset, see http://stackoverflow.com/questions/18826571/python-powerset-of-a-given-set-with-generators
-                for z in chain.from_iterable(combinations(bins, r) for r in range(len(bins)+1)):
-                    if len(z) == 0: # skip empty set
-                        continue
-                    sorted_z = sorted(z, key = attrgetter('origin'))
-                    sorted_z = tuple(sorted_z)
-                    if sorted_z not in counter:
-                        counter[sorted_z] = 1
-                    else:
-                        counter[sorted_z] += 1
-            else:
-                # track the original set
-                if bins not in counter:
-                    counter[bins] = 1
+        for group in matching_results:
+            matched_list = self._simple_matching(group)
+            for features in matched_list:
+                peakset = frozenset(features)
+                if peakset not in counter:
+                    counter[peakset] = 1
                 else:
-                    counter[bins] += 1
-                    
-        if self.verbose:
-            print
-        
+                    counter[peakset] += 1
+                
         # normalise the counts
         S = samples_obtained
         normalised = dict()
         for key, value in counter.items():
             new_value = float(value)/S
-            normalised[key] = new_value       
+            normalised[key] = new_value
             
-        # construct aligned peaksets in descending order of probabilities
+        sorted_list = sorted(normalised.items(), key=itemgetter(1), reverse=True)            
         alignment_results = []
-        sorted_list = sorted(normalised.items(), key=itemgetter(1), reverse=True)
-        probs = []
-        n = 0
-        
-        for item in sorted_list:
-            members = item[0]
-            prob = item[1]
-            if self.verbose and n % 1000 == 0:
-                print "Processing aligned bins " + str(n) + "/" + str(len(sorted_list)) + "\tprob " + str(prob)
-                sys.stdout.flush()
-            # members is a tuple of bins so the features inside need to be matched
-            matched_list = self._match_adduct_features(members) 
-            for features in matched_list:
-                res = AlignmentResults(peakset=features, prob=prob)
-                alignment_results.append(res)
-            n += 1
+        probs = []        
+        for peakset, prob in sorted_list:
+            res = AlignmentResults(peakset=peakset, prob=prob)
+            alignment_results.append(res)        
                 
         if show_plot:
             probs = np.array(probs) 
@@ -635,7 +604,8 @@ class SharedBinMatching:
         results = []
         if len(group) == 1:
             # just singleton things
-            for f in group[0].members:
+            elem = next(iter(group))
+            for f in elem.members:
                 peak_feature = f[0]
                 tup = (peak_feature, )
                 results.append(tup)                        
