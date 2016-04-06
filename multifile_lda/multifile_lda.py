@@ -77,6 +77,18 @@ class MultifileLDA(object):
             self.ms1s[f] = ms1
             self.ms2s[f] = ms2
             self.vocab = vocab
+            
+    def load_synthetic(self, dfs, vocab):
+
+        self.F = len(dfs)
+        self.dfs = dfs
+        self.vocab = vocab
+        self.Ds = {}
+        
+        for f in range(self.F):        
+            df = self.dfs[f]
+            nrow, ncol = df.shape
+            self.Ds[f] = nrow
 
     def _load_data(self, f, fragment_filename, neutral_loss_filename, ms1_filename, ms2_filename, scaling_factor, normalise):
     
@@ -205,7 +217,7 @@ class MultifileLDA(object):
             sampler_func = sample_numpy            
 
         # this will modify the various count matrices (Z, cdk, ckn, cd, ck) inside
-        self.topic_word_, self.doc_topic_, self.posterior_alphas = sampler_func(
+        self.topic_word_, self.doc_topic_, self.posterior_alphas, self.log_likelihoods = sampler_func(
                 self.random_state, n_burn, n_samples, n_thin,
                 self.F, self.Ds, self.N, self.K, self.document_indices,
                 self.alphas, self.beta, self.Z,

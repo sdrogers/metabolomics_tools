@@ -26,6 +26,7 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
 
     N_beta = np.sum(beta)
     thin = 0    
+    lls = []
     for samp in range(n_samples):
     
         s = samp+1        
@@ -108,6 +109,7 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
                 f_K_alpha = np.sum(f_alpha)
                 ll += p_z(f_D, K, f_alpha, f_K_alpha, f_cdk, f_cd)                  
             print(" Log likelihood = %.3f " % ll)
+            lls.append(ll)
         else:
             print
 
@@ -132,7 +134,7 @@ def sample_numpy(random_state, n_burn, n_samples, n_thin,
     phi = all_files_ckn + beta
     phi /= np.sum(phi, axis=1)[:, np.newaxis]
     
-    return phi, thetas, posterior_alphas
+    return phi, thetas, posterior_alphas, np.array(lls)
 
 def p_w_z(F, N, K, beta, N_beta, all_files_ckn, all_files_ck):
     val = K * ( gammaln(N_beta) - np.sum(gammaln(beta)) )
