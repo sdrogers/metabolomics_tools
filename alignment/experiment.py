@@ -30,19 +30,19 @@ def load_or_create_clustering(filename, input_dir, transformation_file, hp):
             print "Loaded from %s" % filename
             return combined_list
     except (IOError, EOFError):
-        loader = FileLoader()        
+        loader = FileLoader()
         data_list = loader.load_model_input(input_dir, synthetic=True)
-        aligner = Aligner(data_list, None, transformation_file, 
+        aligner = Aligner(data_list, None, transformation_file,
                                hp, verbose=False, seed=1234567890, parallel=False, mh_biggest=True, use_vb=False)
         clustering_results = aligner._first_stage_clustering()
         combined_list = zip(data_list, clustering_results)
         with gzip.GzipFile(filename, 'wb') as f:
-            cPickle.dump(combined_list, f, protocol=cPickle.HIGHEST_PROTOCOL)        
+            cPickle.dump(combined_list, f, protocol=cPickle.HIGHEST_PROTOCOL)
         print "Saved to %s" % filename
         return combined_list
-        
+
 def train(selected_data, param_list, hp, match_mode, evaluation_method, transformation_file, gt_file, q=2):
-    
+
     performances = []
     for param in param_list:
 
@@ -54,31 +54,31 @@ def train(selected_data, param_list, hp, match_mode, evaluation_method, transfor
         else:
             hp.across_file_mass_tol = param[0]
             hp.across_file_rt_tol = param[1]
-            
-        selected_files = [x[0] for x in selected_data]  
-        selected_clusterings = [x[1] for x in selected_data]            
-        aligner = Aligner(selected_files, None, transformation_file, 
+
+        selected_files = [x[0] for x in selected_data]
+        selected_clusterings = [x[1] for x in selected_data]
+        aligner = Aligner(selected_files, None, transformation_file,
                                hp, verbose=False, seed=1234567890)
         aligner.run(match_mode, first_stage_clustering_results=selected_clusterings)
 
         res = aligner.evaluate_performance(gt_file, verbose=False, print_TP=True, method=evaluation_method, q=q)
         output = param+res[0]
         if len(param) > 2:
-            print "mass_tol=%d, rt_tol=%d, grouping_tol=%d, matching_alpha=%.1f, tp=%d, fp=%d, fn=%d, prec=%.3f, rec=%.3f, f1=%.3f, th_prob=%.3f" % output        
+            print "mass_tol=%d, rt_tol=%d, grouping_tol=%d, matching_alpha=%.1f, tp=%d, fp=%d, fn=%d, prec=%.3f, rec=%.3f, f1=%.3f, th_prob=%.3f" % output
         else:
-            print "mass_tol=%d, rt_tol=%d, tp=%d, fp=%d, fn=%d, prec=%.3f, rec=%.3f, f1=%.3f, th_prob=%.3f" % output                    
+            print "mass_tol=%d, rt_tol=%d, tp=%d, fp=%d, fn=%d, prec=%.3f, rec=%.3f, f1=%.3f, th_prob=%.3f" % output
         performances.append(output)
 
     if len(param) > 2:
         df = pd.DataFrame(performances, columns=['mass_tol', 'rt_tol', 'grouping_tol', 'matching_alpha', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold'])
         sorted_df = df.sort_values(['F1', 'mass_tol', 'rt_tol', 'grouping_tol', 'matching_alpha'], ascending=[False, True, True, True, True])
     else:
-        df = pd.DataFrame(performances, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold'])    
+        df = pd.DataFrame(performances, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold'])
         sorted_df = df.sort_values(['F1', 'mass_tol', 'rt_tol'], ascending=[False, True, True])
-        
+
     best_row = sorted_df.iloc[0]
     return df, best_row
-    
+
 def test(selected_data, best_row, hp, match_mode, evaluation_method, transformation_file, gt_file, q=2):
 
     if 'grouping_tol' in best_row:
@@ -91,19 +91,19 @@ def test(selected_data, best_row, hp, match_mode, evaluation_method, transformat
         param = (best_row['mass_tol'], best_row['rt_tol'])
         hp.across_file_mass_tol = param[0]
         hp.across_file_rt_tol = param[1]
-        
+
     selected_files = [x[0] for x in selected_data]
-    selected_clusterings = [x[1] for x in selected_data]    
-    aligner = Aligner(selected_files, None, transformation_file, 
+    selected_clusterings = [x[1] for x in selected_data]
+    aligner = Aligner(selected_files, None, transformation_file,
                            hp, verbose=False, seed=1234567890)
     aligner.run(match_mode, first_stage_clustering_results=selected_clusterings)
 
     res = aligner.evaluate_performance(gt_file, verbose=False, print_TP=True, method=evaluation_method, q=q)
     output = param+res[0]
     return output
-    
+
 def train_test_single(match_mode, training_data, testing_data, i, param_list, hp, evaluation_method, transformation_file, gt_file, q=2):
-    
+
     print "Iteration %d" % i
     print "Training on %s" % [x[0].filename for x in training_data]
     training_df, best_training_row = train(training_data, param_list, hp, match_mode, evaluation_method, transformation_file, gt_file, q=q)
@@ -116,10 +116,10 @@ def train_test_single(match_mode, training_data, testing_data, i, param_list, hp
         print "match_mode=%d, mass_tol=%d, rt_tol=%d, tp=%d, fp=%d, fn=%d, prec=%.3f, rec=%.3f, f1=%.3f, th_prob=%.3f" % output
     else:
         print "match_mode=%d, mass_tol=%d, rt_tol=%d, grouping_tol=%d, matching_alpha=%.3f, tp=%d, fp=%d, fn=%d, prec=%.3f, rec=%.3f, f1=%.3f, th_prob=%.3f" % output
-        
+
     item = (training_data, training_df, best_training_row, match_res)
     return item
-    
+
 def train_test(match_mode, training_list, testing_list, param_list, hp, evaluation_method, transformation_file, gt_file, q=2):
     assert len(training_list) == len(testing_list)
     n_iter = len(training_list)
@@ -130,40 +130,40 @@ def train_test(match_mode, training_list, testing_list, param_list, hp, evaluati
         item = train_test_single(match_mode, training_data, testing_data, i, param_list, hp, evaluation_method, transformation_file, gt_file, q=q)
         exp_results.append(item)
         print
-        
+
     return exp_results
-    
+
 def run_experiment_single(match_mode, training_list, testing_list, i, param_list, filename, hp, evaluation_method, transformation_file, gt_file):
     try:
-        with gzip.GzipFile(filename, 'rb') as f:        
+        with gzip.GzipFile(filename, 'rb') as f:
             item = cPickle.load(f)
             print "Loaded from %s" % filename
             return item
     except (IOError, EOFError):
         training_data = training_list[i]
         testing_data = testing_list[i]
-        item = train_test_single(match_mode, training_data, testing_data, i, param_list, hp, evaluation_method, transformation_file, gt_file)        
+        item = train_test_single(match_mode, training_data, testing_data, i, param_list, hp, evaluation_method, transformation_file, gt_file)
         with gzip.GzipFile(filename, 'wb') as f:
-            cPickle.dump(item, f, protocol=cPickle.HIGHEST_PROTOCOL)                        
+            cPickle.dump(item, f, protocol=cPickle.HIGHEST_PROTOCOL)
         print "Saved to %s" % filename
     return item
-    
+
 def run_experiment(match_mode, training_list, testing_list, param_list, filename, hp, evaluation_method, transformation_file, gt_file, q=2):
     try:
-        with gzip.GzipFile(filename, 'rb') as f:        
+        with gzip.GzipFile(filename, 'rb') as f:
             exp_results = cPickle.load(f)
             print "Loaded from %s" % filename
             return exp_results
     except (IOError, EOFError):
         exp_results = train_test(match_mode, training_list, testing_list, param_list, hp, evaluation_method, transformation_file, gt_file, q=q)
         with gzip.GzipFile(filename, 'wb') as f:
-            cPickle.dump(exp_results, f, protocol=cPickle.HIGHEST_PROTOCOL)                        
+            cPickle.dump(exp_results, f, protocol=cPickle.HIGHEST_PROTOCOL)
         print "Saved to %s" % filename
     return exp_results
-    
+
 def load_or_create_filelist(filename, combined_list, n_iter, n_files):
     try:
-        with gzip.GzipFile(filename, 'rb') as f:        
+        with gzip.GzipFile(filename, 'rb') as f:
             item_list = cPickle.load(f)
             print "Loaded from %s" % filename
             for item in item_list:
@@ -176,26 +176,26 @@ def load_or_create_filelist(filename, combined_list, n_iter, n_files):
             print "%s" % [x[0].filename for x in item]
             item_list.append(item)
         with gzip.GzipFile(filename, 'wb') as f:
-            cPickle.dump(item_list, f, protocol=cPickle.HIGHEST_PROTOCOL)                    
+            cPickle.dump(item_list, f, protocol=cPickle.HIGHEST_PROTOCOL)
         print "Saved to %s" % filename
         return item_list
-        
+
 def load_results(path, n_iter):
     results = []
     for i in range(n_iter):
         filename = path % i
-        with gzip.GzipFile(filename, 'rb') as f:        
+        with gzip.GzipFile(filename, 'rb') as f:
             item = cPickle.load(f)
             results.append(item)
             print "Loaded from %s" % filename
-    return results   
-    
+    return results
+
 def load_clustering(path):
     with gzip.GzipFile(path, 'rb') as f:
         ac = cPickle.load(f)
-        print "Loaded from %s" % path     
+        print "Loaded from %s" % path
     return ac
-        
+
 def replace_clustering(combined_list, item_list):
 
     combined_map = {}
@@ -212,7 +212,7 @@ def replace_clustering(combined_list, item_list):
         new_item_list.append(new_row)
 
     return new_item_list
-    
+
 def evaluate_performance(hp, aligner, gt_file, evaluation_method, q=2):
     param = (hp.across_file_mass_tol, hp.across_file_rt_tol )
     res = aligner.evaluate_performance(gt_file, verbose=False, print_TP=True, method=evaluation_method, q=q)
@@ -221,36 +221,37 @@ def evaluate_performance(hp, aligner, gt_file, evaluation_method, q=2):
         performances.append(param+r)
     df = pd.DataFrame(performances, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold'])
     return df
-    
+
 def second_stage_clustering(hp, training_list, i, evaluation_method, transformation_file, gt_file, clustering_out=None, df_out=None, use_adduct_likelihood=True, parallel=False, q=2):
 
-    hp.second_stage_clustering_use_adduct_likelihood = use_adduct_likelihood    
+    hp.second_stage_clustering_use_adduct_likelihood = use_adduct_likelihood
     print hp
-    
+
     training_data = training_list[i]
     print "Iteration %d" % i
     print "Training on %s" % [x[0].filename for x in training_data]
 
-    selected_files = [x[0] for x in training_data]  
-    selected_clusterings = [x[1] for x in training_data]            
-    aligner = Aligner(selected_files, None, transformation_file, 
+    selected_files = [x[0] for x in training_data]
+    selected_clusterings = [x[1] for x in training_data]
+    aligner = Aligner(selected_files, None, transformation_file,
                            hp, verbose=False, seed=1234567890, parallel=parallel)
     match_mode = 2
     aligner.run(match_mode, first_stage_clustering_results=selected_clusterings)
-    
+
     if clustering_out is not None:
         with gzip.GzipFile(clustering_out, 'wb') as f:
-            cPickle.dump(aligner, f, protocol=cPickle.HIGHEST_PROTOCOL)                    
+            cPickle.dump(aligner, f, protocol=cPickle.HIGHEST_PROTOCOL)
         print "Saved clustering to %s" % clustering_out
 
     df = evaluate_performance(hp, aligner, gt_file, evaluation_method, q=q)
     if df_out is not None:
-        df.to_pickle(df_out)    
+        df.to_pickle(df_out)
         print "Saved df to %s" % df_out
-    
+
     return df
-    
-def plot_density(exp_res, title, xlim=(0.7, 1.0), ylim=(0.8, 1.0), saveto=None):
+
+def plot_density(exp_res, title, xlim=(0.7, 1.0), ylim=(0.8, 1.0), cmap='Reds', saveto=None):
+
     sns.set_context("notebook", font_scale=2.0, rc={"lines.linewidth": 2.5})
     sns.set_style("whitegrid")
     training_dfs = []
@@ -259,24 +260,27 @@ def plot_density(exp_res, title, xlim=(0.7, 1.0), ylim=(0.8, 1.0), saveto=None):
         training_dfs.append(training_df)
     combined = pd.concat(training_dfs, axis=0)
     combined = combined.reset_index(drop=True)
-#     f, ax = plt.subplots(figsize=(6, 6))    
-#     sns.kdeplot(combined.Rec, combined.Prec, ax=ax)
-#     sns.rugplot(combined.Rec, ax=ax)
-#     sns.rugplot(combined.Prec, vertical=True, ax=ax)    
-#     ax.set_xlim([0.7, 1.0])
-#     ax.set_ylim([0.7, 1.0])
-    g = sns.JointGrid(x="Rec", y="Prec", data=combined, xlim=xlim, ylim=ylim)
-    g = g.plot_joint(sns.kdeplot)
-    g = g.plot_marginals(sns.kdeplot, shade=True)
-    ax = g.ax_joint
-    ax.set_xlabel('Rec', fontsize=36)
-    ax.set_ylabel('Prec', fontsize=36)
-    ax = g.ax_marg_x
-    ax.set_title(title, fontsize=36)  
-    plt.tight_layout()
+
+    f, ax = plt.subplots(figsize=(6, 6))
+    sns.kdeplot(combined.Rec, combined.Prec, ax=ax, cmap=cmap, shade=True, shade_lowest=False)
+    # sns.rugplot(combined.Rec, ax=ax)
+    # sns.rugplot(combined.Prec, vertical=True, ax=ax)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+
+#     g = sns.JointGrid(x="Rec", y="Prec", data=combined, xlim=xlim, ylim=ylim)
+#     g = g.plot_joint(sns.kdeplot)
+#     g = g.plot_marginals(sns.kdeplot, shade=True)
+#     ax = g.ax_joint
+#     ax.set_xlabel('Rec', fontsize=36)
+#     ax.set_ylabel('Prec', fontsize=36)
+#     ax = g.ax_marg_x
+
+    ax.set_title(title, fontsize=36)
+    # plt.tight_layout()
     if saveto is not None:
         plt.savefig(saveto)
-    
+
 def get_training_rows(exp_res, matching, no_files):
     rows = []
     for i in range(len(exp_res)):
@@ -287,7 +291,7 @@ def get_training_rows(exp_res, matching, no_files):
         best_training_row['iter'] = i
         rows.append(best_training_row)
     return rows
-    
+
 def get_testing_rows(exp_res, matching, no_files):
     rows = []
     for i in range(len(exp_res)):
@@ -297,10 +301,10 @@ def get_testing_rows(exp_res, matching, no_files):
             temp = match_res[0:2] + match_res[4:]
             testing_results = temp + (no_files, matching, i)
         else:
-            testing_results = match_res  + (no_files, matching, i)            
+            testing_results = match_res  + (no_files, matching, i)
         rows.append(testing_results)
     return rows
-    
+
 def plot_training_boxplot(MW, MWG, cluster_match, saveto=None):
     rows = []
     rows1 = get_training_rows(MW, 'MW', 2)
@@ -308,7 +312,7 @@ def plot_training_boxplot(MW, MWG, cluster_match, saveto=None):
     rows3 = get_training_rows(cluster_match, 'Cluster-Match', 2)
     df1 = pd.DataFrame(rows1)
     df2 = pd.DataFrame(rows2)
-    df3 = pd.DataFrame(rows3)    
+    df3 = pd.DataFrame(rows3)
     rows.extend(rows1)
     rows.extend(rows2)
     rows.extend(rows3)
@@ -320,7 +324,7 @@ def plot_training_boxplot(MW, MWG, cluster_match, saveto=None):
         plt.tight_layout()
         plt.savefig(saveto)
     return df1, df2, df3
-    
+
 def plot_testing_boxplot(MW, MWG, cluster_match, saveto=None):
     rows = []
     rows1 = get_testing_rows(MW, 'MW', 2)
@@ -328,7 +332,7 @@ def plot_testing_boxplot(MW, MWG, cluster_match, saveto=None):
     rows3 = get_testing_rows(cluster_match, 'Cluster-Match', 2)
     df1 = pd.DataFrame(rows1, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold', 'no_files', 'matching', 'iter'])
     df2 = pd.DataFrame(rows2, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold', 'no_files', 'matching', 'iter'])
-    df3 = pd.DataFrame(rows3, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold', 'no_files', 'matching', 'iter'])    
+    df3 = pd.DataFrame(rows3, columns=['mass_tol', 'rt_tol', 'TP', 'FP', 'FN', 'Prec', 'Rec', 'F1', 'Threshold', 'no_files', 'matching', 'iter'])
     rows.extend(rows1)
     rows.extend(rows2)
     rows.extend(rows3)
@@ -339,15 +343,15 @@ def plot_testing_boxplot(MW, MWG, cluster_match, saveto=None):
     ax.set_ylim([0.8, 1.0])
     if saveto is not None:
         plt.tight_layout()
-        plt.savefig(saveto)    
+        plt.savefig(saveto)
     return df1, df2, df3
-    
+
 def get_training_df(exp_res, idx):
     item = exp_res[idx]
     training_data, training_df, best_training_row, match_res = item
     training_df = training_df.reset_index(drop=True)
-    return training_df    
-    
+    return training_df
+
 def plot_scatter(exp_res, idx, df, title, ylim=(0.80, 1.0), set_ylim=True, saveto=None):
 
     training_df = get_training_df(exp_res, idx)
@@ -355,9 +359,9 @@ def plot_scatter(exp_res, idx, df, title, ylim=(0.80, 1.0), set_ylim=True, savet
     g = g.plot_joint(plt.scatter, color="g", s=40, edgecolor="white")
 
     plt.figure(g.fig.number)
-    plt.plot(df.Rec, df.Prec, '.r-')    
+    plt.plot(df.Rec, df.Prec, '.r-')
     plt.xlim([0.0, 1.0])
-    
+
     g = g.plot_marginals(sns.kdeplot, shade=True)
     ax = g.ax_joint
     ax.set_xlabel('Recall')
@@ -367,6 +371,6 @@ def plot_scatter(exp_res, idx, df, title, ylim=(0.80, 1.0), set_ylim=True, savet
     ax = g.ax_marg_x
     ax.set_title(title)
     plt.tight_layout()
-    
+
     if saveto is not None:
         plt.savefig(saveto)
