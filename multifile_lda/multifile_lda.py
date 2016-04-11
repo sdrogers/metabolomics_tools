@@ -1,23 +1,21 @@
-import numpy as np
-import pandas as pd
-from scipy.sparse import coo_matrix
-from numpy import int32
-from numpy.random import RandomState
-import sys
-import pylab as plt
-
 import cPickle
 import gzip
 import os
 import re
 import sys
+import sys
 import time
 import timeit
 
-import seaborn as sns
+from IPython.display import display, HTML
+from numpy import int32
+from numpy.random import RandomState
+from scipy.sparse import coo_matrix
 
 from multifile_feature import MultifileFeatureExtractor
 import multifile_utils as utils
+import numpy as np
+import pandas as pd
 
 class MultifileLDA(object):
 
@@ -29,7 +27,9 @@ class MultifileLDA(object):
         else:
             self.random_state = random_state    
 
-    def load_all(self, input_set, scaling_factor=100, normalise=0):
+    def load_all(self, input_set, scaling_factor=100, normalise=0,
+                 fragment_grouping_tol=7, loss_grouping_tol=10, 
+                 loss_threshold_min_count=15, loss_threshold_max_val=200):
 
         self.F = len(input_set)
         self.dfs = {}
@@ -43,7 +43,8 @@ class MultifileLDA(object):
         elif len(input_set[0]) == 2:
 
             do_feature_extraction = True
-            extractor = MultifileFeatureExtractor(input_set)
+            extractor = MultifileFeatureExtractor(input_set, fragment_grouping_tol, loss_grouping_tol, 
+                                                  loss_threshold_min_count, loss_threshold_max_val)
             
             fragment_q = extractor.make_fragment_queue()
             fragment_groups = extractor.group_features(fragment_q, extractor.fragment_grouping_tol)
@@ -237,8 +238,9 @@ class MultifileLDA(object):
         for f in range(len(self.doc_topic_)):
             self.thresholded_doc_topic.append(utils.threshold_matrix(self.doc_topic_[f], epsilon=th_doc_topic))        
                 
-    def print_top_words(self, with_probabilities=True, selected=None):
+    def get_top_words(self, with_probabilities=True, selected=None):
         
+        topic_words_map = {}
         for i, topic_dist in enumerate(self.thresholded_topic_word):
             
             if selected is not None and i not in selected:
@@ -261,63 +263,9 @@ class MultifileLDA(object):
             print
             print
             
-    def plot_motif_degrees(self, interesting=None):
+            topic_words_map[i] = (topic_words, dist)
         
-        if interesting is None:
-            interesting = [k for k in range(self.K)]            
-
-        file_ids = []
-        topic_ids = []
-        degrees = []        
-        for f in range(self.F):
-
-            file_ids.extend([f for k in range(self.K)])
-            topic_ids.extend([k for k in range(self.K)])
-
-            doc_topic = self.thresholded_doc_topic[f]
-            columns = (doc_topic>0).sum(0)
-            assert len(columns) == self.K
-            degrees.extend(columns)
-
-        rows = []
-        for i in range(len(topic_ids)):            
-            topic_id = topic_ids[i]
-            if topic_id in interesting:
-                rows.append((file_ids[i], topic_id, degrees[i]))
-
-        df = pd.DataFrame(rows, columns=['file', 'M2M', 'degree'])
-        sns.barplot(x="M2M", y="degree", hue='file', data=df)
-                
-        return df
-                
-    def plot_e_alphas(self, interesting=None):
-
-        if interesting is None:
-            interesting = [k for k in range(self.K)]            
-
-        file_ids = []
-        topic_ids = []
-        alphas = []        
-        for f in range(self.F):
-
-            file_ids.extend([f for k in range(self.K)])
-            topic_ids.extend([k for k in range(self.K)])
-
-            post_alpha = self.posterior_alphas[f]
-            e_alpha = post_alpha / np.sum(post_alpha)
-            assert len(e_alpha) == self.K
-            alphas.extend(e_alpha.tolist())
-
-        rows = []
-        for i in range(len(topic_ids)):            
-            topic_id = topic_ids[i]
-            if topic_id in interesting:
-                rows.append((file_ids[i], topic_id, alphas[i]))
-
-        df = pd.DataFrame(rows, columns=['file', 'M2M', 'alpha'])
-        sns.barplot(x="M2M", y="alpha", hue='file', data=df)
-                
-        return df
+        return topic_words_map
             
     @classmethod
     def resume_from(cls, project_in):

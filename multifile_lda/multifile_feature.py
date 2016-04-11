@@ -10,16 +10,16 @@ import pandas as pd
 
 class MultifileFeatureExtractor(object):
 
-    def __init__(self, input_set):
+    def __init__(self, input_set, fragment_grouping_tol, loss_grouping_tol, loss_threshold_min_count, loss_threshold_max_val):
 
         self.all_ms1 = []
         self.all_ms2 = []
         self.all_dfs = []
         self.vocab = []
-        self.fragment_grouping_tol = 7
-        self.loss_grouping_tol = 10
-        self.loss_threshold_min_count = 15
-        self.loss_threshold_max_val = 200
+        self.fragment_grouping_tol = fragment_grouping_tol
+        self.loss_grouping_tol = loss_grouping_tol
+        self.loss_threshold_min_count = loss_threshold_min_count
+        self.loss_threshold_max_val = loss_threshold_max_val
         
         # load all the ms1 and ms2 files
         self.F = len(input_set)        
@@ -41,7 +41,9 @@ class MultifileFeatureExtractor(object):
             ms2 = self.all_ms2[f]  
             for index, row in ms2.iterrows():
                 fragment_mz = row['mz']
-                q.put((fragment_mz, row, f)) 
+                fragment_id = row['peakID']
+                item = (fragment_mz, fragment_id, f, row)
+                q.put(item) 
         return q                
 
     def make_loss_queue(self):
@@ -54,10 +56,12 @@ class MultifileFeatureExtractor(object):
                 parent_id = row['MSnParentPeakID']                    
                 parent_row = ms1.loc[ms1['peakID']==parent_id]                
                 row_mz = row['mz']
+                row_id = row['peakID']
                 parent_mz = parent_row['mz']
                 loss_mz = parent_mz - row_mz
                 loss_mz = loss_mz.values[0]
-                q.put((loss_mz, row, f)) 
+                item = (loss_mz, row_id, f, row)
+                q.put(item) 
         return q            
     
     def group_features(self, q, grouping_tol, check_threshold=False):
@@ -72,8 +76,9 @@ class MultifileFeatureExtractor(object):
             
             current_item = q.get()
             current_mass = current_item[0]
-            current_row = current_item[1]
+            current_id = current_item[1]
             current_file = current_item[2]
+            current_row = current_item[3]
             item = (current_row, current_file, current_mass)
             group.append(item)
 
@@ -85,16 +90,16 @@ class MultifileFeatureExtractor(object):
                 if head_mass > upper:
                     
                     # check if the current group is valid before starting a new group
-                    unique_check = []
-                    for row, f, val in group:
-                        this_parent_id = row['MSnParentPeakID']
-                        this_file_id = f
-                        key = (this_file_id, this_parent_id)
-                        if key in unique_check:
-                            self._print_group(group)
-                            msg = "Duplicate feature from (file %d, parent %d) already in the bin, maybe change the threshold?" % key
-                            raise ValueError(msg)
-                        unique_check.append(key)
+#                     unique_check = set()
+#                     for row, f, val in group:
+#                         this_parent_id = row['MSnParentPeakID']
+#                         this_file_id = f
+#                         key = (this_file_id, this_parent_id)
+#                         if key in unique_check:
+#                             self._print_group(group)
+#                             msg = "Duplicate feature from (file %d, parent %d) already in the bin, maybe change the threshold?" % key
+#                             raise ValueError(msg)
+#                         unique_check.add(key)
 
                     if check_threshold:
                         valid = True
