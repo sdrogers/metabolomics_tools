@@ -175,9 +175,7 @@ class MultifileLDAViz(object):
                           fancybox=True, shadow=True)  
                 plt.show()                        
                 plt.close()
-                
-                break
-                                                
+                                                                
     def plot_e_alphas(self, interesting=None):
 
         if interesting is None:
